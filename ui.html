@@ -562,6 +562,17 @@ h3 {
   text-decoration: underline;
 }
 
+.select-all-link svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--blue-color);
+  vertical-align: middle;
+}
+
+.select-all-link:hover svg {
+  fill: var(--blue-hover-color, #0066cc);
+}
+
 /* Добавляем стили для SVG иконки */
 .instance-icon, .info-icon, .text-icon, .frame-icon, .rectangle-icon {
   width: 18px;
@@ -788,6 +799,11 @@ h3 {
       <symbol id="rectangle-icon" viewBox="0 0 16 16">
         <path fill-rule="evenodd" clip-rule="evenodd" d="M11.5 4H4.5C4.22386 4 4 4.22386 4 4.5V11.5C4 11.7761 4.22386 12 4.5 12H11.5C11.7761 12 12 11.7761 12 11.5V4.5C12 4.22386 11.7761 4 11.5 4ZM4.5 3C3.67157 3 3 3.67157 3 4.5V11.5C3 12.3284 3.67157 13 4.5 13H11.5C12.3284 13 13 12.3284 13 11.5V4.5C13 3.67157 12.3284 3 11.5 3H4.5Z"/>
       </symbol>
+      <symbol id="select-all-icon" viewBox="0 0 24 24">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18ZM12 19C15.866 19 19 15.866 19 12C19 8.134 15.866 5 12 5C8.134 5 5 8.134 5 12C5 15.866 8.134 19 12 19ZM12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM13 12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12C11 11.4477 11.4477 11 12 11C12.5523 11 13 11.4477 13 12Z"/>
+      </symbol>
+
+      
 
     </svg>
    
@@ -1378,7 +1394,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
           const selectAllLink = document.createElement('a');
           selectAllLink.href = '#';
           selectAllLink.classList.add('select-all-link');
-          selectAllLink.textContent = 'select all';
+          selectAllLink.title = 'Select all'; // Добавляем атрибут title для отображения tooltip
+          // Создаем SVG иконку вместо текста
+          const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svgIcon.setAttribute('width', '20');
+          svgIcon.setAttribute('height', '20');
+          svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+          selectAllLink.appendChild(svgIcon);
           selectAllLink.style.visibility = 'hidden'; // Изначально скрыта
           selectAllLink.style.marginLeft = 'auto';
           
