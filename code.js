@@ -529,7 +529,29 @@ figma.ui.onmessage = async (msg) => {
       //console.log('После цикла обработки');
 
       // Сортировка компонентов
-      componentsResult.instances.sort((a, b) => a.name.localeCompare(b.name));
+      componentsResult.instances.sort((a, b) => {
+        const aName = a.mainComponentName || a.name;
+        const bName = b.mainComponentName || b.name;
+        
+        // Функция для удаления эмодзи из строки (обновленное регулярное выражение)
+        const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
+        
+        // Функция для проверки специальных символов в начале
+        const startsWithSpecial = (str) => /^[._]/.test(str);
+        
+        const cleanA = removeEmoji(aName);
+        const cleanB = removeEmoji(bName);
+        
+        // Сначала проверяем специальные символы
+        const aSpecial = startsWithSpecial(cleanA);
+        const bSpecial = startsWithSpecial(cleanB);
+        
+        if (aSpecial && !bSpecial) return 1;
+        if (!aSpecial && bSpecial) return -1;
+        
+        // Если оба имеют или не имеют спец. символы, сортируем по тексту
+        return cleanA.localeCompare(cleanB);
+      });
       
       
       console.log('Final components result:', {
