@@ -1922,13 +1922,8 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
           const groupedInstances = {};
           const groupedIcons = {};
 
-          //console.log('Processing instances:', msg.components.instances);
-
           msg.components.instances.forEach((instance) => {
-            // Группируем по ключу главного компонента
-            
-            const groupKey = `${instance.mainComponentKey} || ''}`;
-            if (instance.isIcon === true) {
+            const groupKey = `${instance.mainComponentKey} || ''}`;            if (instance.isIcon === true) {
               if (!groupedIcons[groupKey]) {
                 groupedIcons[groupKey] = [];
               }
@@ -1941,8 +1936,34 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
             }
           });
 
-          // Отображаем компоненты
-          displayGroups(groupedInstances, resultsList);
+          // Сортируем группы по mainComponentName перед отображением
+          const sortedGroups = Object.entries(groupedInstances)
+            .sort(([, a], [, b]) => {
+              const aName = a[0].mainComponentName;
+              const bName = b[0].mainComponentName;
+              
+              // Функция для удаления эмодзи из строки (обновленное регулярное выражение)
+    const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
+              
+              // Функция для проверки специальных символов в начале
+              const startsWithSpecial = (str) => /^[._]/.test(str);
+              
+              const cleanA = removeEmoji(aName);
+              const cleanB = removeEmoji(bName);
+              
+              // Сначала проверяем специальные символы
+              const aSpecial = startsWithSpecial(cleanA);
+              const bSpecial = startsWithSpecial(cleanB);
+              
+              if (aSpecial && !bSpecial) return 1;
+              if (!aSpecial && bSpecial) return -1;
+              
+              // Если оба имеют или не имеют спец. символы, сортируем по тексту
+              return cleanA.localeCompare(cleanB);
+            });
+
+          // Отображаем отсортированные группы
+          displayGroups(Object.fromEntries(sortedGroups), resultsList);
           // Отображаем иконки
           displayGroups(groupedIcons, iconResultsList);
         }
