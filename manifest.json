@@ -1,0 +1,12 @@
+{
+    "name": "Design Polizei 0.8 alpha",
+    "id": "1493892994224385588",
+    "api": "1.0.0",
+    "main": "code.js",
+    "editorType": ["figma"],
+    "permissions": ["teamlibrary", "currentuser"],
+    "enablePrivatePluginApi": true,
+    "documentAccess": "dynamic-page",
+    "ui": "ui.html",
+    "networkAccess": {"allowedDomains": ["https://api.vladey.net"]}
+  }
