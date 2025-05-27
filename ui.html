@@ -246,13 +246,19 @@ h3 {
   margin-left: auto;
 }
 .description-inline {
-  font-size: var(--font-small);
-  color: var(--text-light-color);
-  margin-left: auto;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   cursor: help;
+  background-color: var(--light-background-color);
+  color: var(--gray-color);
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: var(--font-small);
+  font-family: monospace;
+  flex-wrap: nowrap;
+  font-weight: 500;
+  line-height: 12px;
+  white-space: nowrap;
+
+
 }
 
 .section-header {
@@ -1305,7 +1311,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
               infoSpan.classList.add('version-tag');
               infoSpan.textContent = `${instance.nodeVersion}`;
             } 
-            if (instance.description && targetList.id !=='iconResultsList') {
+            else if (instance.description && targetList.id !=='iconResultsList') {
               infoSpan.classList.add('description-inline');
               const fullDescription = instance.description;
               const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
@@ -1482,14 +1488,15 @@ document.getElementById('setComponentData').addEventListener('click', function()
             infoSpan.classList.add('version-tag');
             infoSpan.textContent = `${firstInstance.nodeVersion}`;
           } 
-          if (firstInstance.description && targetList.id !=='iconResultsList') {
+          else if (firstInstance.description && targetList.id !=='iconResultsList') {
             infoSpan.classList.add('description-inline');
             const fullDescription = firstInstance.description;
             const truncatedDescription =
               fullDescription.length > 10
-                ? `${fullDescription.substring(0, 10)}...`
-                : fullDescription;
+              ? `${fullDescription.substring(0, 10)}...`
+              : fullDescription;
               infoSpan.textContent = truncatedDescription;
+              
               infoSpan.title = fullDescription;
           }
 
@@ -1779,7 +1786,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
               infoSpan.classList.add('version-tag');
               infoSpan.textContent = `${instance.nodeVersion}`;
             } 
-            if (instance.description && targetList.id !=='iconResultsList') {
+            else if (instance.description && targetList.id !=='iconResultsList') {
               infoSpan.classList.add('description-inline');
               const fullDescription = typeof instance.description === 'string' 
                 ? instance.description 
@@ -1789,7 +1796,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
                 ? `${fullDescription.substring(0, 10)}...`
                 : fullDescription;
               infoSpan.textContent = truncatedDescription;
-              infoSpan.title = fullDescription;
+             infoSpan.title = fullDescription;
             }
             versionGroup.appendChild(infoSpan);  
           }
@@ -2004,7 +2011,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
             }
 
             // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
-            const wrongFill = hasFill && instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "Product tokens";
+            const wrongFill = hasFill && instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "product colors";
             
 
             // Если оба цвета из Component tokens, пропускаем элемент
@@ -2063,7 +2070,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
             const hasStroke = instance.stroke && instance.stroke !== '#MIXED';
             if (!hasStroke) {return;}
             // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
-            const wrongStroke = hasStroke && instance.stroke_collection_name !== "Component tokens" && instance.stroke_collection_name !== "Service tokens" && instance.stroke_collection_name !== "Service tokens";
+            const wrongStroke = hasStroke && instance.stroke_collection_name !== "Component tokens" && instance.stroke_collection_name !== "Service tokens" && instance.stroke_collection_name !== "product colors";
             if (!wrongStroke) {return;}
             strokeFilteredCount++; // Если элемент прошел все фильтры, увеличиваем счетчик
 
