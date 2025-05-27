@@ -2004,7 +2004,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
             }
 
             // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
-            const wrongFill = hasFill && instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "Product tokens";
+            const wrongFill = hasFill && instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "product colors";
             
 
             // Если оба цвета из Component tokens, пропускаем элемент
@@ -2063,7 +2063,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
             const hasStroke = instance.stroke && instance.stroke !== '#MIXED';
             if (!hasStroke) {return;}
             // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
-            const wrongStroke = hasStroke && instance.stroke_collection_name !== "Component tokens" && instance.stroke_collection_name !== "Service tokens" && instance.stroke_collection_name !== "Service tokens";
+            const wrongStroke = hasStroke && instance.stroke_collection_name !== "Component tokens" && instance.stroke_collection_name !== "Service tokens" && instance.stroke_collection_name !== "product colors";
             if (!wrongStroke) {return;}
             strokeFilteredCount++; // Если элемент прошел все фильтры, увеличиваем счетчик
 
