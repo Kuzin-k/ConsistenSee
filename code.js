@@ -1096,13 +1096,19 @@ async function processNodeColors(node, colorsResult, colorsResultStroke) {
   let parent = node.parent;
   
   // КОСТЫЛЬ не обрабатываем ноды с цветом черного цвета у которых родитель называется source (исходники иконок)
-  if ((nodeData.fill === '#000000' || nodeData.stroke === '#000000' || nodeData.fill === '#FFFFFF' || nodeData.stroke === '#FFFFFF') && parent.name && parent.name.toLowerCase() =='source' && node.parent.type == 'GROUP') {
-    return null;
+  //if ((nodeData.fill === '#000000' || nodeData.stroke === '#000000' || nodeData.fill === '#ffffff' || nodeData.stroke === '#ffffff') && parent.name && parent.name.toLowerCase() =='source' && node.parent.type == 'GROUP') {
+    //return null;
+  //}
+  const excludedColors = ['#000000', '#ffffff', 'FFFFFF', '#FF33BB'];
+  if ((excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) && parent.name && parent.name.toLowerCase() == 'source' && node.parent.type == 'GROUP') {
+      return null;
   }
   // КОСТЫЛЬ не обрабатываем ноды с цветом исходники продуктовых логотипов
-  if ((nodeData.fill === '#FF33BB' || nodeData.stroke === '#FF33BB') && parent.name && parent.name.toLowerCase() =='group' && node.parent.type == 'GROUP') {
+  if ((excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) && parent.name && parent.name.toLowerCase() =='group' && node.parent.type == 'GROUP') {
     return null;
   }
+  // игнорируем фиолетовую обводку component_set
+  if (nodeData.stroke ==='#9747ff' && node.type==="COMPONENT_SET") return null;
   
  
 
