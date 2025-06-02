@@ -1913,13 +1913,13 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
         // Обрабатываем результаты цветов
         if (msg.colors) {
           const groupedColors = {};
-          
-          
+
+
           msg.colors.instances.forEach((instance, index) => {
 
             // Проверяем наличие цветов
             const hasFill = instance.fill && instance.fill !== '#MIXED';
-            
+
             if (!hasFill) {
               //console.log('Пропускаем: нет цветов или смешанные цвета');
               return;
@@ -1927,7 +1927,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
 
             // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
             const wrongFill = hasFill && instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "product colors";
-            
+
 
             // Если оба цвета из Component tokens, пропускаем элемент
             if (!wrongFill) {
@@ -1944,48 +1944,48 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
               delete instance.fill_variable_name;
               delete instance.fill_collection_name;
             }
-            
+
               delete instance.stroke;
               delete instance.stroke_variable_name;
               delete instance.stroke_collection_name;
-            
+
             let groupColor = instance.fill_variable_name ? instance.fill_variable_name : instance.fill;
             // Группируем по имени и описанию
-            const groupKey = groupColor || '';
+            const groupKey = `${groupColor}-${instance.type}` || '';
             if (!groupedColors[groupKey]) {groupedColors[groupKey] = [];}
-            
+
             groupedColors[groupKey].push(instance);
             //console.log('Элемент добавлен в группу:', groupKey);
           });
-          
+
           // Сортируем группы по алфавиту
           const sortedGroupKeys = Object.keys(groupedColors).sort((a, b) => a.localeCompare(b));
           const sortedGroupedColors = {};
           sortedGroupKeys.forEach(key => {
             sortedGroupedColors[key] = groupedColors[key];
           });
-          
+
 
           // Обновляем заголовок вкладки с отфильтрованным количеством
           const colorsTab = document.querySelector('[data-tab="colors"]');
-          
-          if ((fillFilteredCount + strokeFilteredCount) == 0) {  
+
+          if ((fillFilteredCount + strokeFilteredCount) == 0) {
                 colorsTab.classList.replace('tab','tab_success');
                 colorsTab.textContent = `Colors (OK)`;
               } else {
                 colorsTab.classList.replace('tab_success','tab');
                 colorsTab.textContent = `Colors (${fillFilteredCount + strokeFilteredCount})`;
-              } 
+              }
 
           // Отображаем цвета фона
           if (fillFilteredCount > 0) displayGroups(sortedGroupedColors, colorResultsList);
-         
+
         }
         // Группировка Stroke
         if (msg.colorsStroke) {
           const groupedColors = {};
           const sortedGroupedColors = {};
-         
+
 
           msg.colorsStroke.instances.forEach((instance, index) => {
             // Проверяем наличие цветов
@@ -2002,7 +2002,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
               delete instance.stroke_variable_name;
               delete instance.stroke_collection_name;
             }
-            
+
             //очищаем все заливки
             delete instance.fill;
             delete instance.fill_variable_name;
@@ -2010,22 +2010,22 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
 
 
             let colorName = instance.stroke_variable_name ? instance.stroke_variable_name : instance.stroke;
-            
+
             // Группируем по имени
-            const groupKey = colorName || '';
+            const groupKey = `${colorName}-${instance.type}` || '';
             if (!groupedColors[groupKey]) {groupedColors[groupKey] = [];}
             groupedColors[groupKey].push(instance);
             //console.log('Элемент добавлен в группу:', groupKey);
           });
-          
+
           // Сортируем группы по алфавиту
           const sortedGroupKeys = Object.keys(groupedColors).sort((a, b) => a.localeCompare(b));
           sortedGroupKeys.forEach(key => {sortedGroupedColors[key] = groupedColors[key];});
 
           // Обновляем заголовок вкладки с отфильтрованным количеством
           const colorsTab = document.querySelector('[data-tab="colors"]');
-          
-          if ((fillFilteredCount + strokeFilteredCount) == 0) {  
+
+          if ((fillFilteredCount + strokeFilteredCount) == 0) {
                 colorsTab.classList.replace('tab','tab_success');
                 colorsTab.textContent = `Colors (OK)`;
               } else {
@@ -2339,6 +2339,31 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
           versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
           nodeInfo.appendChild(versionLine);
           
+          // Добавляем отображение данных из PluginData
+          if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
+            // Добавляем заголовок для данных из PluginData
+            const pluginDataHeader = document.createElement('div');
+            pluginDataHeader.textContent = 'Данные из PluginData:';
+            pluginDataHeader.style.fontWeight = 'bold';
+            pluginDataHeader.style.marginTop = '8px';
+            pluginDataHeader.style.marginBottom = '4px';
+            nodeInfo.appendChild(pluginDataHeader);
+            
+            // Отображаем ключ из PluginData
+            const pluginDataKeyLine = document.createElement('div');
+            pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
+            pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
+            pluginDataKeyLine.style.marginLeft = '10px';
+            nodeInfo.appendChild(pluginDataKeyLine);
+            
+            // Отображаем версию из PluginData
+            const pluginDataVersionLine = document.createElement('div');
+            pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
+            pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
+            pluginDataVersionLine.style.marginLeft = '10px';
+            nodeInfo.appendChild(pluginDataVersionLine);
+          }
+          
           container.appendChild(nodeInfo);
         }
         
@@ -2483,7 +2508,6 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
         }
         
         outputElement.appendChild(container);
-        console.log('Отображены данные компонента:', data);
       };
       
       // Переопределяем обработчик сообщений
