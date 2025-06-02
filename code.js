@@ -1048,7 +1048,6 @@ async function processNodeColors(node, colorsResult, colorsResultStroke) {
     name: node.name, // Имя узла
     nodeId: node.id, // ID узла
     key: node.key, // Ключ узла
-    modifiedName: node.name, // Модифицированное имя (пока совпадает)
     color: true, // Флаг, указывающий, что узел имеет цвет
     hidden: isNodeOrParentHidden(node), // Статус скрытия узла или его родителя
     type: node.type // Тип узла
@@ -1391,7 +1390,6 @@ async function processNodeComponent(node, componentsResult) {
           name: name.trim(), // Имя узла (без лишних пробелов)
           nodeId: node.id, // ID узла
           key: node.key, // Ключ узла
-          modifiedName: name.trim().replace(' (new)', ''), // Модифицированное имя (удаляем "(new)")
           description: descriptionDataMain ? descriptionDataMain.description : (descriptionDataSingle ? descriptionDataSingle.description : undefined), // Описание
           nodeVersion: descriptionDataMain ? descriptionDataMain.nodeVersion : (descriptionDataSingle ? descriptionDataSingle.nodeVersion : undefined), // Версия из описания
           hidden: isNodeOrParentHidden(node), // Статус скрытия
@@ -1452,7 +1450,6 @@ async function processComponentSetNode(node, parentSet = null) {
       name: name.trim(), // Имя набора
       nodeId: node.id, // ID набора
       key: node.key, // Ключ набора
-      modifiedName: name.trim().replace(' (new)', ''), // Модифицированное имя
       description: descriptionDataSet ? descriptionDataSet.description : undefined, // Описание набора
       nodeVersion: descriptionDataSet ? descriptionDataSet.nodeVersion : undefined, // Версия из описания набора
       hidden: isNodeOrParentHidden(node), // Статус скрытия
