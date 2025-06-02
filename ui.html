@@ -1096,8 +1096,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const popover = document.createElement('div');
       popover.classList.add('popover');
       popover.style.maxWidth = '500px';
+      popover.style.position = 'fixed';
+      popover.style.zIndex = '10000';
       
-      // Формируем содержимое popover из всех свойств instance
       const content = Object.entries(instance).map(([key, value]) => {
         const boldKey = `<strong>${key}:</strong>`;
         if (typeof value === 'object' && value !== null) {
@@ -1110,12 +1111,53 @@ document.getElementById('setComponentData').addEventListener('click', function()
       document.body.appendChild(popover);
 
       const rect = icon.getBoundingClientRect();
-      popover.style.left = `${rect.left + window.scrollX}px`;
-      popover.style.top = `${rect.bottom + window.scrollY}px`;
+      // Temporarily display popover to get its dimensions
+      popover.style.visibility = 'hidden';
       popover.style.display = 'block';
+      const popoverRect = popover.getBoundingClientRect();
+      popover.style.display = 'none';
+      popover.style.visibility = 'visible';
+
+      let top = rect.bottom + 5;
+      let left = rect.left;
+
+      // Adjust popover position to stay within the iframe boundaries
+      // This is a preliminary adjustment within the iframe, the main adjustment will be done by resizing the plugin window
+      if (left + popoverRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - popoverRect.width - 10;
+      }
+      if (left < 10) {
+        left = 10;
+      }
+
+      if (top + popoverRect.height > window.innerHeight - 10) {
+        top = rect.top - popoverRect.height - 5;
+      }
+      if (top < 10) {
+        top = 10;
+      }
+
+      popover.style.left = `${left}px`;
+      popover.style.top = `${top}px`;
+      popover.style.display = 'block';
+
+      // Send message to code.js to resize the plugin window
+      parent.postMessage({
+        pluginMessage: {
+          type: 'resize-plugin-window',
+          width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20), // Ensure enough width for popover + padding
+          height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20) // Ensure enough height for popover + padding
+        }
+      }, '*');
 
       icon.addEventListener('mouseleave', () => {
         popover.remove();
+        // Send message to code.js to reset plugin window size (optional, but good practice)
+        parent.postMessage({
+          pluginMessage: {
+            type: 'reset-plugin-window-size'
+          }
+        }, '*');
       });
     };
 
@@ -1143,17 +1185,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       
       // Логика для подсчета имен
       const nameCount = {};
-      for (const key in groupedData) {
-        const modifiedName = groupedData[key][0].modifiedName;
-        nameCount[modifiedName] = (nameCount[modifiedName] || 0) + 1;
-      }
 
       for (const key in groupedData) {
         const group = groupedData[key];
         const firstInstance = group[0];
         // название - имя компонента из библиотеки
         const name = firstInstance.mainComponentName ? firstInstance.mainComponentName  : firstInstance.name;
-        const modifiedName = firstInstance.modifiedName;
+        
 
         // Если в группе только один элемент и это не вкладка Colors, показываем его без группировки
         if (group.length === 1 && (targetList.id !== 'colorResultsList' && targetList.id !== 'colorStrokeResultsList')) {
