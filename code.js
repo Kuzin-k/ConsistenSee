@@ -18,7 +18,7 @@ if (typeof window !== 'undefined') {
   });
 }
 // Show the UI
-figma.showUI(__html__, { width: 600, height: 800 });
+figma.showUI(__html__, { width: 500, height: 800 });
 
 // Отправляем информацию о пользователе в UI
 figma.ui.postMessage({
