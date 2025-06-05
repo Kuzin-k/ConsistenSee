@@ -9,7 +9,12 @@ if (typeof window !== 'undefined') {
       // Уведомляем пользователя о критической ошибке
       figma.notify('Критическая ошибка памяти Figma API. Плагин будет перезапущен.');
       // Закрываем плагин через 3 секунды с сообщением об ошибке
-      setTimeout(() => figma.closePlugin('Произошла критическая ошибка WebAssembly. Перезапустите плагин.'), 3000);
+      setTimeout(() => figma.closePlugin('Произошла критическая ошибка WebAssembly. Перезапустите плагин.'), 15000);
+    } else {
+      figma.ui.postMessage({
+        type: 'error',
+        message: `Unhandled Rejection: ${err.message || err}`
+      });
     }
   });
   // Обработчик для общих ошибок (error)
@@ -21,7 +26,12 @@ if (typeof window !== 'undefined') {
       // Уведомляем пользователя о критической ошибке
       figma.notify('Критическая ошибка памяти Figma API. Плагин будет перезапущен.');
       // Закрываем плагин через 3 секунды с сообщением об ошибке
-      setTimeout(() => figma.closePlugin('Произошла критическая ошибка WebAssembly. Перезапустите плагин.'), 3000);
+      setTimeout(() => figma.closePlugin('Произошла критическая ошибка WebAssembly. Перезапустите плагин.'), 15000);
+    } else {
+      figma.ui.postMessage({
+        type: 'error',
+        message: `Error: ${err.message || err}`
+      });
     }
   });
 }
@@ -308,6 +318,10 @@ async function getDescription(node, mainComponent = null) {
         }
       } catch (error) {
         console.error(`Ошибка при получении mainComponent в getDescription:`, error);
+        figma.ui.postMessage({
+          type: 'error',
+          message: `Ошибка при получении mainComponent в getDescription: ${error.message}`
+        });
       }
     }
   }
@@ -405,9 +419,12 @@ figma.ui.onmessage = async (msg) => {
   // Логика этих обработчиков находится ниже в этом же блоке onmessage
 
   // Обработка основного запроса на анализ всех элементов в выделенной области
-  if (msg.type === 'check-all') {
-    // Получаем текущее выделение пользователя
-    const selection = figma.currentPage.selection;
+    if (msg.type === 'check-all') {
+      // Записываем время начала выполнения
+      const startTime = Date.now();
+
+      // Получаем текущее выделение пользователя
+      const selection = figma.currentPage.selection;
 
     // Если ничего не выделено, отправляем сообщение об ошибке в UI и выходим
     if (!selection || selection.length === 0) {
@@ -579,6 +596,15 @@ figma.ui.onmessage = async (msg) => {
       } else {
         figma.notify('Нет выбранных элементов для построения дерева.');
       }
+
+       // Вычисляем время выполнения
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+
+      // Добавляем время выполнения в componentsResult
+      componentsResult.executionTime = executionTime;
+      console.log(`Время выполнения запроса check-all: ${executionTime}ms`);
+      
       figma.ui.postMessage({
         type: 'all-results', // Тип сообщения для UI
         components: componentsResult, // Результаты компонентов
@@ -586,6 +612,9 @@ figma.ui.onmessage = async (msg) => {
         colorsStroke: colorsResultStroke, // Результаты цветов обводки
         componentTree: componentTree // Дерево выбранных элементов
       });
+
+     
+
       // Небольшая задержка перед возможным следующим этапом (проверка обновлений, закомментировано)
       //await delay(30);
       // Второй этап: асинхронная проверка обновлений (УДАЛЕНО)
@@ -1313,7 +1342,11 @@ async function processNodeComponent(node, componentsResult) {
         } catch (error) {
           // Обработка ошибок при получении главного компонента
           console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name}:`, error);
-          throw error; // Пробрасываем ошибку выше для корректной обработки
+          figma.ui.postMessage({
+            type: 'error',
+            message: `Ошибка при получении mainComponent для ${node.name}: ${error.message}`
+          });
+          return null;
         }
       } else if (node.type === 'COMPONENT') {
         //console.log(`[processNodeComponent] Узел является компонентом:`, node.name);
