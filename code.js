@@ -1,4 +1,3 @@
-
 // Глобальный обработчик ошибок для wasm/memory/out of bounds
 if (typeof window !== 'undefined') {
   // Обработчик для необработанных промисов (unhandledrejection)
@@ -400,9 +399,7 @@ figma.ui.onmessage = async (msg) => {
   console.log('Получено сообщение от UI:', msg.type);
 
   // Обработка сообщения для изменения размера окна плагина
-  if (msg.type === 'resize') {
-    figma.ui.resize(msg.width, msg.height);
-  }
+  if (msg.type === 'resize') {figma.ui.resize(msg.width, msg.height);}
 
   // Обработчики для работы с данными компонента (get-component-data, clear-component-data)
   // Логика этих обработчиков находится ниже в этом же блоке onmessage
@@ -590,9 +587,9 @@ figma.ui.onmessage = async (msg) => {
         componentTree: componentTree // Дерево выбранных элементов
       });
       // Небольшая задержка перед возможным следующим этапом (проверка обновлений, закомментировано)
-      await delay(30);
-      // Второй этап: асинхронная проверка обновлений (закомментировано)
-      //await checkComponentUpdates(componentsResult);
+      //await delay(30);
+      // Второй этап: асинхронная проверка обновлений (УДАЛЕНО)
+      // await checkComponentUpdates(componentsResult);
 
     } catch (error) {
       // Обработка ошибок в процессе анализа
@@ -972,6 +969,23 @@ figma.ui.onmessage = async (msg) => {
       });
     }
   }
+
+  // === Новый обработчик для проверки обновлений по кнопке ===
+  else if (msg.type === 'check-updates') {
+    console.log('Получен запрос на проверку обновлений');
+    // Проверяем, есть ли уже результаты компонентов (используем глобальный кэш, если есть)
+    let componentsResult = null;
+    if (typeof globalThis.lastComponentsResult !== 'undefined') {
+      componentsResult = globalThis.lastComponentsResult;
+    } else {
+      // Если нет кэша, повторно собираем (можно доработать по необходимости)
+      figma.notify('Сначала выполните общий поиск!');
+      return;
+    }
+    // Запускаем проверку обновлений
+    await checkComponentUpdates(componentsResult);
+    figma.notify('Проверка обновлений завершена!');
+  }
 };
 
 
@@ -1136,6 +1150,22 @@ async function processNodeColors(node, colorsResult, colorsResultStroke) {
     }
   }
 
+  // === ДОБАВЛЯЕМ: обработка fillStyleId ===
+  if (node.fillStyleId && node.fillStyleId !== figma.mixed) {
+    try {
+      const fillStyle = await figma.getStyleByIdAsync(node.fillStyleId);
+      if (fillStyle) {
+        nodeData.fill_variable_name = fillStyle.name;
+        nodeData.fill_collection_id = node.fillStyleId.split(",")[0];
+        nodeData.fill_collection_name = fillStyle.description || '';
+      } else {
+        nodeData.fill_variable_name = node.fillStyleId;
+      }
+    } catch (e) {
+      nodeData.fill_variable_name = node.fillStyleId;
+    }
+  }
+
   // Обрабатываем обводку (strokes) узла
   //console.log('\nОбработка обводки...');
   // Проверяем наличие обводок и что массив не пустой
@@ -1169,6 +1199,22 @@ async function processNodeColors(node, colorsResult, colorsResultStroke) {
     }
   }
 
+  // === ДОБАВЛЯЕМ: обработка strokeStyleId ===
+  if (node.strokeStyleId && node.strokeStyleId !== figma.mixed) {
+    try {
+      const strokeStyle = await figma.getStyleByIdAsync(node.strokeStyleId);
+      if (strokeStyle) {
+        nodeData.stroke_variable_name = strokeStyle.name;
+        nodeData.stroke_collection_id = node.strokeStyleId.split(",")[0];
+        nodeData.stroke_collection_name = strokeStyle.description || '';
+      } else {
+        nodeData.stroke_variable_name = node.strokeStyleId;
+      }
+    } catch (e) {
+      nodeData.stroke_variable_name = node.strokeStyleId;
+    }
+  }
+
   // Обрабатываем привязки переменных цвета к заливкам и обводкам
   //console.log('\nОбработка привязок переменных...');
   // Проверяем наличие привязанных переменных у узла
@@ -1186,14 +1232,34 @@ async function processNodeColors(node, colorsResult, colorsResultStroke) {
   let parent = node.parent; // Получаем родителя узла
 
   // КОСТЫЛЬ: не обрабатываем ноды с определенными цветами (черный, белый, #FF33BB),
-  // у которых родитель называется 'source' и является группой. Это фильтр для исходников иконок.
-  const excludedColors = ['#000000', '#ffffff', 'FFFFFF', '#FF33BB'];
-  if ((excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) && parent && parent.name && parent.name.toLowerCase() == 'source' && node.parent.type == 'GROUP') {
-      return null; // Возвращаем null, чтобы исключить узел из результатов
+  // у которых любой из родителей называется 'source' и является группой. Это фильтр для исходников иконок.
+  function hasParentWithNameAndType(node, targetName, targetType) {
+    let current = node.parent;
+    while (current) {
+      if (
+        current.name &&
+        current.name.toLowerCase() === targetName &&
+        current.type === targetType
+      ) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+  const excludedColors = ['#000000', '#ffffff', 'FFFFFF', '#ff33bb'];
+  if (
+    (excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) &&
+    hasParentWithNameAndType(node, 'source', 'GROUP')
+  ) {
+    return null; // Возвращаем null, чтобы исключить узел из результатов
   }
   // КОСТЫЛЬ: не обрабатываем ноды с определенными цветами (черный, белый, #FF33BB),
-  // у которых родитель называется 'group' и является группой. Это фильтр для исходников продуктовых логотипов.
-  if ((excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) && parent && parent.name && parent.name.toLowerCase() =='group' && node.parent.type == 'GROUP') {
+  // у которых любой из родителей называется 'group' и является группой. Это фильтр для исходников продуктовых логотипов.
+  if (
+    (excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) &&
+    hasParentWithNameAndType(node, 'group', 'GROUP')
+  ) {
     return null; // Возвращаем null, чтобы исключить узел из результатов
   }
   // Игнорируем фиолетовую обводку у узлов типа COMPONENT_SET (стандартная обводка Figma)
@@ -1243,7 +1309,7 @@ async function processNodeComponent(node, componentsResult) {
         try {
           //console.log(`[processNodeComponent] Получаем mainComponent для инстанса:`, node.name);
           mainComponent = await node.getMainComponentAsync(); // Асинхронно получаем главный компонент
-          console.log(`[processNodeComponent] Получен mainComponent:`, mainComponent ? `${mainComponent.name} (${mainComponent.remote})` : 'null');
+          //console.log(`[processNodeComponent] Получен mainComponent:`, mainComponent ? `${mainComponent.name} (${mainComponent.remote})` : 'null');
         } catch (error) {
           // Обработка ошибок при получении главного компонента
           console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name}:`, error);
@@ -1387,8 +1453,6 @@ async function processNodeComponent(node, componentsResult) {
 
         let parent = node.parent; // Непосредственный родитель узла
         // Формируем объект с данными компонента/инстанса
-        console.log('name',name);
-        console.log('remote',mainComponent.remote);
         const componentData = {
           type: node.type, // Тип узла
           name: name.trim(), // Имя узла (без лишних пробелов)
@@ -1542,6 +1606,14 @@ async function checkComponentUpdates(componentsResult) {
       //  importedMainComponentId: updateInfo.importedMainComponentId,
       //  version: updateInfo.version
       //});
+
+      // После каждой проверки компонента отправляем прогресс:
+      figma.ui.postMessage({
+        type: 'progress-update',
+        processed: i + 1,
+        total: componentsResult.instances.length,
+        currentComponentName: instance.name
+      });
     } catch (componentError) {
       // Обработка ошибок при проверке конкретного компонента
       //console.error(`Ошибка при проверке компонента \"${instance.name}\":`, componentError);

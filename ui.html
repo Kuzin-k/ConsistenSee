@@ -862,6 +862,7 @@ input:checked + .slider:before {
     <!-- Кнопка --> 
       <div class="button-wrapper">
         <button id="checkAll" class="button-main">New search</button>
+        <!-- <button id="check-updates" class="button-main">Updates</button> -->
         <div class="switch-container">
           <label for="showHiddenToggle" class="switch" style="text-decoration: none; cursor: pointer;">
             <input type="checkbox" id="showHiddenToggle" class="checkbox" checked>
@@ -1007,6 +1008,26 @@ input:checked + .slider:before {
             tab.classList.add('active');
         });
     });
+
+    // Все переменные объявляем внутри этого блока
+    const loaderContainer = document.querySelector('.loader-container');
+    const processedCount = document.getElementById('processedCount');
+    const totalCount = document.getElementById('totalCount');
+    const progressBarFill = document.querySelector('.progress-bar-fill');
+    const checkUpdatesButton = document.getElementById('check-updates');
+
+    if (checkUpdatesButton) {
+      checkUpdatesButton.addEventListener('click', () => {
+        loaderContainer.style.display = 'flex';
+        processedCount.textContent = '0';
+        totalCount.textContent = '0';
+        progressBarFill.style.width = '0%';
+        document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+        parent.postMessage({ pluginMessage: { type: 'check-updates' } }, '*');
+      });
+    }
+
+    // ...все остальные инициализации и обработчики...
 });
       
       
@@ -1602,7 +1623,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
           // Add parent component name if exists
           if (instance.parentName) {
-            const parentName = document.createElement('div');
+            const parentName = document.createElement('span');
             parentName.classList.add('parent-component-name');
             parentName.textContent = 'in ' + instance.parentName;
             componentNameContainer.appendChild(parentName);
@@ -1920,12 +1941,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (resultsList) {
           resultsList.innerHTML = '';
           
-          if (msg.instances && msg.instances.length > 0) {
-            displayGroups(msg.instances, resultsList, msg.counts);
-          } else {
-            resultsList.innerHTML = '<p>Цвета не найдены</p>';
-          }
-        } else {
+          if (msg.instances && msg.instances.length > 0) {displayGroups(msg.instances, resultsList, msg.counts);
+          } else {resultsList.innerHTML = '<p>Цвета не найдены</p>';}} 
+          else {
           //console.error('Не найден элемент colorResultsList');
         }
       } else if (msg.type === 'progress-update') {
@@ -1941,6 +1959,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
         // Обновляем прогресс-бар
         const percentage = (msg.processed / msg.total) * 100;
         progressBarFill.style.width = `${percentage}%`;
+        // Показываем имя компонента
+        if (msg.currentComponentName) {
+          document.getElementById('progressPhase').textContent = `Проверка: ${msg.currentComponentName}`;
+        } else if (msg.type === 'progress-update' && msg.phase === 'check-updates') {
+          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+        } else {
+          document.getElementById('progressPhase').textContent = '';
+        }
       } else if (msg.type === 'all-results') {
         // Сохраняем данные для поиска
         window.lastDebugData = {
@@ -1970,9 +1996,8 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
             }*/
         
         // Очищаем предыдущие результаты
-        resultsList.innerHTML = '';
-        iconResultsList.innerHTML = '';
         colorResultsList.innerHTML = '';
+        colorStrokeResultsList.innerHTML = '';
         
         // Обрабатываем результаты компонентов
         if (msg.components) {
@@ -2229,6 +2254,9 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
         const fillHeader = colorResultsList.previousElementSibling;
         const strokeHeader = colorStrokeResultsList.previousElementSibling;
 
+        colorResultsList.innerHTML = '';
+        colorStrokeResultsList.innerHTML = '';
+
         // Process Fill Colors
         if (colorsData && colorsData.instances) {
             const groupedFillColors = {};
@@ -2253,7 +2281,8 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
                 delete cleanInstance.stroke;
                 delete cleanInstance.stroke_variable_name;
                 delete cleanInstance.stroke_collection_name;
-
+                delete cleanInstance.stroke_collection_id;
+                
                 let groupColor = cleanInstance.fill_variable_name ? cleanInstance.fill_variable_name : cleanInstance.fill;
                 const groupKey = `${groupColor}-${cleanInstance.type}` || '';
                 if (!groupedFillColors[groupKey]) { groupedFillColors[groupKey] = []; }
@@ -2304,6 +2333,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
                 delete cleanInstance.fill;
                 delete cleanInstance.fill_variable_name;
                 delete cleanInstance.fill_collection_name;
+                delete cleanInstance.fill_collection_id;
 
                 let colorName = cleanInstance.stroke_variable_name ? cleanInstance.stroke_variable_name : cleanInstance.stroke;
                 const groupKey = `${colorName}-${cleanInstance.type}` || '';
@@ -2317,8 +2347,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
                 sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
             });
 
-            if (strokeFilteredCount > 0) {
-                displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+            if (strokeFilteredCount > 0) {displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
             } else {
                 colorStrokeResultsList.innerHTML = '';
                 if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
@@ -2518,7 +2547,16 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
       const checkUpdatesButton = document.getElementById('check-updates');
       if (checkUpdatesButton) {
         checkUpdatesButton.addEventListener('click', () => {
-          figma.ui.postMessage({ type: 'check-updates' });
+          // Показываем лоадер
+          loaderContainer.style.display = 'flex';
+          // Сбрасываем прогресс
+          processedCount.textContent = '0';
+          totalCount.textContent = '0';
+          progressBarFill.style.width = '0%';
+          // Показываем фазу
+          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+          // Отправляем сообщение в backend
+          parent.postMessage({ pluginMessage: { type: 'check-updates' } }, '*');
         });
       }
       
