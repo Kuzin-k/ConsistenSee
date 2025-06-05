@@ -295,12 +295,13 @@ h3 {
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   width:100%;
-  padding-top: 4px;
+  padding: 4px 0px;
   display: flex;
   flex-wrap: nowrap;
   flex-direction: row;
   vertical-align: middle;
   line-height: 18px;
+  align-items: center;
 }
 /* Контейнер иконки группы */
 .group-color-icon{
@@ -316,6 +317,7 @@ h3 {
   font-weight: var(--font-weight-medium);
   font-size: var(--font-size-medium);
   width: 100%;
+  padding: 1px 0px 0px 2px;
   
 }
 
@@ -326,6 +328,7 @@ h3 {
   font-weight: var(--font-weight-regular);
   padding: 2px 4px;
   border-radius: 4px;
+  
 }
 
 .group-items {display: none;}
@@ -347,6 +350,7 @@ h3 {
   width: 100%;
   gap: 4px;
   align-items: center;
+  padding:0px;
 }
 
 .parent-component-name {
@@ -560,8 +564,8 @@ h3 {
 
 /* Добавляем стили для SVG иконки */
 .instance-icon, .info-icon, .text-icon, .frame-icon, .rectangle-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   margin-right: 0px;
   display: inline-block;
   vertical-align: middle;
@@ -1394,7 +1398,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
               groupHeader.appendChild(strokeSwatch);
           }
           else  {
-            // иконка для нстансов и прочих элементов
+            // иконка для инстансов и прочих элементов
             const groupicon = document.createElement('div');
             groupicon.classList.add('instance-icon');
             const icon = createIcon(firstInstance.type);
