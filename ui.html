@@ -118,21 +118,19 @@ body {
 }
 
 .button-wrapper {
-  width: 100%;
-  padding: 8px 0px;
-  text-align: center;
+  
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  align-content: center;
+  border-bottom: var(--figma-color-border) 1px solid;
 }
 
 h1 {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: var(--spacing-large);
-}
-
-h2 {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: var(--spacing-medium);
 }
 
 h3 {
@@ -150,8 +148,7 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 8px;
-  padding: 0px 16px;
+  padding: 8px 16px;
 }
 
 .tab {
@@ -202,12 +199,6 @@ h3 {
 .tab_success.active {
   background-color:var(--figma-color-bg-positive);}
 
-.footer button {
-  gap: 2px;
-  border: 0px;
-  font-size: var(--font-size-small);
-  color: transparent;
-}
 
 .footer .tabs {
   gap: 2px;
@@ -277,11 +268,6 @@ h3 {
 
 #results li:last-child {padding-bottom: 10px;}
 
-.description {
-  font-size: var(--font-size-small);
-  color: var(--text-light-color);
-  margin-left: auto;
-}
 .description-inline {
   cursor: help;
   background-color: var(--light-background-color);
@@ -475,11 +461,10 @@ h3 {
   font-size: 14px;
 }
 
-#searchResults, #debugContent {
+#debugContent { /* Удален #searchResults, так как элемент отсутствует в HTML */
   font-family: monospace;
   font-size: var(--font-size-medium);
   padding: 10px 00px;
-
 }
 
 .highlight {
@@ -556,6 +541,7 @@ h3 {
   display: flex;
   text-decoration: none;
   cursor: pointer;
+  padding: 4px 0px;
 }
 
 .toggle-groups:hover {text-decoration: underline;}
@@ -662,7 +648,7 @@ h3 {
 }
 
 .button-wrapper .button-main  {
-  padding: 8px 12px;
+  padding: 8px 24px;
   height:fit-content;
   border-radius: 5px;
   font-weight: var(--font-weight-regular);
@@ -731,6 +717,75 @@ h3 {
 }
 
 .resize-handle:hover svg {opacity: 1;}
+
+.switch-container{
+  display: flex; 
+  gap: 4px; 
+  align-items: center; 
+  font-size: var(--font-size-medium); 
+  color: var(--figma-color-text-secondary);
+  padding-left: 16px;}
+
+.switch {
+  position: relative;
+  display: flex;
+  width: 34px;
+  height: 20px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(14px);
+  -ms-transform: translateX(14px);
+  transform: translateX(14px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 20px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
 </style>
 </head>
 <body>
@@ -803,6 +858,12 @@ h3 {
     <!-- Кнопка --> 
       <div class="button-wrapper">
         <button id="checkAll" class="button-main">New search</button>
+        <div class="switch-container">
+          <label for="showHiddenToggle" class="switch" style="text-decoration: none; cursor: pointer;">
+            <input type="checkbox" id="showHiddenToggle" class="checkbox" checked>
+            <span class="slider round"></span>
+          </label>hidden
+        </div>
       </div>
       <!-- Tabs --> 
       <div class="tabs">
@@ -812,14 +873,15 @@ h3 {
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
         <div class="tab_disabled" data-tab="outdated">Outdated (soon)</div>
         <div class="tab" data-tab="icons">Icons (0)</div>
+        
       </div>
     </div>
     <!-- Контент --> 
     <div class="tabs-content"> 
       <!-- Все инстансы --> 
       <div id="instances" class="tab-content active">
-      <div id="results">
-        <a href="#"  class="toggle-groups" data-action="expand">expand all</a>
+        <div id="results">
+          <a href="#" class="toggle-groups" data-action="expand">expand all</a>
         <ul id="resultsList"></ul>
       </div>
     </div>
@@ -996,10 +1058,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       });
 
     
-    
-
-
-    
    
     const tabs = document.querySelectorAll('.tab');
     
@@ -1164,10 +1222,16 @@ document.getElementById('setComponentData').addEventListener('click', function()
     // СПИСОК ЭЛЕМЕНТОВ
     const displayGroups = (groupedData, targetList) => {
       console.log('Displaying groups for:', targetList.id, groupedData);
+      const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
       targetList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
       
       // Добавляем заголовок перед списком элементов
       let headerText = '';
+      // Сначала проверим, существует ли targetList и его id
+      if (!targetList || !targetList.id) {
+        console.error('Target list or its ID is undefined.');
+        return;
+      }
       if (targetList.id === 'colorResultsList') headerText = 'Fill';
       if (targetList.id === 'colorStrokeResultsList') headerText = 'Stroke';
       if (headerText) {
@@ -1188,11 +1252,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
       for (const key in groupedData) {
         const group = groupedData[key];
+        // Теперь group уже должен быть отфильтрован по hidden перед вызовом displayGroups
+
+        if (group.length === 0) continue; // Пропускаем группу, если она пуста
+
         const firstInstance = group[0];
         // название - имя компонента из библиотеки
         const name = firstInstance.mainComponentName ? firstInstance.mainComponentName  : firstInstance.name;
         
-
         // Если в группе только один элемент и это не вкладка Colors, показываем его без группировки
         if (group.length === 1 && (targetList.id !== 'colorResultsList' && targetList.id !== 'colorStrokeResultsList')) {
           const instance = group[0];
@@ -1767,6 +1834,20 @@ document.getElementById('setComponentData').addEventListener('click', function()
       }
     };
 
+    // Добавляем обработчик для нового toggle "Show hidden"
+    const showHiddenToggle = document.getElementById('showHiddenToggle');
+    if (showHiddenToggle) {
+        showHiddenToggle.addEventListener('change', () => {
+            // Перерисовываем список инстансов при изменении состояния toggle
+            if (window.lastDebugData) {
+                if (window.lastDebugData.components) {
+                    processAndDisplayComponents(window.lastDebugData.components);
+                }
+                // Re-process and display colors
+                processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
+            }
+        });
+    }
     const searchInput = document.getElementById('searchInput');
     const clearSearch = document.getElementById('clearSearch');
     const searchResults = document.getElementById('searchResults');
@@ -1872,10 +1953,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         
         // Обновляем заголовки вкладок с учетом обоих результатов
         const componentsTab = document.querySelector('[data-tab="instances"]');
-        const iconsTab = document.querySelector('[data-tab="icons"]');
-        const colorsTab = document.querySelector('[data-tab="colors"]');
-        
-        if (msg.components) {
+        /*if (msg.components) {
           console.log('Components data:', msg.components);
           const nonIconCount = (msg.components.counts.components || 0) - (msg.components.counts.icons || 0);
 componentsTab.textContent = `All instances (${nonIconCount})`;
@@ -1885,7 +1963,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
         if (msg.colors) {
           //console.log('Colors data:', msg.colors);
           colorsTab.textContent = `Colors (${msg.colors.counts.colors || 0})`;
-            }
+            }*/
         
         // Очищаем предыдущие результаты
         resultsList.innerHTML = '';
@@ -1894,54 +1972,7 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
         
         // Обрабатываем результаты компонентов
         if (msg.components) {
-          allInstances = msg.components.instances;
-          const groupedInstances = {};
-          const groupedIcons = {};
-
-          msg.components.instances.forEach((instance) => {
-            const groupKey = `${instance.mainComponentKey} || ''}`;            if (instance.isIcon === true) {
-              if (!groupedIcons[groupKey]) {
-                groupedIcons[groupKey] = [];
-              }
-              groupedIcons[groupKey].push(instance);
-            } else {
-              if (!groupedInstances[groupKey]) {
-                groupedInstances[groupKey] = [];
-              }
-              groupedInstances[groupKey].push(instance);
-            }
-          });
-
-          // Сортируем группы по mainComponentName перед отображением
-          const sortedGroups = Object.entries(groupedInstances)
-            .sort(([, a], [, b]) => {
-              const aName = a[0].mainComponentName;
-              const bName = b[0].mainComponentName;
-              
-              // Функция для удаления эмодзи из строки (обновленное регулярное выражение)
-              const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
-              
-              // Функция для проверки специальных символов в начале
-              const startsWithSpecial = (str) => /^[._]/.test(str);
-              
-              const cleanA = removeEmoji(aName);
-              const cleanB = removeEmoji(bName);
-              
-              // Сначала проверяем специальные символы
-              const aSpecial = startsWithSpecial(cleanA);
-              const bSpecial = startsWithSpecial(cleanB);
-              
-              if (aSpecial && !bSpecial) return 1;
-              if (!aSpecial && bSpecial) return -1;
-              
-              // Если оба имеют или не имеют спец. символы, сортируем по тексту
-              return cleanA.localeCompare(cleanB);
-            });
-
-          // Отображаем отсортированные группы
-          displayGroups(Object.fromEntries(sortedGroups), resultsList);
-          // Отображаем иконки
-          displayGroups(groupedIcons, iconResultsList);
+          processAndDisplayComponents(msg.components);
         }
         
 
@@ -2129,6 +2160,189 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
         debugContent.appendChild(debugError);
       }
     };
+
+    function processAndDisplayComponents(componentsData) {
+        allInstances = componentsData.instances;
+        const groupedInstances = {};
+        const groupedIcons = {};
+
+        const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+
+        let nonIconCount = 0;
+        let iconCount = 0;
+
+        componentsData.instances.forEach((instance) => {
+            if (!showHidden && instance.hidden) {
+                return; // Пропускаем скрытые элементы, если toggle выключен
+            }
+
+            const groupKey = `${instance.mainComponentKey || ''}`; // Добавил || '' для случая undefined mainComponentKey
+            if (instance.isIcon === true) {
+                if (!groupedIcons[groupKey]) {
+                    groupedIcons[groupKey] = [];
+                }
+                groupedIcons[groupKey].push(instance);
+                iconCount++;
+            } else {
+                if (!groupedInstances[groupKey]) {
+                    groupedInstances[groupKey] = [];
+                }
+                groupedInstances[groupKey].push(instance);
+                nonIconCount++;
+            }
+        });
+
+        // Обновляем заголовки вкладок
+        const componentsTab = document.querySelector('[data-tab="instances"]');
+        const iconsTab = document.querySelector('[data-tab="icons"]');
+        if (componentsTab) componentsTab.textContent = `All instances (${nonIconCount})`;
+        if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
+
+        // Сортируем группы по mainComponentName перед отображением
+        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, a], [, b]) => {
+            const aName = a[0].mainComponentName || ''; // Добавил || ''
+            const bName = b[0].mainComponentName || ''; // Добавил || ''
+            const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
+            const startsWithSpecial = (str) => /^[._]/.test(str);
+            const cleanA = removeEmoji(aName), cleanB = removeEmoji(bName);
+            const aSpecial = startsWithSpecial(cleanA), bSpecial = startsWithSpecial(cleanB);
+            if (aSpecial && !bSpecial) return 1; if (!aSpecial && bSpecial) return -1;
+            return cleanA.localeCompare(cleanB);
+        }));
+
+        displayGroups(sortGroups(groupedInstances), resultsList);
+        displayGroups(sortGroups(groupedIcons), iconResultsList);
+    }
+
+    function processAndDisplayColors(colorsData, colorsStrokeData) {
+        const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+        let fillFilteredCount = 0;
+        let strokeFilteredCount = 0;
+
+        const colorResultsList = document.getElementById('colorResultsList');
+        const colorStrokeResultsList = document.getElementById('colorStrokeResultsList');
+
+        const fillHeader = colorResultsList.previousElementSibling;
+        const strokeHeader = colorStrokeResultsList.previousElementSibling;
+
+        // Process Fill Colors
+        if (colorsData && colorsData.instances) {
+            const groupedFillColors = {};
+            let rawFillInstances = colorsData.instances;
+
+            if (!showHidden) {
+                rawFillInstances = rawFillInstances.filter(instance => !instance.hidden);
+            }
+
+            rawFillInstances.forEach((instance) => {
+                const hasFill = instance.fill && instance.fill !== '#MIXED';
+                if (!hasFill) return;
+
+                const wrongFill = instance.fill_collection_name !== "Component tokens" &&
+                                  instance.fill_collection_name !== "Service tokens" &&
+                                  instance.fill_collection_name !== "product colors";
+                if (!wrongFill) return;
+
+                fillFilteredCount++;
+
+                const cleanInstance = { ...instance }; // Create a shallow copy
+                delete cleanInstance.stroke;
+                delete cleanInstance.stroke_variable_name;
+                delete cleanInstance.stroke_collection_name;
+
+                let groupColor = cleanInstance.fill_variable_name ? cleanInstance.fill_variable_name : cleanInstance.fill;
+                const groupKey = `${groupColor}-${cleanInstance.type}` || '';
+                if (!groupedFillColors[groupKey]) { groupedFillColors[groupKey] = []; }
+                groupedFillColors[groupKey].push(cleanInstance);
+            });
+
+            const sortedFillGroupKeys = Object.keys(groupedFillColors).sort((a, b) => a.localeCompare(b));
+            const sortedGroupedFillColors = {};
+            sortedFillGroupKeys.forEach(key => {
+                sortedGroupedFillColors[key] = groupedFillColors[key];
+            });
+            if (fillFilteredCount > 0) {
+                displayGroups(sortedGroupedFillColors, colorResultsList);
+            } else {
+                colorResultsList.innerHTML = '';
+                if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
+                    fillHeader.remove();
+                }
+            }
+        } else {
+            colorResultsList.innerHTML = '';
+             if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
+                fillHeader.remove();
+            }
+        }
+
+        // Process Stroke Colors
+        if (colorsStrokeData && colorsStrokeData.instances) {
+            const groupedStrokeColors = {};
+            let rawStrokeInstances = colorsStrokeData.instances;
+
+            if (!showHidden) {
+                rawStrokeInstances = rawStrokeInstances.filter(instance => !instance.hidden);
+            }
+
+            rawStrokeInstances.forEach((instance) => {
+                const hasStroke = instance.stroke && instance.stroke !== '#MIXED';
+                if (!hasStroke) return;
+
+                const wrongStroke = instance.stroke_collection_name !== "Component tokens" &&
+                                    instance.stroke_collection_name !== "Service tokens" &&
+                                    instance.stroke_collection_name !== "product colors";
+                if (!wrongStroke) return;
+
+                strokeFilteredCount++;
+                
+                const cleanInstance = { ...instance }; // Create a shallow copy
+                delete cleanInstance.fill;
+                delete cleanInstance.fill_variable_name;
+                delete cleanInstance.fill_collection_name;
+
+                let colorName = cleanInstance.stroke_variable_name ? cleanInstance.stroke_variable_name : cleanInstance.stroke;
+                const groupKey = `${colorName}-${cleanInstance.type}` || '';
+                if (!groupedStrokeColors[groupKey]) { groupedStrokeColors[groupKey] = []; }
+                groupedStrokeColors[groupKey].push(cleanInstance);
+            });
+
+            const sortedStrokeGroupKeys = Object.keys(groupedStrokeColors).sort((a, b) => a.localeCompare(b));
+            const sortedGroupedStrokeColors = {};
+            sortedStrokeGroupKeys.forEach(key => {
+                sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
+            });
+
+            if (strokeFilteredCount > 0) {
+                displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+            } else {
+                colorStrokeResultsList.innerHTML = '';
+                if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
+                    strokeHeader.remove();
+                }
+            }
+        } else {
+            colorStrokeResultsList.innerHTML = '';
+            if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
+                strokeHeader.remove();
+            }
+        }
+
+        // Update Colors Tab Header
+        const colorsTab = document.querySelector('[data-tab="colors"]');
+        const totalColorIssues = fillFilteredCount + strokeFilteredCount;
+        if (colorsTab) { // Ensure colorsTab exists
+            if (totalColorIssues === 0) {
+                colorsTab.classList.remove('tab');
+                colorsTab.classList.add('tab_success');
+                colorsTab.textContent = `Colors (OK)`;
+            } else {
+                colorsTab.classList.remove('tab_success');
+                colorsTab.classList.add('tab');
+                colorsTab.textContent = `Colors (${totalColorIssues})`;
+            }
+        }
+    }
 
     function createDebugTree(data, searchTerm = '') {
       try {
