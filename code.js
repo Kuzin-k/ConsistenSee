@@ -65,22 +65,32 @@ let lastColorsData = null;
  * @returns {string} Уникальный ключ для кэширования
  */
 function getComponentCacheKey(component) {
+  // Если компонент отсутствует, возвращаем стандартный ключ для неизвестного компонента.
+  if (!component) {
+    return 'unknown_component_no_id';
+  }
+
   try {
-    // Базовые проверки
-    if (!component || !component.key) {
-      return `no_key_${component && component.id ? component.id : 'unknown'}`;
+    // Если у компонента нет ключа (например, локальный компонент),
+    // используем его ID для генерации уникального ключа.
+    if (!component.key) {
+      return `local_component_${component.id || 'no_id'}`;
     }
 
-    // Проверка на принадлежность к COMPONENT_SET
+    // Если компонент является частью набора компонентов (COMPONENT_SET) и у набора есть ключ,
+    // формируем ключ на основе ключа набора и имени компонента.
     const parent = component.parent;
     if (parent && parent.type === 'COMPONENT_SET' && parent.key) {
-      return `${parent.key}_${component.name || 'unnamed'}`;
+      const componentNameInSet = component.name || 'unnamed_variant';
+      return `set_${parent.key}_variant_${componentNameInSet}`;
     }
 
+    // Для обычных компонентов с ключом используем сам ключ.
     return component.key;
   } catch (error) {
     console.error('Error in getComponentCacheKey:', error);
-    return `error_${component && component.id ? component.id : 'unknown'}`;
+    // В случае ошибки возвращаем ключ, указывающий на ошибку и ID компонента, если он доступен.
+    return `error_processing_component_${component.id || 'no_id'}`;
   }
 }
 
@@ -89,125 +99,109 @@ function getComponentCacheKey(component) {
  * Сравнивает текущий компонент с импортированной версией из библиотеки
  * Использует кэширование для оптимизации повторных проверок (закомментировано в текущей версии)
  * @param {ComponentNode} mainComponent - Компонент для проверки
- * @returns {Promise<{isOutdated: boolean, importedId: string|null, version: string|null, description: string|null, mainComponentId: string, importedMainComponentId: string|null}>} Объект с информацией об актуальности
+ * @returns {Promise<{isOutdated: boolean, importedId: string|null, version: string|null, description: string|null, mainComponentId: string, importedMainComponentId: string|null, libraryComponentVersion?: string, libraryComponentId?: string, isLost?: boolean}>} Объект с информацией об актуальности
  */
 async function checkComponentUpdate(mainComponent) {
-  // Проверяем входные данные: если компонент пустой, возвращаем базовый результат
+  // 1. Проверка входных данных и инициализация
   if (!mainComponent) {
     console.error('checkComponentUpdate: получен пустой компонент');
     return {
       isOutdated: false,
-      importedId: null,
-      mainComponentId: null,
-      importedMainComponentId: null,
-      version: null,
-      description: null
+      importedId: null, // ID импортированного компонента (для одиночных)
+      version: null, // Версия из описания импортированного одиночного компонента
+      description: null, // Описание импортированного одиночного компонента
+      mainComponentId: null, // ID текущего проверяемого компонента
+      importedMainComponentId: null // ID импортированного главного компонента (для одиночных)
     };
   }
 
   try {
-    // Генерируем ключ для кэширования
     const cacheKey = getComponentCacheKey(mainComponent);
 
-    // Инициализируем объект результата
-    let result = {
+    // Инициализируем объект результата с полями по умолчанию
+    const result = {
       isOutdated: false,
-      importedId: null,
-      version: null,
-      description: null,
       mainComponentId: mainComponent.id,
-      importedMainComponentId: null
+      importedId: null, // Для одиночного импортированного компонента
+      importedMainComponentId: null, // Для одиночного импортированного компонента
+      libraryComponentId: null, // Для компонента из импортированного набора
+      version: null, // Версия из описания (может быть от набора или одиночного)
+      description: null, // Описание (может быть от набора или одиночного)
+      libraryComponentVersion: null, // Версия из описания набора (если применимо)
+      isLost: false // Флаг, если компонент не найден в импортированном наборе
     };
 
-    // Проверяем наличие ключа у компонента. Если ключа нет, компонент локальный и не требует обновления из библиотеки.
+    // 2. Проверка на локальный компонент (без ключа)
     if (!mainComponent.key) {
       console.error('У компонента отсутствует ключ:', mainComponent.name);
-      componentUpdateCache.set(cacheKey, result); // Сохраняем в кэш (закомментировано)
-      return result;
+      // componentUpdateCache.set(cacheKey, result); // Кэширование пока закомментировано
+      return result; // Локальные компоненты не могут быть устаревшими из библиотеки
     }
-    
-    // Проверяем, является ли компонент частью набора компонентов (COMPONENT_SET)
+
+    // 3. Определение, является ли компонент частью набора (COMPONENT_SET)
     const isPartOfSet = mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET';
-    let importedComponent = null; // Переменная для хранения импортированного компонента
+    let libraryVersionSourceNode = null; // Узел, из которого берем версию и описание (набор или одиночный компонент)
 
-    
-    // Если компонент является частью набора и у родительского набора есть ключ
+    // 4. Логика импорта и проверки
     if (isPartOfSet && mainComponent.parent && mainComponent.parent.key) {
+      // 4.1. Компонент является частью набора
       try {
-        // Импортируем весь набор компонентов по ключу родителя
         const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
-
-        // Если набор успешно импортирован
         if (importedSet) {
-          //console.log('Набор компонентов ', importedSet.name, "импортирован");
-          let foundMatch = false;
-          // Ищем в импортированном наборе дочерний компонент с таким же именем и типом
-          importedComponent = importedSet.findChild(comp => {
-            if (comp.key === mainComponent.key) {foundMatch = true; return true;}
-            else return false;
-          });
+          libraryVersionSourceNode = importedSet; // Описание и версию берем из набора
+          const importedComponentInSet = importedSet.findChild(comp => comp.key === mainComponent.key);
 
-          // Получаем описание и версию из импортированного набора
-          const importedSetDescData = await getDescription(importedSet);
-          // Формируем результат проверки для компонента внутри набора
-          result = {
-            //isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
-            isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
-            mainComponentId: mainComponent.id,
-            libraryComponentId: importedComponent ? importedComponent.id : null, // ID компонента из библиотеки
-            libraryComponentVersion: importedSetDescData.nodeVersion, // Версия из описания набора
-            description: importedSetDescData.description // Описание из набора
-          };
-
-          // Если совпадение по имени и типу не найдено в импортированном наборе, считаем компонент устаревшим
-          if (!foundMatch) {
-            result.isOutdated = true;
-            result.isLost = true;
-            console.error('Совпадений по key в наборе не найдено');
-           }
-            //console.log('Результат поиска в наборе:', foundMatch ? 'Компонент с таким ID в наборе не найден' : result);
+          if (importedComponentInSet) {
+            result.isOutdated = importedComponentInSet.id !== mainComponent.id;
+            result.libraryComponentId = importedComponentInSet.id;
           } else {
-          console.error('Не удалось импортировать набор компонентов');
+            // Компонент с таким ключом не найден в импортированном наборе
+            result.isOutdated = true;
+            result.isLost = true; // Помечаем, что компонент "потерян" в библиотеке
+            console.error(`Компонент "${mainComponent.name}" (key: ${mainComponent.key}) не найден в импортированном наборе "${importedSet.name}"`);
+          }
+        } else {
+          console.error(`Не удалось импортировать набор компонентов для "${mainComponent.name}" (parent key: ${mainComponent.parent.key})`);
+          result.isOutdated = true; // Считаем устаревшим, если не удалось импортировать набор
         }
       } catch (setError) {
-        // Обработка ошибок при импорте набора
-        console.error('Ошибка при импорте набора компонентов:', setError);
+        console.error(`Ошибка при импорте набора компонентов для "${mainComponent.name}":`, setError);
+        result.isOutdated = true; // Считаем устаревшим при ошибке импорта
       }
-    } else { // Если компонент не в наборе или у набора нет ключа (одиночный компонент)
-      
-      
+    } else {
+      // 4.2. Одиночный компонент (не в наборе или набор без ключа)
       try {
-        // Импортируем отдельный компонент по его ключу
-        importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
-        /*
-        console.log('Результат импорта компонента:', importedComponent ? {
-          success: true,
-          importedMainComponentId: importedComponent.id,
-          mainComponentId: mainComponent.id
-        } : 'не удалось');
-        */
+        const importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
+        if (importedComponent) {
+          libraryVersionSourceNode = importedComponent; // Описание и версию берем из самого компонента
+          result.isOutdated = importedComponent.id !== mainComponent.id;
+          result.importedId = importedComponent.id; // ID импортированного компонента
+          result.importedMainComponentId = importedComponent.id; // ID импортированного главного компонента
+        } else {
+          console.error(`Не удалось импортировать одиночный компонент "${mainComponent.name}" (key: ${mainComponent.key})`);
+          result.isOutdated = true; // Считаем устаревшим, если не удалось импортировать
+        }
       } catch (componentError) {
-        // Обработка ошибок при импорте отдельного компонента
-        console.error('Ошибка при импорте компонента:', componentError);
+        console.error(`Ошибка при импорте одиночного компонента "${mainComponent.name}":`, componentError);
+        result.isOutdated = true; // Считаем устаревшим при ошибке импорта
       }
-
-    // Получаем описание и версию из импортированного компонента (если он есть)
-    const importedDescData = importedComponent ? await getDescription(importedComponent) : { description: null, nodeVersion: null };
-    // Формируем результат проверки для одиночного компонента
-    result = {
-        isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
-        importedId: importedComponent ? importedComponent.id : null, // ID импортированного компонента
-        version: importedDescData.nodeVersion, // Версия из описания импортированного компонента
-        mainComponentId: mainComponent.id, // ID текущего компонента
-        importedMainComponentId: importedComponent ? importedComponent.id : null, // ID импортированного компонента
-        description: importedDescData.description // Описание импортированного компонента
-      };
-
     }
 
+    // 5. Получение описания и версии из libraryVersionSourceNode (импортированный набор или компонент)
+    if (libraryVersionSourceNode) {
+      const descData = await getDescription(libraryVersionSourceNode);
+      result.description = descData.description;
+      if (isPartOfSet && mainComponent.parent && mainComponent.parent.key) {
+        // Если это был набор, версия из набора идет в libraryComponentVersion
+        result.libraryComponentVersion = descData.nodeVersion;
+        result.version = descData.nodeVersion; // Также дублируем в общее поле version для консистентности
+      } else {
+        // Если это был одиночный компонент, версия идет в основное поле version
+        result.version = descData.nodeVersion;
+      }
+    }
 
-    // Сохраняем результат в кэш (закомментировано)
-    componentUpdateCache.set(cacheKey, result);
+    // componentUpdateCache.set(cacheKey, result); // Кэширование пока закомментировано
 
     /*
     console.log('Результат проверки компонента:', {
@@ -218,12 +212,10 @@ async function checkComponentUpdate(mainComponent) {
       libraryComponentVersion: result.libraryComponentVersion,
     });
     */
-    // Возвращаем результат проверки
     return result;
 
   } catch (error) {
-    // Общая обработка ошибок при проверке компонента
-    console.error('Ошибка при проверке компонента:', {
+    console.error(`Критическая ошибка при проверке компонента "${mainComponent ? mainComponent.name : 'N/A'}":`, {
       componentName: mainComponent ? mainComponent.name : 'неизвестно',
       error: error.message,
       stack: error.stack
@@ -231,24 +223,23 @@ async function checkComponentUpdate(mainComponent) {
 
     // Возвращаем безопасный результат в случае ошибки
     const safeResult = {
-      isOutdated: false,
-      importedId: null,
-      libraryName: null,
+      isOutdated: false, // По умолчанию не устарел при ошибке
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
+      importedId: null,
+      libraryComponentId: null,
       version: null,
-      description: null
+      description: null,
+      libraryComponentVersion: null,
+      isLost: false
     };
 
-    try {
-      // Пытаемся сохранить безопасный результат в кэш (закомментировано)
-      const cacheKey = getComponentCacheKey(mainComponent);
-      componentUpdateCache.set(cacheKey, safeResult);
-    } catch (cacheError) {
-      console.error('Не удалось сохранить результат в кэш:', cacheError);
-    }
-
-    // Возвращаем безопасный результат
+    // try {
+    //   const cacheKey = getComponentCacheKey(mainComponent);
+    //   componentUpdateCache.set(cacheKey, safeResult); // Кэширование пока закомментировано
+    // } catch (cacheError) {
+    //   console.error('Не удалось сохранить безопасный результат в кэш при ошибке:', cacheError);
+    // }
     return safeResult;
   }
 }
