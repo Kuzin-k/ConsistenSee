@@ -474,6 +474,11 @@ figma.ui.onmessage = async (msg) => {
       }
     };
 
+   
+    //let executionTime = Date.now() - startTime;
+    //console.log(`Первый этап выполнен: ${executionTime}ms`);
+    //console.log(`Результат: ${nodesToProcess}`);
+
     try {
       // Отправляем начальное сообщение о прогрессе в UI
       await updateProgress('processing', 0, nodesToProcess.length, 'Обработка элементов');
@@ -489,16 +494,13 @@ figma.ui.onmessage = async (msg) => {
         try {
           // Проверяем, имеет ли узел заливки или обводки
           let hasColor = false;
-          try {
-            hasColor = hasFillOrStroke(node);
-          } catch (err) {
+          try {hasColor = hasFillOrStroke(node);} catch (err) {
             console.error(`[${index + 1}] ERROR in hasFillOrStroke:`, err);
           }
 
           // Если узел имеет цвет, обрабатываем его цвета
           if (hasColor) {
-            try {
-              await processNodeColors(node, colorsResult, colorsResultStroke);
+            try {await processNodeColors(node, colorsResult, colorsResultStroke);
             } catch (err) {
               console.error(`[${index + 1}] ERROR in processNodeColors:`, err);
             }
@@ -521,8 +523,8 @@ figma.ui.onmessage = async (msg) => {
       for (let i = 0; i < nodesToProcess.length; i++) {
         await processNodeSafely(nodesToProcess[i], i);
         // Обновляем прогресс после каждого узла
-        // Даем браузеру "подышать" после каждого узла, чтобы UI не зависал
-        if (i % 5 === 0) {
+        // Даем браузеру "подышать" после каждого 10 узла, чтобы UI не зависал
+        if (i % 10 === 0) {
           await new Promise(resolve => setTimeout(resolve, 0));
           await updateProgress('processing', i + 1, nodesToProcess.length, 'Обработка элементов');
         }
@@ -589,8 +591,7 @@ figma.ui.onmessage = async (msg) => {
       }
 
        // Вычисляем время выполнения
-      const endTime = Date.now();
-      const executionTime = endTime - startTime;
+      let executionTime = Date.now() - startTime;
 
       // Добавляем время выполнения в componentsResult
       componentsResult.executionTime = executionTime;

@@ -2116,6 +2116,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
             }
         });
 
+        // Sort items within each group alphabetically by their instance name
+        for (const key in groupedInstances) {
+            groupedInstances[key].sort((a, b) => {
+                const aName = a.name || '';
+                const bName = b.name || '';
+                return aName.localeCompare(bName);
+            });
+        }
+
+        for (const key in groupedIcons) {
+            groupedIcons[key].sort((a, b) => {
+                const aName = a.name || '';
+                const bName = b.name || '';
+                return aName.localeCompare(bName);
+            });
+        }
+
+
         // Обновляем заголовки вкладок
         const componentsTab = document.querySelector('[data-tab="instances"]');
         const iconsTab = document.querySelector('[data-tab="icons"]');
@@ -2123,15 +2141,36 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
 
         // Сортируем группы по mainComponentName перед отображением
-        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, a], [, b]) => {
-            const aName = a[0].mainComponentName || ''; // Добавил || ''
-            const bName = b[0].mainComponentName || ''; // Добавил || ''
+        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
+            const firstItemA = groupAItems[0];
+            const firstItemB = groupBItems[0];
+
+            const aSetName = firstItemA.mainComponentSetName || '';
+            const bSetName = firstItemB.mainComponentSetName || '';
+
+            const aCompName = firstItemA.mainComponentName || '';
+            const bCompName = firstItemB.mainComponentName || '';
+
+            // Helper functions for cleaning and checking names
             const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
             const startsWithSpecial = (str) => /^[._]/.test(str);
-            const cleanA = removeEmoji(aName), cleanB = removeEmoji(bName);
-            const aSpecial = startsWithSpecial(cleanA), bSpecial = startsWithSpecial(cleanB);
-            if (aSpecial && !bSpecial) return 1; if (!aSpecial && bSpecial) return -1;
-            return cleanA.localeCompare(cleanB);
+
+            // Construct sortable names
+            // If mainComponentSetName exists, use "SetName/ComponentName", otherwise just "ComponentName"
+            const sortableNameA = aSetName ? `${aSetName}/${aCompName}` : aCompName;
+            const sortableNameB = bSetName ? `${bSetName}/${bCompName}` : bCompName;
+
+            // Clean the sortable names (remove emoji, etc.)
+            const cleanSortableA = removeEmoji(sortableNameA);
+            const cleanSortableB = removeEmoji(sortableNameB);
+
+            // Check for special characters at the beginning
+            const aSpecial = startsWithSpecial(cleanSortableA);
+            const bSpecial = startsWithSpecial(cleanSortableB);
+
+            if (aSpecial && !bSpecial) return 1; // Items with special characters go later
+            if (!aSpecial && bSpecial) return -1; // Items without special characters go earlier
+            return cleanSortableA.localeCompare(cleanSortableB); // Standard alphabetical sort
         }));
 
         displayGroups(sortGroups(groupedInstances), resultsList);
