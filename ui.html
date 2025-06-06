@@ -862,7 +862,7 @@ input:checked + .slider:before {
     <!-- Кнопка --> 
       <div class="button-wrapper">
         <button id="checkAll" class="button-main">New search</button>
-        <!-- <button id="check-updates" class="button-main">Updates</button> -->
+        <button id="check-updates" class="button-main">Updates</button>
         <div class="switch-container">
           <label for="showHiddenToggle" class="switch" style="text-decoration: none; cursor: pointer;">
             <input type="checkbox" id="showHiddenToggle" class="checkbox" checked>
@@ -1018,12 +1018,40 @@ input:checked + .slider:before {
 
     if (checkUpdatesButton) {
       checkUpdatesButton.addEventListener('click', () => {
+        // Check if we have component data
+        if (!window.lastDebugData?.components?.instances?.length) {
+          // Show error message if no components data available
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          const errorText = document.createElement('p');
+          errorText.textContent = 'Пожалуйста, сначала выполните поиск компонентов';
+          errorDiv.appendChild(errorText);
+          document.body.appendChild(errorDiv);
+          
+          setTimeout(() => {
+            errorDiv.remove();
+          }, 3000);
+          return;
+        }
+
+        // Show loader
         loaderContainer.style.display = 'flex';
+        
+        // Reset progress
         processedCount.textContent = '0';
         totalCount.textContent = '0';
         progressBarFill.style.width = '0%';
+        
+        // Show phase
         document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
-        parent.postMessage({ pluginMessage: { type: 'check-updates' } }, '*');
+        
+        // Send message to backend
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'check-updates',
+            components: window.lastDebugData.components // Send cached component data
+          } 
+        }, '*');
       });
     }
 
@@ -1246,7 +1274,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
     // СПИСОК ЭЛЕМЕНТОВ
     const displayGroups = (groupedData, targetList) => {
-      console.log('Displaying groups for:', targetList.id, groupedData);
+      //console.log('Displaying groups for:', targetList.id, groupedData);
       const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
       targetList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
       
@@ -1283,7 +1311,12 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
         const firstInstance = group[0];
         // название - имя компонента из библиотеки
-        const name = firstInstance.mainComponentName ? firstInstance.mainComponentName  : firstInstance.name;
+
+        
+
+        const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName 
+          : firstInstance.mainComponentName ? firstInstance.mainComponentName 
+          : firstInstance.name;
         
         // Если в группе только один элемент и это не вкладка Colors, показываем его без группировки
         if (group.length === 1 && (targetList.id !== 'colorResultsList' && targetList.id !== 'colorStrokeResultsList')) {
@@ -1321,7 +1354,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
           const nameLink = document.createElement('a');
           nameLink.href = '#';
           nameLink.classList.add('component-link');
-          nameLink.textContent = instance.mainComponentName || 'Без названия';
+          nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName;
           
           nameLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1968,7 +2001,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
           document.getElementById('progressPhase').textContent = '';
         }
       } else if (msg.type === 'all-results') {
-        // Сохраняем данные для поиска
+        // Save data for search
         window.lastDebugData = {
           components: msg.components,
           colors: msg.colors,
@@ -1976,170 +2009,29 @@ document.getElementById('setComponentData').addEventListener('click', function()
           componentTree: msg.componentTree
         };
 
+        // Hide loader
+        const loaderContainer = document.querySelector('.loader-container');
+        if (loaderContainer) {
+          loaderContainer.style.display = 'none';
+        }
+
         console.log('Received all-results:', msg);
 
-        // Скрываем индикатор загрузки
-        loaderContainer.style.display = 'none';
-        
-        // Обновляем заголовки вкладок с учетом обоих результатов
-        const componentsTab = document.querySelector('[data-tab="instances"]');
-        /*if (msg.components) {
-          console.log('Components data:', msg.components);
-          const nonIconCount = (msg.components.counts.components || 0) - (msg.components.counts.icons || 0);
-componentsTab.textContent = `All instances (${nonIconCount})`;
-          iconsTab.textContent = `Icons (${msg.components.counts.icons})`;
-        }
-        
-        if (msg.colors) {
-          //console.log('Colors data:', msg.colors);
-          colorsTab.textContent = `Colors (${msg.colors.counts.colors || 0})`;
-            }*/
-        
-        // Очищаем предыдущие результаты
-        colorResultsList.innerHTML = '';
-        colorStrokeResultsList.innerHTML = '';
-        
-        // Обрабатываем результаты компонентов
+        // Process components and colors...
         if (msg.components) {
           processAndDisplayComponents(msg.components);
         }
-        
 
-        let fillFilteredCount = 0;
-        let strokeFilteredCount = 0;
-
-        // Обрабатываем результаты цветов
+        // Process colors...
         if (msg.colors) {
-          const groupedColors = {};
-
-
-          msg.colors.instances.forEach((instance, index) => {
-
-            // Проверяем наличие цветов
-            const hasFill = instance.fill && instance.fill !== '#MIXED';
-
-            if (!hasFill) {
-              //console.log('Пропускаем: нет цветов или смешанные цвета');
-              return;
-            }
-
-            // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
-            const wrongFill = hasFill && instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "product colors";
-
-
-            // Если оба цвета из Component tokens, пропускаем элемент
-            if (!wrongFill) {
-              //console.log('Пропускаем: все цвета из библиотеки Component tokens');
-              return;
-            }
-
-            // Если элемент прошел все фильтры, увеличиваем счетчик
-            fillFilteredCount++;
-
-            // Очищаем цвета, которые из Component tokens
-            if (!wrongFill) {
-              delete instance.fill;
-              delete instance.fill_variable_name;
-              delete instance.fill_collection_name;
-            }
-
-              delete instance.stroke;
-              delete instance.stroke_variable_name;
-              delete instance.stroke_collection_name;
-
-            let groupColor = instance.fill_variable_name ? instance.fill_variable_name : instance.fill;
-            // Группируем по имени и описанию
-            const groupKey = `${groupColor}-${instance.type}` || '';
-            if (!groupedColors[groupKey]) {groupedColors[groupKey] = [];}
-
-            groupedColors[groupKey].push(instance);
-            //console.log('Элемент добавлен в группу:', groupKey);
-          });
-
-          // Сортируем группы по алфавиту
-          const sortedGroupKeys = Object.keys(groupedColors).sort((a, b) => a.localeCompare(b));
-          const sortedGroupedColors = {};
-          sortedGroupKeys.forEach(key => {
-            sortedGroupedColors[key] = groupedColors[key];
-          });
-
-
-          // Обновляем заголовок вкладки с отфильтрованным количеством
-          const colorsTab = document.querySelector('[data-tab="colors"]');
-
-          if ((fillFilteredCount + strokeFilteredCount) == 0) {
-                colorsTab.classList.replace('tab','tab_success');
-                colorsTab.textContent = `Colors (OK)`;
-              } else {
-                colorsTab.classList.replace('tab_success','tab');
-                colorsTab.textContent = `Colors (${fillFilteredCount + strokeFilteredCount})`;
-              }
-
-          // Отображаем цвета фона
-          if (fillFilteredCount > 0) displayGroups(sortedGroupedColors, colorResultsList);
-
+          processAndDisplayColors(msg.colors, msg.colorsStroke);
         }
-        // Группировка Stroke
-        if (msg.colorsStroke) {
-          const groupedColors = {};
-          const sortedGroupedColors = {};
 
-
-          msg.colorsStroke.instances.forEach((instance, index) => {
-            // Проверяем наличие цветов
-            const hasStroke = instance.stroke && instance.stroke !== '#MIXED';
-            if (!hasStroke) {return;}
-            // Проверяем, есть ли хотя бы один цвет не из библиотеки Component tokens
-            const wrongStroke = hasStroke && instance.stroke_collection_name !== "Component tokens" && instance.stroke_collection_name !== "Service tokens" && instance.stroke_collection_name !== "product colors";
-            if (!wrongStroke) {return;}
-            strokeFilteredCount++; // Если элемент прошел все фильтры, увеличиваем счетчик
-
-            // Очищаем rjhhtrnyst цвета, чтобы они не попали в выборку
-            if (!wrongStroke) {
-              delete instance.stroke;
-              delete instance.stroke_variable_name;
-              delete instance.stroke_collection_name;
-            }
-
-            //очищаем все заливки
-            delete instance.fill;
-            delete instance.fill_variable_name;
-            delete instance.fill_collection_name;
-
-
-            let colorName = instance.stroke_variable_name ? instance.stroke_variable_name : instance.stroke;
-
-            // Группируем по имени
-            const groupKey = `${colorName}-${instance.type}` || '';
-            if (!groupedColors[groupKey]) {groupedColors[groupKey] = [];}
-            groupedColors[groupKey].push(instance);
-            //console.log('Элемент добавлен в группу:', groupKey);
-          });
-
-          // Сортируем группы по алфавиту
-          const sortedGroupKeys = Object.keys(groupedColors).sort((a, b) => a.localeCompare(b));
-          sortedGroupKeys.forEach(key => {sortedGroupedColors[key] = groupedColors[key];});
-
-          // Обновляем заголовок вкладки с отфильтрованным количеством
-          const colorsTab = document.querySelector('[data-tab="colors"]');
-
-          if ((fillFilteredCount + strokeFilteredCount) == 0) {
-                colorsTab.classList.replace('tab','tab_success');
-                colorsTab.textContent = `Colors (OK)`;
-              } else {
-                colorsTab.classList.replace('tab_success','tab');
-                colorsTab.textContent = `Colors (${fillFilteredCount + strokeFilteredCount})`;
-              }
-
-          // Отображаем цвета границ
-          if (strokeFilteredCount > 0) displayGroups(sortedGroupedColors, colorStrokeResultsList);
-        }
-        
-        // Обновляем отладочную информацию
+        // Update debug information
         debugContent.innerHTML = '';
         debugContent.className = 'debug-tree';
-        
-        // Создаем отформатированный вывод для отладки
+
+        // Create formatted debug output
         const debugData = {
           type: msg.type,
           timestamp: new Date().toISOString(),
@@ -2148,10 +2040,10 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
           colorsStroke: msg.colorsStroke,
           componentTree: msg.componentTree
         };
-        
+
         // Сбрасываем сохраненное оригинальное содержимое при новых данных
         originalDebugContent = null;
-        
+
         // Преобразуем данные в древовидную структуру
         const tree = createDebugTree(debugData);
         if (tree) {
@@ -2205,7 +2097,10 @@ componentsTab.textContent = `All instances (${nonIconCount})`;
                 return; // Пропускаем скрытые элементы, если toggle выключен
             }
 
-            const groupKey = `${instance.mainComponentKey || ''}`; // Добавил || '' для случая undefined mainComponentKey
+            
+            
+            const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+            //const groupKey = `${instance.mainComponentKey || ''}`; // Добавил || '' для случая undefined mainComponentKey
             if (instance.isIcon === true) {
                 if (!groupedIcons[groupKey]) {
                     groupedIcons[groupKey] = [];

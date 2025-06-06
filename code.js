@@ -60,39 +60,27 @@ const rgbToHexCache = new Map();
 let lastColorsData = null;
 
 /**
- * Получает уникальный ключ кэширования для компонента
- * Если компонент находится в наборе компонентов (COMPONENT_SET),
- * использует комбинацию ключа родителя и имени компонента,
- * иначе использует собственный ключ компонента
+ * Получает уникальный ключ кэширования для компонента.
  * @param {ComponentNode} component - Компонент для получения ключа
  * @returns {string} Уникальный ключ для кэширования
  */
 function getComponentCacheKey(component) {
   try {
-    // Проверяем наличие компонента
-    if (!component) {
-      //console.error('getComponentCacheKey: компонент не определен');
-      return 'undefined_component';
+    // Базовые проверки
+    if (!component || !component.key) {
+      return `no_key_${component && component.id ? component.id : 'unknown'}`;
     }
 
-    // Проверяем наличие ключа компонента
-    if (!component.key) {
-      //console.error('getComponentCacheKey: у компонента отсутствует ключ');
-      return `no_key_${component.id || 'unknown'}`;
+    // Проверка на принадлежность к COMPONENT_SET
+    const parent = component.parent;
+    if (parent && parent.type === 'COMPONENT_SET' && parent.key) {
+      return `${parent.key}_${component.name || 'unnamed'}`;
     }
 
-    // Проверяем наличие родителя и его тип. Если родитель - COMPONENT_SET и у него есть ключ
-    if (component.parent && component.parent.type === 'COMPONENT_SET' && component.parent.key) {
-      // Формируем ключ из ключа родительского набора и имени компонента
-      return `${component.parent.key}_${component.name || 'unnamed'}`;
-    }
-
-    // Если компонент не в наборе или у набора нет ключа, используем ключ самого компонента
     return component.key;
   } catch (error) {
-    //console.error('Ошибка в getComponentCacheKey:', error);
-    // В случае ошибки возвращаем ключ на основе ID компонента или "unknown"
-    return `error_${component.id || 'unknown'}`;
+    console.error('Error in getComponentCacheKey:', error);
+    return `error_${component && component.id ? component.id : 'unknown'}`;
   }
 }
 
@@ -118,7 +106,7 @@ async function checkComponentUpdate(mainComponent) {
   }
 
   try {
-    // Генерируем ключ для кэширования (кэширование закомментировано)
+    // Генерируем ключ для кэширования
     const cacheKey = getComponentCacheKey(mainComponent);
 
     // Инициализируем объект результата
@@ -133,15 +121,16 @@ async function checkComponentUpdate(mainComponent) {
 
     // Проверяем наличие ключа у компонента. Если ключа нет, компонент локальный и не требует обновления из библиотеки.
     if (!mainComponent.key) {
-      console.log('У компонента отсутствует ключ:', mainComponent.name);
+      console.error('У компонента отсутствует ключ:', mainComponent.name);
       componentUpdateCache.set(cacheKey, result); // Сохраняем в кэш (закомментировано)
       return result;
     }
-
+    
     // Проверяем, является ли компонент частью набора компонентов (COMPONENT_SET)
     const isPartOfSet = mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET';
     let importedComponent = null; // Переменная для хранения импортированного компонента
 
+    
     // Если компонент является частью набора и у родительского набора есть ключ
     if (isPartOfSet && mainComponent.parent && mainComponent.parent.key) {
       try {
@@ -150,21 +139,19 @@ async function checkComponentUpdate(mainComponent) {
 
         // Если набор успешно импортирован
         if (importedSet) {
-          console.log('Набор компонентов ', importedSet.name, "импортирован");
+          //console.log('Набор компонентов ', importedSet.name, "импортирован");
           let foundMatch = false;
           // Ищем в импортированном наборе дочерний компонент с таким же именем и типом
           importedComponent = importedSet.findChild(comp => {
-            if (comp.name === mainComponent.name && comp.type === 'COMPONENT') {
-              foundMatch = true;
-              return true;
-            }
-            return false;
+            if (comp.key === mainComponent.key) {foundMatch = true; return true;}
+            else return false;
           });
 
           // Получаем описание и версию из импортированного набора
           const importedSetDescData = await getDescription(importedSet);
           // Формируем результат проверки для компонента внутри набора
           result = {
+            //isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
             isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
             mainComponentId: mainComponent.id,
             libraryComponentId: importedComponent ? importedComponent.id : null, // ID компонента из библиотеки
@@ -175,26 +162,30 @@ async function checkComponentUpdate(mainComponent) {
           // Если совпадение по имени и типу не найдено в импортированном наборе, считаем компонент устаревшим
           if (!foundMatch) {
             result.isOutdated = true;
-            console.log('Совпадений по ID в наборе не найдено');
+            result.isLost = true;
+            console.error('Совпадений по key в наборе не найдено');
            }
-
-           console.log('Результат поиска в наборе:', foundMatch ? 'Компонент с таким ID в наборе не найден' : result);
-        } else {
-          console.log('Не удалось импортировать набор компонентов');
+            //console.log('Результат поиска в наборе:', foundMatch ? 'Компонент с таким ID в наборе не найден' : result);
+          } else {
+          console.error('Не удалось импортировать набор компонентов');
         }
       } catch (setError) {
         // Обработка ошибок при импорте набора
         console.error('Ошибка при импорте набора компонентов:', setError);
       }
     } else { // Если компонент не в наборе или у набора нет ключа (одиночный компонент)
+      
+      
       try {
         // Импортируем отдельный компонент по его ключу
         importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
+        /*
         console.log('Результат импорта компонента:', importedComponent ? {
           success: true,
           importedMainComponentId: importedComponent.id,
           mainComponentId: mainComponent.id
         } : 'не удалось');
+        */
       } catch (componentError) {
         // Обработка ошибок при импорте отдельного компонента
         console.error('Ошибка при импорте компонента:', componentError);
@@ -204,7 +195,7 @@ async function checkComponentUpdate(mainComponent) {
     const importedDescData = importedComponent ? await getDescription(importedComponent) : { description: null, nodeVersion: null };
     // Формируем результат проверки для одиночного компонента
     result = {
-      isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
+        isOutdated: importedComponent ? importedComponent.id !== mainComponent.id : false, // Устарел, если ID не совпадают
         importedId: importedComponent ? importedComponent.id : null, // ID импортированного компонента
         version: importedDescData.nodeVersion, // Версия из описания импортированного компонента
         mainComponentId: mainComponent.id, // ID текущего компонента
@@ -218,7 +209,7 @@ async function checkComponentUpdate(mainComponent) {
     // Сохраняем результат в кэш (закомментировано)
     componentUpdateCache.set(cacheKey, result);
 
-    
+    /*
     console.log('Результат проверки компонента:', {
       name: mainComponent.name,
       isOutdated: result.isOutdated,
@@ -226,7 +217,7 @@ async function checkComponentUpdate(mainComponent) {
       libraryComponentId: result.libraryComponentId,
       libraryComponentVersion: result.libraryComponentVersion,
     });
-
+    */
     // Возвращаем результат проверки
     return result;
 
@@ -1001,19 +992,31 @@ figma.ui.onmessage = async (msg) => {
 
   // === Новый обработчик для проверки обновлений по кнопке ===
   else if (msg.type === 'check-updates') {
-    console.log('Получен запрос на проверку обновлений');
-    // Проверяем, есть ли уже результаты компонентов (используем глобальный кэш, если есть)
+    console.log('Received update check request');
     let componentsResult = null;
-    if (typeof globalThis.lastComponentsResult !== 'undefined') {
-      componentsResult = globalThis.lastComponentsResult;
-    } else {
-      // Если нет кэша, повторно собираем (можно доработать по необходимости)
-      figma.notify('Сначала выполните общий поиск!');
+
+    // Use the component data sent from UI
+    if (msg.components && msg.components.instances) {
+      componentsResult = msg.components;
+    }
+
+    if (!componentsResult || !componentsResult.instances || componentsResult.instances.length === 0) {
+      figma.ui.postMessage({
+        type: 'error',
+        message: 'No components to check for updates. Please run a search first.'
+      });
       return;
     }
-    // Запускаем проверку обновлений
-    await checkComponentUpdates(componentsResult);
-    figma.notify('Проверка обновлений завершена!');
+
+    try {
+      await checkComponentUpdates(componentsResult);
+    } catch (error) {
+      console.error('Error during update check:', error);
+      figma.ui.postMessage({
+        type: 'error', 
+        message: `Error checking for updates: ${error.message}`
+      });
+    }
   }
 };
 
@@ -1360,6 +1363,7 @@ async function processNodeComponent(node, componentsResult) {
       const descriptionDataMain = await getDescription(node, mainComponent);
       let parentComponentName = null; // Имя родительского компонента (если вложен в инстанс)
       let mainComponentName = mainComponent ? mainComponent.name : null; // Имя главного компонента
+      let mainComponentKey = mainComponent ? mainComponent.key : null; // Имя главного компонента
 
       // Если узел является набором компонентов (COMPONENT_SET), обрабатываем его дочерние элементы рекурсивно
       // (Примечание: в основном цикле check-all дети COMPONENT_SET обрабатываются напрямую, эта часть может быть избыточной или использоваться для других целей)
@@ -1405,13 +1409,18 @@ async function processNodeComponent(node, componentsResult) {
 
       // Определяем имя и ключ главного компонента или родительского ComponentSet
       let componentKeyToUse = mainComponent ? mainComponent.key : null; // Ключ главного компонента по умолчанию
+      let mainComponentSetKey = null; // Ключ набора компонентов, если есть
+      let mainComponentSetName = null; // Имя набора компонентов, если есть
+      let mainComponentSetId = null; // ID набора компонентов, если есть
 
       // Если главный компонент является частью набора, используем имя и ключ набора
       if (mainComponent && mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET') {
-        mainComponentName = mainComponent.parent.name; // Имя набора
         componentKeyToUse = mainComponent.parent.key; // Ключ родительского ComponentSet
+        mainComponentSetName = mainComponent.parent.name; // Имя набора
+        mainComponentSetKey = mainComponent.parent.key; // Ключ набора компонентов
+        mainComponentSetId = mainComponent.parent.id; // id набора компонентов
       } else if (mainComponent) {
-         mainComponentName = mainComponent.name; // Для одиночных компонентов/инстансов используем имя главного компонента
+         //mainComponentName = mainComponent.name; // Для одиночных компонентов/инстансов используем имя главного компонента
       }
 
       // Используем await, так как getDescription теперь асинхронная (получаем описание и версию из самого узла, если нет mainComponent)
@@ -1470,12 +1479,12 @@ async function processNodeComponent(node, componentsResult) {
 
           // Если это инстанс и у него нет своих данных, проверяем PluginData главного компонента
           if (node.type === 'INSTANCE' && mainComponent && (!pluginDataKey || !pluginDataVersion)) {
-            const mainComponentKey = mainComponent.getPluginData('customKey') || '';
-            const mainComponentVersion = mainComponent.getPluginData('customVersion') || '';
+            const pluginDataKey = mainComponent.getPluginData('customKey') || '';
+            //const mainComponentVersion = mainComponent.getPluginData('customVersion') || '';
 
             // Используем данные из главного компонента, если у инстанса нет своих
-            if (mainComponentKey && !pluginDataKey) pluginDataKey = mainComponentKey;
-            if (mainComponentVersion && !pluginDataVersion) pluginDataVersion = mainComponentVersion;
+            //if (mainComponentKey && !pluginDataKey) pluginDataKey = mainComponentKey;
+            //if (mainComponentVersion && !pluginDataVersion) pluginDataVersion = mainComponentVersion;
           }
 
           //console.log(`Получены данные из PluginData для ${node.name}:`, { ключ: pluginDataKey, версия: pluginDataVersion });
@@ -1498,15 +1507,19 @@ async function processNodeComponent(node, componentsResult) {
           parentName: parentComponentName ? parentComponentName : null, // Имя родительского компонента (если вложен в инстанс)
           parentId: parent ? parent.id : null, // ID родителя
           mainComponentName: mainComponentName, // Имя главного компонента или набора
-          mainComponentKey: componentKeyToUse, // Ключ главного компонента или набора
+          mainComponentKey: mainComponentKey, // Ключ главного компонента или набора
           mainComponentId: mainComponent ? mainComponent.id : null, // ID самого главного компонента
+          mainComponentSetKey: mainComponentSetKey ? mainComponentSetKey : null, // Ключ набора компонентов (если есть)
+          mainComponentSetName: mainComponentSetName ? mainComponentSetName : null, // Имя набора компонентов (если есть)
+          mainComponentSetId: mainComponentSetId ? mainComponentSetId : null, // Имя набора компонентов (если есть)
+          
           fileKey: figma.fileKey, // Ключ текущего файла Figma
           isIcon: isIcon, // Является ли иконкой
           size: isIcon ? width : `${width}x${height}`, // Размер (для иконок - одна сторона, для других - ШxВ)
           isNested: isNested, // Является ли вложенным инстансом
           skipUpdate: isNested, // Пропускать ли проверку обновления для вложенных инстансов
           pluginDataKey: pluginDataKey, // Пользовательский ключ из PluginData
-          pluginDataVersion: pluginDataVersion // Пользовательская версия из PluginData
+          //pluginDataVersion: pluginDataVersion // Пользовательская версия из PluginData
         };
         // Если объект данных компонента создан и узел является INSTANCE или COMPONENT
         if (componentData && (node.type === 'INSTANCE' || node.type === 'COMPONENT')) {
@@ -1557,9 +1570,9 @@ async function processComponentSetNode(node, parentSet = null) {
       remote: node.remote, // Является ли локальным набором
       parentName: parentSet ? parentSet.name : null, // Имя родительского набора (если вложен)
       parentId: parentSet ? parentSet.id : null, // ID родительского набора
-      mainComponentName: name, // Имя главного компонента (для набора это его собственное имя)
-      mainComponentKey: node.key, // Для COMPONENT_SET используем его собственный ключ
-      mainComponentId: node.id, // ID самого набора
+      //mainComponentName: name, // Имя главного компонента (для набора это его собственное имя)
+      //mainComponentKey: node.key, // Для COMPONENT_SET используем его собственный ключ
+      //mainComponentId: node.id, // ID самого набора
       fileKey: figma.fileKey, // Ключ текущего файла Figma
       isIcon: false, // COMPONENT_SET сам по себе не является иконкой
       size: `${Math.round(node.width)}x${Math.round(node.height)}`, // Размеры COMPONENT_SET
@@ -1575,86 +1588,79 @@ async function processComponentSetNode(node, parentSet = null) {
 // Асинхронная функция для проверки обновлений списка компонентов
 // (Закомментирована в основном цикле check-all, проверка актуальности интегрирована в processNodeComponent)
 async function checkComponentUpdates(componentsResult) {
-  console.log('\n=== Начинаем проверку обновлений компонентов ===');
-  console.log('componentsResult.instances:', componentsResult);
-
-  // Используем сохраненные данные о цветах из глобальной переменной (для отправки в UI вместе с компонентами)
+  console.log('\n=== Starting component update checks ===');
+  
+  // Use saved colors data from global variable
   const colorsData = lastColorsData || { instances: [], counts: { colors: 0 } };
 
-  // Итерируем по каждому инстансу в списке результатов компонентов
+  // Iterate through each component instance
   for (let i = 0; i < componentsResult.instances.length; i++) {
     const instance = componentsResult.instances[i];
 
     try {
-      // Пропускаем компоненты, у которых отсутствует mainComponentId
+      // Skip components without mainComponentId
       if (!instance.mainComponentId) {
-        //console.log(`\\nПропускаем компонент \"${instance.name}\" - отсутствует mainComponentId`);
         continue;
       }
 
-      // Пропускаем вложенные компоненты (если флаг skipUpdate установлен)
-      //if (instance.skipUpdate) {
-        //console.log(`Пропускаем вложенный компонент \"${instance.name}\"`);
-      //  continue;
-      //}
-
-      console.log(`Проверяем компонент: \"${instance.name}\" (mainComponentId: ${instance.mainComponentId})`);
-      // Получаем главный компонент по его ID
+      console.log(`Checking component: "${instance.name}" (mainComponentId: ${instance.mainComponentId})`);
+      
+      // Get the main component by ID
       const mainComponent = await figma.getNodeByIdAsync(instance.mainComponentId);
 
-      // Если главный компонент не найден, пропускаем
+      // Skip if main component not found
       if (!mainComponent) {
-        console.log(`Не удалось найти компонент по ID: ${instance.mainComponentId}`);
-        continue;
+        console.log(`Could not find component with ID: ${instance.mainComponentId}`);
+        continue; 
       }
 
-      // Асинхронно проверяем актуальность главного компонента
+      // Check for updates
       const updateInfo = await checkComponentUpdate(mainComponent);
 
-      console.log('ПРОВЕРКА:',updateInfo);
-
-      // Обновляем информацию об актуальности в массиве результатов компонентов
+      // Update the instance info
       componentsResult.instances[i] = Object.assign({}, instance, {
-        isOutdated: updateInfo.isOutdated, // Статус устаревания
-        libraryComponentId: updateInfo.libraryComponentId, // ID компонента из библиотеки
-        libraryComponentVersion: updateInfo.libraryComponentVersion, // Версия из библиотеки
-        mainComponentId: updateInfo.mainComponentId // ID главного компонента
+        isOutdated: updateInfo.isOutdated,
+        libraryComponentId: updateInfo.libraryComponentId, 
+        libraryComponentVersion: updateInfo.libraryComponentVersion,
+        mainComponentId: updateInfo.mainComponentId
       });
 
-      // Отправляем частичное обновление результатов в UI (включая данные о цветах)
-      figma.ui.postMessage({
-        type: 'all-results', // Тип сообщения
-        components: { // Обновленные результаты компонентов
-          instances: componentsResult.instances,
-          counts: componentsResult.counts
-        },
-        colors: colorsData // Используем сохраненные данные о цветах
-      });
-
-      //console.log('Результат проверки:', {
-      //  componentName: instance.name,
-      //  isOutdated: updateInfo.isOutdated,
-      //  importedId: updateInfo.importedId,
-      //  mainComponentId: updateInfo.mainComponentId,
-      //  importedMainComponentId: updateInfo.importedMainComponentId,
-      //  version: updateInfo.version
-      //});
-
-      // После каждой проверки компонента отправляем прогресс:
+      // Send progress update to UI
       figma.ui.postMessage({
         type: 'progress-update',
         processed: i + 1,
         total: componentsResult.instances.length,
         currentComponentName: instance.name
       });
+
+      // Send partial results update to UI
+      figma.ui.postMessage({
+        type: 'all-results',
+        components: {
+          instances: componentsResult.instances,
+          counts: componentsResult.counts
+        },
+        colors: colorsData
+      });
+
     } catch (componentError) {
-      // Обработка ошибок при проверке конкретного компонента
-      //console.error(`Ошибка при проверке компонента \"${instance.name}\":`, componentError);
-      continue; // Продолжаем обработку других компонентов
+      console.error(`Error checking component "${instance.name}":`, componentError);
+      continue;
     }
   }
 
-  console.log('\n=== Проверка обновлений компонентов завершена ===');
+  // Send final completion message
+  figma.ui.postMessage({
+    type: 'all-results',
+    components: {
+      instances: componentsResult.instances, 
+      counts: componentsResult.counts
+    },
+    colors: colorsData,
+    complete: true
+  });
+
+  console.log('\n=== Component update checks completed ===');
 }
 
 /**
