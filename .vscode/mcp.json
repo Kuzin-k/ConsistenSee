@@ -1,0 +1,7 @@
+{
+    "servers": {
+        "my-mcp-server-54097df6": {
+            "url": "http://127.0.0.1:3845/sse"
+        }
+    }
+}
