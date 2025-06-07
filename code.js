@@ -55,6 +55,8 @@ const componentUpdateCache = new Map();
 let resultsList = [];
 // Добавляем кэш для функции rgbToHex
 const rgbToHexCache = new Map();
+// Добавляем кэш для статусов публикации компонентов
+const publishStatusCache = new Map();
 
 // Добавляем глобальную переменную для хранения данных о цветах
 let lastColorsData = null;
@@ -117,6 +119,11 @@ async function checkComponentUpdate(mainComponent) {
 
   try {
     const cacheKey = getComponentCacheKey(mainComponent);
+        // Проверяем, есть ли результат в кэше
+        if (componentUpdateCache.has(cacheKey)) {
+          // console.log(`[Cache HIT] для checkComponentUpdate: ${cacheKey}`);
+          return componentUpdateCache.get(cacheKey);
+        }
 
     // Инициализируем объект результата с полями по умолчанию
     const result = {
@@ -134,7 +141,7 @@ async function checkComponentUpdate(mainComponent) {
     // 2. Проверка на локальный компонент (без ключа)
     if (!mainComponent.key) {
       console.error('У компонента отсутствует ключ:', mainComponent.name);
-      // componentUpdateCache.set(cacheKey, result); // Кэширование пока закомментировано
+       componentUpdateCache.set(cacheKey, result); // Кэширование пока закомментировано
       return result; // Локальные компоненты не могут быть устаревшими из библиотеки
     }
 
@@ -152,38 +159,51 @@ async function checkComponentUpdate(mainComponent) {
           const importedComponentInSet = importedSet.findChild(comp => comp.key === mainComponent.key);
 
           if (importedComponentInSet) {
+            if (!importedComponentInSet.id) 
+              {
+              console.error(`Ошибка: Импортированный компонент "${importedComponentInSet.name}" в наборе "${importedSet.name}" не имеет ID.`);
+              result.isOutdated = false; // Не можем подтвердить устаревание
+              result.isLost = true; // Помечаем как "потерянный" или проблемный
+              result.description = (result.description || '') + ' [Error: Imported component in set has no ID]';
+              console.error(`Компонент "${mainComponent.name}" (key: ${mainComponent.key}) не найден в импортированном наборе "${importedSet.name}"`);
+              } 
+            else {
             result.isOutdated = importedComponentInSet.id !== mainComponent.id;
             result.libraryComponentId = importedComponentInSet.id;
-          } else {
-            // Компонент с таким ключом не найден в импортированном наборе
-            result.isOutdated = true;
-            result.isLost = true; // Помечаем, что компонент "потерян" в библиотеке
-            console.error(`Компонент "${mainComponent.name}" (key: ${mainComponent.key}) не найден в импортированном наборе "${importedSet.name}"`);
+            result.description = importedComponentInSet.description;
+            result.version = importedComponentInSet.version;
+            }
           }
         } else {
           console.error(`Не удалось импортировать набор компонентов для "${mainComponent.name}" (parent key: ${mainComponent.parent.key})`);
-          result.isOutdated = true; // Считаем устаревшим, если не удалось импортировать набор
+          
         }
       } catch (setError) {
         console.error(`Ошибка при импорте набора компонентов для "${mainComponent.name}":`, setError);
-        result.isOutdated = true; // Считаем устаревшим при ошибке импорта
+        result.isOutdated = false; // Не можем подтвердить устаревание из-за ошибки импорта
+        result.isLost = true; // Помечаем как проблему с импортом
+        result.description = (result.description || '');
       }
     } else {
       // 4.2. Одиночный компонент (не в наборе или набор без ключа)
       try {
         const importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
         if (importedComponent) {
+          if (!importedComponent.id) {
+            console.error(`Ошибка: Импортированный одиночный компонент "${importedComponent.name}" не имеет ID.`);
+            result.isOutdated = false; // Не можем подтвердить устаревание
+            result.isLost = true; // Помечаем как проблемный
+            result.description = (result.description || '') + ' [Error: Imported component has no ID]';
+          } else {
           libraryVersionSourceNode = importedComponent; // Описание и версию берем из самого компонента
           result.isOutdated = importedComponent.id !== mainComponent.id;
           result.importedId = importedComponent.id; // ID импортированного компонента
           result.importedMainComponentId = importedComponent.id; // ID импортированного главного компонента
-        } else {
-          console.error(`Не удалось импортировать одиночный компонент "${mainComponent.name}" (key: ${mainComponent.key})`);
-          result.isOutdated = true; // Считаем устаревшим, если не удалось импортировать
         }
+      }
       } catch (componentError) {
         console.error(`Ошибка при импорте одиночного компонента "${mainComponent.name}":`, componentError);
-        result.isOutdated = true; // Считаем устаревшим при ошибке импорта
+        
       }
     }
 
@@ -201,7 +221,7 @@ async function checkComponentUpdate(mainComponent) {
       }
     }
 
-    // componentUpdateCache.set(cacheKey, result); // Кэширование пока закомментировано
+     componentUpdateCache.set(cacheKey, result); // Кэширование пока закомментировано
 
     /*
     console.log('Результат проверки компонента:', {
@@ -423,6 +443,12 @@ figma.ui.onmessage = async (msg) => {
 
   // Обработка основного запроса на анализ всех элементов в выделенной области
     if (msg.type === 'check-all') {
+      // Очищаем все кэши перед новым поиском
+      componentUpdateCache.clear();
+      rgbToHexCache.clear();
+      publishStatusCache.clear();
+      console.log('Все кэши очищены перед новым поиском.');
+
       // Записываем время начала выполнения
       const startTime = Date.now();
 
@@ -1456,7 +1482,7 @@ async function processNodeComponent(node, componentsResult) {
           //console.log(`Получены данные из PluginData для ${node.name}:`, { ключ: pluginDataKey, версия: pluginDataVersion });
         } catch (error) {
           // Обработка ошибок при получении PluginData
-          console.error(`Ошибка при получении PluginData для ${node.name}:`, error);
+          console.warn(`Ошибка при получении PluginData для ${node.name}:`, error);
         }
 
         let parent = node.parent; // Непосредственный родитель узла
@@ -1552,20 +1578,32 @@ async function processComponentSetNode(node, parentSet = null) {
 }
 
 // Асинхронная функция для проверки обновлений списка компонентов
-// (Закомментирована в основном цикле check-all, проверка актуальности интегрирована в processNodeComponent)
+
 async function checkComponentUpdates(componentsResult) {
-  console.log('\n=== Starting component update checks ===');
-  
-  // Use saved colors data from global variable
+    console.log('=== Начало проверки обновлений компонентов ===');  
+  // Use saved 
+  //  data from global variable
   const colorsData = lastColorsData || { instances: [], counts: { colors: 0 } };
 
+  const totalComponentsToCheck = componentsResult.instances.length;
+  const updatedInstances = [];
+
   // Iterate through each component instance
-  for (let i = 0; i < componentsResult.instances.length; i++) {
+  for (let i = 0; i < totalComponentsToCheck; i++) {
     const instance = componentsResult.instances[i];
 
     try {
       // Skip components without mainComponentId
       if (!instance.mainComponentId) {
+        console.log(`Пропуск компонента "${instance.name}" из-за отсутствия mainComponentId.`);
+        updatedInstances.push(instance);
+        continue;
+      }
+
+      // Пропускаем локальные компоненты (remote === false)
+      if (instance.remote === false) {
+        console.log(`Пропуск локального компонента "${instance.name}" (remote: false).`);
+        updatedInstances.push(instance); // Добавляем без изменений
         continue;
       }
 
@@ -1576,57 +1614,95 @@ async function checkComponentUpdates(componentsResult) {
 
       // Skip if main component not found
       if (!mainComponent) {
-        console.log(`Could not find component with ID: ${instance.mainComponentId}`);
+        console.warn(`Could not find component with ID: ${instance.mainComponentId}`);
+        updatedInstances.push(instance);
         continue; 
       }
+      /*
+      // Проверяем статус публикации компонента (ПЕРЕМЕЩЕНО СЮДА)
+      const publishStatusCacheKey = mainComponent.key || mainComponent.id;
+      let publishStatus = publishStatusCache.get(publishStatusCacheKey);
 
+      if (typeof publishStatus === 'undefined') { // Используем typeof, чтобы отличить от false или null из кэша
+        try {
+          publishStatus = await mainComponent.getPublishStatusAsync();
+          console.log(`Получен статус публикации для "${mainComponent.name}": ${publishStatus}`);
+          publishStatusCache.set(publishStatusCacheKey, publishStatus);
+        } catch (e) {
+          console.error(`Ошибка при получении статуса публикации для "${mainComponent.name}":`, e);
+          // Если не удалось получить статус, считаем, что нужно проверить обновление
+          publishStatus = 'UNKNOWN'; // или другое значение, чтобы продолжить проверку
+        }
+      }
+
+      if (publishStatus === 'UNPUBLISHED') {
+        console.log(`Пропуск компонента "${instance.name}", так как его master-компонент "${mainComponent.name}" не опубликован (статус: ${publishStatus}).`);
+        updatedInstances.push(Object.assign({}, instance, { isOutdated: false, publishStatus: publishStatus, libraryComponentVersion: instance.libraryComponentVersion || null }));
+        // Обновляем прогресс для UI
+        figma.ui.postMessage({ type: 'progress-update', phase: 'check-updates', processed: i + 1, total: totalComponentsToCheck, currentComponentName: instance.name });
+        await delay(1);
+        continue;
+      }
+      */
       // Check for updates
       const updateInfo = await checkComponentUpdate(mainComponent);
 
-      // Update the instance info
-      componentsResult.instances[i] = Object.assign({}, instance, {
+      let finalLibraryComponentVersion = updateInfo.libraryComponentVersion;
+      if (updateInfo.isOutdated && !finalLibraryComponentVersion) {
+        finalLibraryComponentVersion = 'NEW';
+      }
+
+      // Добавляем обновленную информацию в новый массив
+      updatedInstances.push(Object.assign({}, instance, {
         isOutdated: updateInfo.isOutdated,
         libraryComponentId: updateInfo.libraryComponentId, 
-        libraryComponentVersion: updateInfo.libraryComponentVersion,
-        mainComponentId: updateInfo.mainComponentId
-      });
-
-      // Send progress update to UI
+        libraryComponentVersion: finalLibraryComponentVersion,
+        mainComponentId: updateInfo.mainComponentId,
+        //publishStatus: publishStatus // Добавляем статус публикации
+      }));
       figma.ui.postMessage({
         type: 'progress-update',
+        phase: 'check-updates',
         processed: i + 1,
-        total: componentsResult.instances.length,
+        total: totalComponentsToCheck,
         currentComponentName: instance.name
       });
 
-      // Send partial results update to UI
-      figma.ui.postMessage({
-        type: 'all-results',
-        components: {
-          instances: componentsResult.instances,
-          counts: componentsResult.counts
-        },
-        colors: colorsData
-      });
+      // Small delay to allow UI to update
+      await delay(1);
 
     } catch (componentError) {
-      console.error(`Error checking component "${instance.name}":`, componentError);
+      console.warn(`Error checking component "${instance.name}":`, componentError);
+      updatedInstances.push(instance);
       continue;
     }
   }
 
-  // Send final completion message
+  // Фильтруем устаревшие компоненты
+  const outdatedInstances = updatedInstances.filter(instance => 
+    {
+      //console.log(`Фильтрация: ${instance.name}, isOutdated: ${instance.isOutdated}`);
+      return instance.isOutdated === true;
+    });
+  
+  //console.log(`Проверка обновлений завершена. Найдено устаревших: ${outdatedInstances.length}`);
+  //console.log('outdatedInstances после фильтрации:', outdatedInstances);
+
+  // Отправляем финальные результаты
   figma.ui.postMessage({
     type: 'all-results',
     components: {
-      instances: componentsResult.instances, 
-      counts: componentsResult.counts
+      instances: updatedInstances, // Все проверенные инстансы
+      outdated: outdatedInstances, // Только устаревшие инстансы
+      counts: Object.assign({}, componentsResult.counts, { // Обновляем счетчики
+        outdated: outdatedInstances.length // Добавляем счетчик устаревших
+      })
     },
     colors: colorsData,
     complete: true
   });
 
-  console.log('\n=== Component update checks completed ===');
+  console.log('\n=== Проверка обновлений компонентов завершена ===');
 }
 
 /**

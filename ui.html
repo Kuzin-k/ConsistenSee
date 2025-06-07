@@ -245,7 +245,7 @@ h3 {
 .tab-content.active {display: block;}
 
 /* Results and Icons */
-#results, #icons, #colors, #log {
+#results, #icons, #outdated, #colors, #log {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   color: var(--figma-color-text);
@@ -254,31 +254,28 @@ h3 {
   padding-bottom: 8px;
 }
 
-#results ul, #icons ul, #colors ul {
+#results ul, #icons ul, #colors ul, #outdated ul, #log ul {
   gap: 2px;
   margin-top:0px;
   padding-left: 0px;
 }
 
-#results li, #icons li, #colors li {
+#results li, #icons li, #colors li, #outdated li, #log li {
   margin:0px;
   padding: 4px 0 0 16px;
   list-style-type: none;
 }
 
-#results li:last-child {padding-bottom: 10px;}
-
-.description-inline {
-  cursor: help;
-  background-color: var(--light-background-color);
-  color: var(--gray-color);
-  padding: 4px 6px;
-  border-radius: 4px;
+.description-tag {
+  background-color: var(--figma-color-bg-tertiary);
+  color: var(--figma-color-text-secondary);
   font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+  padding: 3px 6px;
+  border-radius: 2px;
   font-family: monospace;
-  flex-wrap: nowrap;
-  font-weight: 500;
   line-height: 12px;
+  cursor: help;
   white-space: nowrap;
 }
 
@@ -366,20 +363,19 @@ h3 {
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-regular);
   padding: 3px 6px;
-  border-radius: 4px;
+  border-radius: 2px;
   font-family: monospace;
   line-height: 12px;
 }
 
-.version-badge {
-  background-color: rgb(235, 172, 13);
-  color: rgb(0, 0, 0);
-  padding: 4px 6px;
-  border-radius: 4px;
+.version-tag-updated {
+  background-color: var(--figma-color-bg-positive);
+  color: var(--figma-color-bg-positive-strong);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+  padding: 3px 6px;
+  border-radius: 2px;
   font-family: monospace;
-  font-size: 12px;
-  font-weight: 500;
-  
   line-height: 12px;
 }
 
@@ -387,6 +383,7 @@ h3 {
   display: flex;
   align-items: right;
   margin-left: auto;
+  gap: 2px;
 }
 
 /* Debug */
@@ -876,7 +873,7 @@ input:checked + .slider:before {
         <div class="tab" data-tab="colors">Colors</div>
         <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
-        <div class="tab_disabled" data-tab="outdated">Outdated (soon)</div>
+        <div class="tab" data-tab="outdated">Outdated (0)</div>
         <div class="tab" data-tab="icons">Icons (0)</div>
         
       </div>
@@ -888,6 +885,13 @@ input:checked + .slider:before {
         <div id="results">
           <a href="#" class="toggle-groups" data-action="expand">expand all</a>
         <ul id="resultsList"></ul>
+      </div>
+    </div>
+    <!-- Устаревшие инстансы -->
+    <div id="outdated" class="tab-content">
+      <div id="outdatedResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="outdatedResultsList"></ul>
       </div>
     </div>
     <!-- Changelog --> 
@@ -1392,7 +1396,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
           if (instance.isOutdated) {
             const outdatedBadge = document.createElement('span');
-            outdatedBadge.classList.add('version-badge');
+            outdatedBadge.classList.add('version-tag-updated');
             outdatedBadge.textContent = instance.libraryComponentVersion;
             versionGroup.appendChild(outdatedBadge);
           }
@@ -1406,7 +1410,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
               infoSpan.textContent = `${instance.nodeVersion}`;
             } 
             else if (instance.description && targetList.id !=='iconResultsList') {
-              infoSpan.classList.add('description-inline');
+              infoSpan.classList.add('description-tag');
               const fullDescription = instance.description;
               const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
               infoSpan.textContent = truncatedDescription;
@@ -1534,6 +1538,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
           });
         
           // Проверяем, есть ли в группе устаревшие элементы
+        
+        const versionGroup = document.createElement('span');
+        versionGroup.classList.add('version-group');
+
         const hasOutdatedItems = group.some(item => item.isOutdated);
         if (hasOutdatedItems) {
           if (group.length === 1) {
@@ -1543,29 +1551,31 @@ document.getElementById('setComponentData').addEventListener('click', function()
             // Бейдж текущей версии
             if (item.nodeVersion) {
               const currentVersionBadge = document.createElement('span');
-              currentVersionBadge.classList.add('version-badge');
+              currentVersionBadge.classList.add('version-tag');
               currentVersionBadge.textContent = item.nodeVersion;
               currentVersionBadge.title = 'Текущая версия';
-              groupHeader.appendChild(currentVersionBadge);
+              versionGroup.appendChild(currentVersionBadge);
             }
             
             // Бейдж актуальной версии
+            
             if (item.libraryComponentVersion) {
               const libraryVersionBadge = document.createElement('span');
-              libraryVersionBadge.classList.add('version-badge');
+              libraryVersionBadge.classList.add('version-tag-updated');
               libraryVersionBadge.textContent = item.libraryComponentVersion;
               libraryVersionBadge.title = 'Доступна новая версия';
-              libraryVersionBadge.style.backgroundColor = 'var(--blue-color)';
               groupHeader.appendChild(libraryVersionBadge);
             }
         } else {
             // Для групп с несколькими элементами показываем 'NEW'
             const versionBadge = document.createElement('span');
-            versionBadge.classList.add('version-badge');
+            versionBadge.classList.add('version-tag-updated');
             versionBadge.textContent = 'NEW';
             versionBadge.title = 'Доступна новая версия';
-            groupHeader.appendChild(versionBadge);
+            versionGroup.appendChild(versionBadge);
+            
           }
+            
         }
 
 
@@ -1578,7 +1588,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
             infoSpan.textContent = `${firstInstance.nodeVersion}`;
           } 
           else if (firstInstance.description && targetList.id !=='iconResultsList') {
-            infoSpan.classList.add('description-inline');
+            infoSpan.classList.add('description-tag');
             const fullDescription = firstInstance.description;
             const truncatedDescription =
               fullDescription.length > 10
@@ -1588,11 +1598,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
               
               infoSpan.title = fullDescription;
           }
-
-          groupHeader.appendChild(infoSpan);
-          
+          versionGroup.appendChild(infoSpan);
           
         }
+        groupHeader.appendChild(versionGroup);
 
         targetList.appendChild(groupHeader);
 
@@ -1851,7 +1860,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
           if (instance.isOutdated) {
             const infoSpan = document.createElement('span');
-            infoSpan.classList.add('version-badge');
+            infoSpan.classList.add('version-tag-updated');
             infoSpan.textContent = instance.libraryComponentVersion || 'NEW';
             infoSpan.title = 'Доступна новая версия';
             infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
@@ -1868,7 +1877,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
               infoSpan.textContent = `${instance.nodeVersion}`;
             } 
             else if (instance.description && targetList.id !=='iconResultsList') {
-              infoSpan.classList.add('description-inline');
+              infoSpan.classList.add('description-tag');
               const fullDescription = typeof instance.description === 'string' 
                 ? instance.description 
                 : (instance.description?.description || '');
@@ -1900,6 +1909,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
             if (window.lastDebugData) {
                 if (window.lastDebugData.components) {
                     processAndDisplayComponents(window.lastDebugData.components);
+                }
+                if (window.lastDebugData.components && window.lastDebugData.components.outdated) {
+                    processAndDisplayOutdatedComponents(window.lastDebugData.components); 
                 }
                 // Re-process and display colors
                 processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
@@ -2021,6 +2033,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (msg.components) {
           processAndDisplayComponents(msg.components);
         }
+        // Process outdated components if present
+        if (msg.components && msg.components.outdated) {
+          // Используем ту же функцию processAndDisplayComponents, но передаем ей данные устаревших и другой целевой список
+          processAndDisplayOutdatedComponents(msg.components);
+        }
 
         // Process colors...
         if (msg.colors) {
@@ -2091,6 +2108,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
         let nonIconCount = 0;
         let iconCount = 0;
+        let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === 'number' ? componentsData.counts.outdated : (componentsData.outdated ? componentsData.outdated.length : 0);
 
         componentsData.instances.forEach((instance) => {
             if (!showHidden && instance.hidden) {
@@ -2137,9 +2155,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
         // Обновляем заголовки вкладок
         const componentsTab = document.querySelector('[data-tab="instances"]');
         const iconsTab = document.querySelector('[data-tab="icons"]');
+        const outdatedTab = document.querySelector('[data-tab="outdated"]');
+
         if (componentsTab) componentsTab.textContent = `All instances (${nonIconCount})`;
         if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
-
+        if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
         // Сортируем группы по mainComponentName перед отображением
         const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
             const firstItemA = groupAItems[0];
@@ -2185,6 +2205,60 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
         displayGroups(sortGroups(groupedInstances), resultsList);
         displayGroups(sortGroups(groupedIcons), iconResultsList);
+    }
+
+    function processAndDisplayOutdatedComponents(componentsData) {
+        // Эта функция будет очень похожа на processAndDisplayComponents,
+        // но будет работать с componentsData.outdated и отображать их в outdatedResultsList
+        const outdatedInstancesArray = componentsData.outdated || [];
+        const groupedOutdatedInstances = {};
+
+        const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+        let outdatedCount = 0;
+
+        // Filter instances based on the showHidden toggle state
+        const filteredOutdatedInstances = showHidden ? outdatedInstancesArray : outdatedInstancesArray.filter(instance => !instance.hidden);
+
+        filteredOutdatedInstances.forEach((instance) => {
+            if (!showHidden && instance.hidden) {
+                return; 
+            }
+            // Для устаревших не будем делить на иконки и не иконки, просто группируем все
+            const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+            if (!groupedOutdatedInstances[groupKey]) {
+                groupedOutdatedInstances[groupKey] = [];
+            }
+            groupedOutdatedInstances[groupKey].push(instance);
+            // outdatedCount will be set later based on filteredOutdatedInstances.length
+        });
+
+        // Считаем количество после фильтрации
+        outdatedCount = filteredOutdatedInstances.length;
+
+        for (const key in groupedOutdatedInstances) {
+            groupedOutdatedInstances[key].sort((a, b) => {
+                const aName = a.name || '';
+                const bName = b.name || '';
+                return aName.localeCompare(bName);
+            });
+        }
+
+        const outdatedTab = document.querySelector('[data-tab="outdated"]');
+        if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+
+        // Используем ту же функцию сортировки групп
+        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
+            const firstItemA = groupAItems[0];
+            const firstItemB = groupBItems[0];
+            const aName = (firstItemA.mainComponentSetName || firstItemA.mainComponentName || firstItemA.name || '').replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim().replace(/^[^a-zA-Z0-9\/]+/, '');
+            const bName = (firstItemB.mainComponentSetName || firstItemB.mainComponentName || firstItemB.name || '').replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim().replace(/^[^a-zA-Z0-9\/]+/, '');
+            const aSpecial = /^[._]/.test(aName);
+            const bSpecial = /^[._]/.test(bName);
+            if (aSpecial && !bSpecial) return 1;
+            if (!aSpecial && bSpecial) return -1;
+            return aName.localeCompare(bName, undefined, { numeric: true, sensitivity: 'accent' });
+        }));
+        displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
     }
 
     function processAndDisplayColors(colorsData, colorsStrokeData) {
@@ -2474,7 +2548,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         // Add description if exists
         if (instance.description) {
           const description = document.createElement('span');
-          description.classList.add('description-inline');
+          description.classList.add('description-tag');
           description.innerHTML = ' - ' + highlightText(instance.description, searchTerm);
           resultItem.appendChild(description);
         }
