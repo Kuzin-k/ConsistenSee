@@ -1342,11 +1342,6 @@ async function processNodeComponent(node, componentsResult) {
       // Получаем описание и версию, используя главный компонент (если есть) или сам узел
       const descriptionDataMain = await getDescription(mainComponent || node); // Передаем mainComponent или сам node
       let parentComponentName = null; // Имя родительского компонента (если вложен в инстанс)
-      let mainComponentName = mainComponent ? mainComponent.name : null; // Имя главного компонента
-      let mainComponentKey = mainComponent ? mainComponent.key : null; // Имя главного компонента
-
-      // Если узел является набором компонентов (COMPONENT_SET), обрабатываем его дочерние элементы рекурсивно
-      // (Примечание: в основном цикле check-all дети COMPONENT_SET обрабатываются напрямую, эта часть может быть избыточной или использоваться для других целей)
       if (node.type === 'COMPONENT_SET') {
         const results = [];
         // Обрабатываем сам COMPONENT_SET (если нужно получить его данные)
@@ -1373,6 +1368,11 @@ async function processNodeComponent(node, componentsResult) {
         console.log('COMPONENT_SET recursive results:', results);
         return results; // Возвращаем результаты обработки дочерних элементов
       }
+
+      // Этот блок кода был перемещен выше, чтобы mainComponentName и mainComponentKey 
+      // были доступны до блока COMPONENT_SET
+      let mainComponentName = mainComponent ? mainComponent.name : null; 
+      let mainComponentKey = mainComponent ? mainComponent.key : null; 
 
       // Проверяем, находится ли инстанс внутри другого инстанса
       let isNested = false;
@@ -1402,9 +1402,6 @@ async function processNodeComponent(node, componentsResult) {
       } else if (mainComponent) {
          //mainComponentName = mainComponent.name; // Для одиночных компонентов/инстансов используем имя главного компонента
       }
-
-      // Используем await, так как getDescription теперь асинхронная (получаем описание и версию из самого узла, если нет mainComponent)
-      const descriptionDataSingle = await getDescription(node);
 
       parentComponentName = await getParentComponentName(node); // Используем новую вспомогательную функцию
 
@@ -1459,8 +1456,8 @@ async function processNodeComponent(node, componentsResult) {
           name: name.trim(), // Имя узла (без лишних пробелов)
           nodeId: node.id, // ID узла
           key: node.key, // Ключ узла
-          description: descriptionDataMain ? descriptionDataMain.description : (descriptionDataSingle ? descriptionDataSingle.description : undefined), // Описание
-          nodeVersion: descriptionDataMain ? descriptionDataMain.nodeVersion : (descriptionDataSingle ? descriptionDataSingle.nodeVersion : undefined), // Версия из описания
+          description: descriptionDataMain ? descriptionDataMain.description : undefined, // Описание из descriptionDataMain
+          nodeVersion: descriptionDataMain ? descriptionDataMain.nodeVersion : undefined, // Версия из описания из descriptionDataMain
           hidden: isNodeOrParentHidden(node), // Статус скрытия
           remote: mainComponent.remote, // Является ли локальным компонентом
           parentName: parentComponentName ? parentComponentName : null, // Имя родительского компонента (если вложен в инстанс)
