@@ -265,6 +265,8 @@ function getNodePath(node) {
 }
 
 
+// code.js
+// ...
 /**
  * Извлекает описание и версию из описания узла или его главного компонента.
  * Если узел является INSTANCE, пытается получить описание из его mainComponent или родительского mainComponentSet.
@@ -273,7 +275,7 @@ function getNodePath(node) {
  */
 async function getDescription(node) {
   let description = '';
-  let nodeToParse = node; // Узел, из которого будем брать описание
+  // let nodeToParse = node; // Эта переменная менее критична, если description правильно каскадируется.
 
   if (!node) {
     console.warn('getDescription: получен пустой узел.');
@@ -281,29 +283,35 @@ async function getDescription(node) {
   }
 
   try {
-    // 1. Если узел сам является COMPONENT или COMPONENT_SET, используем его описание.
-    if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
-      description = node.description || '';
+    // 1. Сначала пытаемся получить описание непосредственно с самого узла.
+    description = node.description || '';
+
+    // 2. Если узел - КОМПОНЕНТ и у него нет своего описания,
+    //    а его родитель - НАБОР КОМПОНЕНТОВ, берем описание из набора.
+    if (node.type === 'COMPONENT' && !description && node.parent && node.parent.type === 'COMPONENT_SET') {
+      description = node.parent.description || '';
     }
-    // 2. Если узел является INSTANCE, пытаемся получить описание из его mainComponent.
+    // 3. Если узел - ЭКЗЕМПЛЯР и у него нет своего описания (или у его mainComponent нет описания).
     else if (node.type === 'INSTANCE') {
-      description = node.description || ''; // Сначала проверяем описание самого инстанса
+      // description = node.description || ''; // Это уже было сделано в п.1
       if (!description) { // Если у инстанса нет описания, идем к главному компоненту
         const mainComponent = await node.getMainComponentAsync();
         if (mainComponent) {
-          nodeToParse = mainComponent; // Теперь описание будем брать из mainComponent
+          // nodeToParse = mainComponent; // Обновляем узел, из которого берем описание
           description = mainComponent.description || '';
           // Если у mainComponent нет описания, и он часть COMPONENT_SET, берем описание из SET
           if (!description && mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET') {
-            nodeToParse = mainComponent.parent; // Описание из COMPONENT_SET
+            // nodeToParse = mainComponent.parent; // Обновляем узел
             description = mainComponent.parent.description || '';
           }
         }
       }
     }
-    // 3. Для других типов узлов (например, FRAME, RECTANGLE) используем их собственное описание.
-    else {
-      description = node.description || '';
+    // 4. Если узел - КОМПОНЕНТ (это может быть mainComponent, переданный в функцию)
+    //    и у него все еще нет описания, проверяем его родительский COMPONENT_SET.
+    //    Этот блок дублирует логику из пункта 2, но обеспечивает покрытие, если getDescription вызвана с COMPONENT.
+    else if (node.type === 'COMPONENT' && !description && node.parent && node.parent.type === 'COMPONENT_SET') {
+      description = node.parent.description || '';
     }
   } catch (error) {
     console.error(`Ошибка в getDescription для узла "${node.name}" (ID: ${node.id}):`, error);
@@ -325,6 +333,8 @@ async function getDescription(node) {
 
   return { description: description || '', nodeVersion };
 }
+// ...
+
 
 /**
  * Проверяет, скрыт ли узел или любой из его родителей
