@@ -264,60 +264,66 @@ function getNodePath(node) {
   return path.join(',');
 }
 
-/**
- * Извлекает описание и версию из описания узла или его главного компонента
- * @param {SceneNode} node - Узел для получения описания
- * @param {ComponentNode|ComponentSetNode|null} [mainComponent=null] - Главный компонент или набор компонента (если известен)
- * @returns {Promise<Object>} Объект с описанием (`description`) и найденной версией (`nodeVersion`)
- */
-async function getDescription(node, mainComponent = null) {
-  let description = ''; // Переменная для хранения описания
 
-  // Если передан mainComponent, пытаемся получить описание из него или его родителя
-  if (mainComponent) {
-    description = mainComponent.description || '';
-    if (!description && mainComponent.parent) {
-      description = mainComponent.parent.description;
-    }
-  } else { // Если mainComponent не передан, работаем с текущим узлом
-    description = node.description || '';
-    // Если узел - INSTANCE и у него нет описания, пытаемся получить описание главного компонента
-    if (!description && node.type === 'INSTANCE') {
-      try {
-        let mc = null;
-        try {
-          // Асинхронно получаем главный компонент инстанса
-          mc = await node.getMainComponentAsync();
-        } catch (error) {
-          console.error(`Ошибка при получении mainComponent для ${node.name}:`, error);
-        }
-        // Если главный компонент найден, пытаемся получить описание из него или его родителя
-        if (mc) {
-          description = mc.description || '';
-          if (!description && mc.parent) {
-            description = mc.parent.description;
-          }
-        }
-      } catch (error) {
-        console.error(`Ошибка при получении mainComponent в getDescription:`, error);
-        figma.ui.postMessage({
-          type: 'error',
-          message: `Ошибка при получении mainComponent в getDescription: ${error.message}`
-        });
-      }
-    }
+/**
+ * Извлекает описание и версию из описания узла или его главного компонента.
+ * Если узел является INSTANCE, пытается получить описание из его mainComponent или родительского mainComponentSet.
+ * @param {SceneNode | ComponentNode | ComponentSetNode} node - Узел (может быть INSTANCE, COMPONENT, или COMPONENT_SET) для получения описания.
+ * @returns {Promise<Object>} Объект с описанием (`description`) и найденной версией (`nodeVersion`).
+ */
+async function getDescription(node) {
+  let description = '';
+  let nodeToParse = node; // Узел, из которого будем брать описание
+
+  if (!node) {
+    console.warn('getDescription: получен пустой узел.');
+    return { description: '', nodeVersion: null };
   }
 
-  // Извлекаем версию из описания с помощью регулярного выражения
+  try {
+    // 1. Если узел сам является COMPONENT или COMPONENT_SET, используем его описание.
+    if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+      description = node.description || '';
+    }
+    // 2. Если узел является INSTANCE, пытаемся получить описание из его mainComponent.
+    else if (node.type === 'INSTANCE') {
+      description = node.description || ''; // Сначала проверяем описание самого инстанса
+      if (!description) { // Если у инстанса нет описания, идем к главному компоненту
+        const mainComponent = await node.getMainComponentAsync();
+        if (mainComponent) {
+          nodeToParse = mainComponent; // Теперь описание будем брать из mainComponent
+          description = mainComponent.description || '';
+          // Если у mainComponent нет описания, и он часть COMPONENT_SET, берем описание из SET
+          if (!description && mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET') {
+            nodeToParse = mainComponent.parent; // Описание из COMPONENT_SET
+            description = mainComponent.parent.description || '';
+          }
+        }
+      }
+    }
+    // 3. Для других типов узлов (например, FRAME, RECTANGLE) используем их собственное описание.
+    else {
+      description = node.description || '';
+    }
+  } catch (error) {
+    console.error(`Ошибка в getDescription для узла "${node.name}" (ID: ${node.id}):`, error);
+    // Не отправляем сообщение в UI отсюда, чтобы не дублировать ошибки из checkComponentUpdate
+    // figma.ui.postMessage({
+    //   type: 'error',
+    //   message: `Ошибка при получении описания для ${node.name}: ${error.message}`
+    // });
+    // В случае ошибки, description останется пустым, и версия не будет найдена.
+  }
+
+  // Извлекаем версию из полученного описания с помощью регулярного выражения
   let nodeVersion = null;
-  if (description) {
+  if (description) { // Убедимся, что description это строка
     const versionPattern = /v\s*(\d+\.\d+\.\d+)/i; // Паттерн для поиска "v X.Y.Z"
-    const match = description.match(versionPattern);
+    const match = String(description).match(versionPattern); // Приводим description к строке на всякий случай
     nodeVersion = match ? match[1] : null; // Если найдено совпадение, берем первую группу (версию)
   }
 
-  // Возвращаем объект с описанием и версией
-  return { description, nodeVersion };
+  return { description: description || '', nodeVersion };
 }
 
 /**
@@ -346,6 +352,11 @@ function isNodeOrParentHidden(node) {
  * @returns {boolean} true если узел вложен в другой экземпляр, иначе false
  */
 function isNestedInstance(node) {
+  // Если узел не предоставлен, он не может быть вложенным.
+  if (!node) {
+    return false;
+  }
+
   let parent = node.parent; // Начинаем с непосредственного родителя
   // Поднимаемся по иерархии родителей
   while (parent) {
@@ -1041,43 +1052,88 @@ function hasFillOrStroke(node) {
  * @returns {string} Цвет в формате HEX (#RRGGBB)
  */
 function rgbToHex({ r, g, b }) {
-  try {
-    // Проверяем, что все значения определены и являются числами
-    if (r === undefined || g === undefined || b === undefined ||
-        typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number') {
-      //console.error('Неверные значения RGB:', { r, g, b });
-      return '#000000'; // Возвращаем черный цвет в случае некорректных данных
-    }
+  // Проверяем, что все значения определены, являются числами и не являются figma.mixed
+  if (r === undefined || g === undefined || b === undefined ||
+      typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number' ||
+      r === figma.mixed || g === figma.mixed || b === figma.mixed) {
+    // console.warn('Неверные или смешанные значения RGB:', { r, g, b });
+    return '#MIXED'; // Возвращаем специальное значение для смешанных или некорректных данных
+  }
 
-    // Если значение уже было рассчитано ранее, возвращаем его
-    const key = `${Math.round(r * 255)}-${Math.round(g * 255)}-${Math.round(b * 255)}`;
+  try {
+    // Ограничиваем значения r, g, b диапазоном [0, 1]
+    const rClamped = Math.max(0, Math.min(1, r));
+    const gClamped = Math.max(0, Math.min(1, g));
+    const bClamped = Math.max(0, Math.min(1, b));
+
+    // Масштабируем и округляем значения
+    const rInt = Math.round(rClamped * 255);
+    const gInt = Math.round(gClamped * 255);
+    const bInt = Math.round(bClamped * 255);
+
+    // Формируем ключ для кэша на основе целочисленных значений
+    const key = `${rInt}-${gInt}-${bInt}`;
     if (rgbToHexCache.has(key)) {return rgbToHexCache.get(key);}
 
     // Вспомогательная функция для конвертации компонента (0-1) в 16-ричную строку (00-FF)
-    const toHex = (n) => {
-      const hex = Math.round(n * 255).toString(16); // Масштабируем, округляем и конвертируем в 16-ричную строку
+    // Принимает уже масштабированное и округленное значение (0-255)
+    const toHexComponent = (n_int) => {
+      const hex = n_int.toString(16); // Конвертируем в 16-ричную строку
       return hex.length === 1 ? '0' + hex : hex; // Добавляем ведущий ноль, если нужно
     };
 
     // Формируем HEX строку
-    const hex = '#' + toHex(r) + toHex(g) + toHex(b);
+    const hex = `#${toHexComponent(rInt)}${toHexComponent(gInt)}${toHexComponent(bInt)}`;
     rgbToHexCache.set(key, hex);
     return hex;
   } catch (error) {
     // Обработка ошибок в процессе конвертации
-    //console.error('Ошибка при конвертации RGB в HEX:', error);
-    return '#000000'; // Возвращаем черный цвет в случае ошибки
+    console.error('Ошибка при конвертации RGB в HEX:', { r, g, b, error });
+    return '#ERROR'; // Возвращаем специальное значение в случае непредвиденной ошибки
   }
 }
 
-
+/**
+ * Асинхронно находит имя родительского компонента для указанного узла.
+ * Поднимается по иерархии родителей, пока не найдет родителя типа INSTANCE,
+ * затем получает имя его главного компонента или набора компонентов.
+ * @param {SceneNode} node - Узел, для которого ищется родительский компонент.
+ * @returns {Promise<string|null>} Имя родительского компонента или null, если не найден.
+ */
+async function getParentComponentName(node) {
+  let parentNode = node.parent;
+  while (parentNode) {
+    if (parentNode.type === 'INSTANCE') {
+      try {
+        const parentMainComponent = await parentNode.getMainComponentAsync();
+        if (parentMainComponent) {
+          if (parentMainComponent.parent && parentMainComponent.parent.type === 'COMPONENT_SET') {
+            return parentMainComponent.parent.name;
+          }
+          return parentMainComponent.name;
+        }
+      } catch (error) {
+        console.error(`Ошибка при получении mainComponent для родителя ${parentNode.name} (ID: ${parentNode.id}):`, error);
+      }
+      // Если дошли до инстанса-родителя, но не смогли получить его имя,
+      // нет смысла искать дальше по цепочке для этого конкретного уровня вложенности.
+      return null;
+    }
+    parentNode = parentNode.parent;
+  }
+  return null;
+}
 
 /**
  * Обрабатывает цвета (заливки и обводки) для отдельного узла
  * Извлекает информацию о цвете, привязанных переменных и применяет фильтры.
  * @param {SceneNode} node - Узел для обработки
  * @param {Object} colorsResult - Объект для сбора результатов по заливкам
+ * @param {Array<Object>} colorsResult.instances - Массив для данных о заливках.
+ * @param {Object} colorsResult.counts - Счетчики для заливок.
  * @param {Object} colorsResultStroke - Объект для сбора результатов по обводкам
+ * @param {Array<Object>} colorsResultStroke.instances - Массив для данных о обводках.
+ * @param {Object} colorsResultStroke.counts - Счетчики для обводок.
  * @returns {Promise<Object|null>} Данные о цветах узла или null, если узел отфильтрован
  */
 async function processNodeColors(node, colorsResult, colorsResultStroke) {
@@ -1093,230 +1149,161 @@ async function processNodeColors(node, colorsResult, colorsResultStroke) {
     type: node.type // Тип узла
   };
 
-  //console.log('Базовые данные узла:', {
-  //  name: nodeData.name,
-  //  id: nodeData.nodeId,
-  //  type: nodeData.type,
-  //  hidden: nodeData.hidden
-  //});
-
   // Находим имя родительского компонента (если узел является инстансом внутри инстанса)
-  //console.log('Поиск родительского компонента...');
-  let parentComponentName = null;
-  let parentNode = node.parent; // Начинаем с непосредственного родителя
-
-  // Поднимаемся по иерархии родителей, пока не найдем родителя типа INSTANCE или не достигнем корня
-  while (parentNode && !parentComponentName) {
-    //console.log(`Проверка родителя: ${parentNode.type} (${parentNode.name})`);
-    // Если родитель - INSTANCE
-    if (parentNode.type === 'INSTANCE') {
-      try {
-        // Используем асинхронный метод для получения главного компонента родительского инстанса
-        const parentMainComponent = await parentNode.getMainComponentAsync();
-        // Если главный компонент родителя найден
-        if (parentMainComponent) {
-          // Используем имя главного компонента родителя
-          parentComponentName = parentMainComponent.name;
-          // Если главный компонент родителя является частью набора, используем имя набора
-          if (parentMainComponent.parent && parentMainComponent.parent.type === 'COMPONENT_SET') {
-            parentComponentName = parentMainComponent.parent.name;
-        //console.warn(`Найден родительский компонент в наборе: ${parentComponentName}`);
-          } else {
-            //console.log(`Найден родительский компонент: ${parentComponentName}`);
-          }
-        }
-      } catch (error) {
-        // Обработка ошибок при получении главного компонента родителя
-        console.error(`Ошибка при получении mainComponent для родителя ${parentNode.name}:`, error);
-      }
-    }
-    parentNode = parentNode.parent; // Переходим к следующему родительскому узлу
-  }
-
-  // Если имя родительского компонента найдено, добавляем его в данные узла
+  const parentComponentName = await getParentComponentName(node);
   if (parentComponentName) {
     nodeData.parentComponentName = parentComponentName;
-    //console.log(`Установлено имя родительского компонента: ${parentComponentName}`);
-  } else {
-    //console.log('Родительский компонент не найден');
   }
 
-  // Обрабатываем заливку (fills) узла
-  //console.log('\nОбработка заливки...');
-  // Проверяем наличие заливок и что массив не пустой
-  if (node.fills && node.fills.length > 0) {
-    //console.log(`Найдено ${node.fills.length} заливок`);
-    // Итерируем по заливкам
-    for (const fill of node.fills) {
-      // Обрабатываем только видимые сплошные заливки (SOLID)
-      if (fill.type === 'SOLID' && fill.visible !== false) {
-        //console.log('Найдена видимая сплошная заливка');
-        try {
-          // Проверяем, что у заливки есть объект цвета
-          if (fill.color && typeof fill.color === 'object') {
-            // Извлекаем компоненты цвета
-            const color = {
-              r: typeof fill.color.r === 'number' ? fill.color.r : 0,
-              g: typeof fill.color.g === 'number' ? fill.color.g : 0,
-              b: typeof fill.color.b === 'number' ? fill.color.b : 0
-            };
-            // Конвертируем цвет в HEX и сохраняем в nodeData
-            nodeData.fill = rgbToHex(color);
-            //console.log(`Цвет заливки преобразован в HEX: ${nodeData.fill}`);
-            break; // Прерываем цикл после нахождения первой видимой SOLID заливки
+  /**
+   * Вспомогательная функция для обработки конкретного типа цвета (fill или stroke).
+   * @param {Array<Paint>} paints - Массив заливок или обводок.
+   * @param {string} styleId - ID стиля (fillStyleId или strokeStyleId).
+   * @param {string} colorPropertyPrefix - Префикс для свойств в nodeData ('fill' или 'stroke').
+   */
+  async function processPaintType(paints, styleId, colorPropertyPrefix) {
+    if (paints && paints.length > 0) {
+      for (const paint of paints) {
+        if (paint.type === 'SOLID' && paint.visible !== false) {
+          try {
+            if (paint.color && typeof paint.color === 'object') {
+              const color = {
+                r: typeof paint.color.r === 'number' ? paint.color.r : 0,
+                g: typeof paint.color.g === 'number' ? paint.color.g : 0,
+                b: typeof paint.color.b === 'number' ? paint.color.b : 0
+              };
+              nodeData[colorPropertyPrefix] = rgbToHex(color);
+              break; 
+            }
+          } catch (error) {
+            console.error(`Ошибка при обработке цвета для ${colorPropertyPrefix} узла ${node.name}:`, error);
+            nodeData[colorPropertyPrefix] = '#MIXED';
           }
-        } catch (error) {
-          // Обработка ошибок при обработке цвета заливки
-          //console.log('Ошибка при обработке цвета заливки:', error);
-          nodeData.fill = '#MIXED'; // В случае ошибки помечаем как смешанный цвет
         }
       }
     }
-  }
 
-  // === ДОБАВЛЯЕМ: обработка fillStyleId ===
-  if (node.fillStyleId && node.fillStyleId !== figma.mixed) {
-    try {
-      const fillStyle = await figma.getStyleByIdAsync(node.fillStyleId);
-      if (fillStyle) {
-        nodeData.fill_variable_name = fillStyle.name;
-        nodeData.fill_collection_id = node.fillStyleId.split(",")[0];
-        nodeData.fill_collection_name = fillStyle.description || '';
-      } else {
-        nodeData.fill_variable_name = node.fillStyleId;
-      }
-    } catch (e) {
-      nodeData.fill_variable_name = node.fillStyleId;
-    }
-  }
-
-  // Обрабатываем обводку (strokes) узла
-  //console.log('\nОбработка обводки...');
-  // Проверяем наличие обводок и что массив не пустой
-  if (node.strokes && node.strokes.length > 0) {
-    //console.log(`Найдено ${node.strokes.length} обводок`);
-    // Итерируем по обводкам
-    for (const stroke of node.strokes) {
-      // Обрабатываем только видимые сплошные обводки (SOLID)
-      if (stroke.type === 'SOLID' && stroke.visible !== false) {
-        //console.log('Найдена видимая сплошная обводка');
-        try {
-          // Проверяем, что у обводки есть объект цвета
-          if (stroke.color && typeof stroke.color === 'object') {
-            // Извлекаем компоненты цвета
-            const color = {
-              r: typeof stroke.color.r === 'number' ? stroke.color.r : 0,
-              g: typeof stroke.color.g === 'number' ? stroke.color.g : 0,
-              b: typeof stroke.color.b === 'number' ? stroke.color.b : 0
-            };
-            // Конвертируем цвет в HEX и сохраняем в nodeData
-            nodeData.stroke = rgbToHex(color);
-            //console.log(`Цвет обводки преобразован в HEX: ${nodeData.stroke}`);
-            break; // Прерываем цикл после нахождения первой видимой SOLID обводки
+    if (styleId && styleId !== figma.mixed) {
+      try {
+        const style = await figma.getStyleByIdAsync(styleId);
+        if (style) {
+          nodeData[`${colorPropertyPrefix}_variable_name`] = style.name;
+          // ID коллекции извлекается из ID стиля. ID стиля имеет формат "S:collection_id,style_id_within_collection"
+          // или просто "collection_id" для переменных, если styleId это variableId.
+          // Для стилей правильнее брать collectionId из самого стиля, если доступно,
+          // но figma.getStyleByIdAsync не возвращает collectionId напрямую для Style объектов.
+          // Поэтому, если это стиль, то ID коллекции - это часть styleId.
+          // Если это переменная (что будет обработано в processVariableBindings), там будет свой collectionId.
+          const styleIdParts = styleId.split(',');
+          if (styleIdParts.length > 0 && styleIdParts[0].startsWith('S:')) {
+             nodeData[`${colorPropertyPrefix}_collection_id`] = styleIdParts[0]; // S:collection_id
+          } else {
+             nodeData[`${colorPropertyPrefix}_collection_id`] = styleId; // Если это не стандартный ID стиля, а, например, ID переменной
           }
-        } catch (error) {
-          // Обработка ошибок при обработке цвета обводки
-          //console.log('Ошибка при обработке цвета обводки:', error);
-          nodeData.stroke = '#MIXED'; // В случае ошибки помечаем как смешанный цвет
+          nodeData[`${colorPropertyPrefix}_collection_name`] = style.description || ''; // Используем описание стиля как имя коллекции
+        } else {
+          // Если стиль не найден, но styleId есть, можно записать сам ID
+          nodeData[`${colorPropertyPrefix}_variable_name`] = styleId; // Или другое обозначение
+          console.warn(`Стиль с ID "${styleId}" не найден для ${colorPropertyPrefix} узла ${node.name}.`);
         }
+      } catch (e) {
+        console.error(`Ошибка при получении стиля по ID "${styleId}" для ${colorPropertyPrefix} узла ${node.name}:`, e);
+        nodeData[`${colorPropertyPrefix}_variable_name`] = styleId; // Записываем ID в случае ошибки
       }
+    }
+
+    // Обработка привязанных переменных (если они есть для данного типа свойства)
+    if (node.boundVariables && node.boundVariables[colorPropertyPrefix === 'fill' ? 'fills' : 'strokes']) {
+      await processVariableBindings(node, nodeData, (colorPropertyPrefix === 'fill' ? 'fills' : 'strokes'), colorPropertyPrefix);
     }
   }
 
-  // === ДОБАВЛЯЕМ: обработка strokeStyleId ===
-  if (node.strokeStyleId && node.strokeStyleId !== figma.mixed) {
-    try {
-      const strokeStyle = await figma.getStyleByIdAsync(node.strokeStyleId);
-      if (strokeStyle) {
-        nodeData.stroke_variable_name = strokeStyle.name;
-        nodeData.stroke_collection_id = node.strokeStyleId.split(",")[0];
-        nodeData.stroke_collection_name = strokeStyle.description || '';
-      } else {
-        nodeData.stroke_variable_name = node.strokeStyleId;
-      }
-    } catch (e) {
-      nodeData.stroke_variable_name = node.strokeStyleId;
-    }
-  }
+  // Обрабатываем заливку (fills)
+  await processPaintType(node.fills, node.fillStyleId, 'fill');
 
-  // Обрабатываем привязки переменных цвета к заливкам и обводкам
-  //console.log('\nОбработка привязок переменных...');
-  // Проверяем наличие привязанных переменных у узла
-  if (node.boundVariables) {
-    //console.log('Найдены привязки переменных');
-    // Обрабатываем привязки для заливок
-    await processVariableBindings(node, nodeData, 'fills', 'fill');
-    // Обрабатываем привязки для обводок
-    await processVariableBindings(node, nodeData, 'strokes', 'stroke');
-  } else {
-    //console.log('Привязки переменных не найдены');
-  }
+  // Обрабатываем обводку (strokes)
+  await processPaintType(node.strokes, node.strokeStyleId, 'stroke');
+
+  // Старая логика обработки привязок переменных (может быть частично покрыта processPaintType, но оставим для явности)
+  // if (node.boundVariables) {
+  //   await processVariableBindings(node, nodeData, 'fills', 'fill');
+  //   await processVariableBindings(node, nodeData, 'strokes', 'stroke');
+  // }
 
   // Проверяем условия фильтрации узлов с цветами
-  let parent = node.parent; // Получаем родителя узла
-
-  // КОСТЫЛЬ: не обрабатываем ноды с определенными цветами (черный, белый, #FF33BB),
-  // у которых любой из родителей называется 'source' и является группой. Это фильтр для исходников иконок.
-  function hasParentWithNameAndType(node, targetName, targetType) {
-    let current = node.parent;
+  // Функция hasParentWithNameAndType остается локальной, так как используется только здесь
+  function hasParentWithNameAndType(targetNode, targetName, targetType) {
+    let current = targetNode.parent;
     while (current) {
-      if (
-        current.name &&
-        current.name.toLowerCase() === targetName &&
-        current.type === targetType
-      ) {
+      if (current.name && current.name.toLowerCase() === targetName.toLowerCase() && current.type === targetType) {
         return true;
       }
       current = current.parent;
     }
     return false;
   }
-  const excludedColors = ['#000000', '#ffffff', 'FFFFFF', '#ff33bb'];
-  if (
-    (excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) &&
-    hasParentWithNameAndType(node, 'source', 'GROUP')
-  ) {
-    return null; // Возвращаем null, чтобы исключить узел из результатов
-  }
-  // КОСТЫЛЬ: не обрабатываем ноды с определенными цветами (черный, белый, #FF33BB),
-  // у которых любой из родителей называется 'group' и является группой. Это фильтр для исходников продуктовых логотипов.
-  if (
-    (excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) &&
-    hasParentWithNameAndType(node, 'group', 'GROUP')
-  ) {
-    return null; // Возвращаем null, чтобы исключить узел из результатов
-  }
-  // Игнорируем фиолетовую обводку у узлов типа COMPONENT_SET (стандартная обводка Figma)
-  if (nodeData.stroke ==='#9747ff' && node.type==="COMPONENT_SET") return null;
 
+  const excludedColors = ['#000000', '#ffffff', '#FFFFFF', '#ff33bb', '#MIXED', '#ERROR'];
+  const isExcludedBySourceGroup = (excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) &&
+                                  hasParentWithNameAndType(node, 'source', 'GROUP');
+  const isExcludedByGroupGroup = (excludedColors.includes(nodeData.fill) || excludedColors.includes(nodeData.stroke)) &&
+                                 hasParentWithNameAndType(node, 'group', 'GROUP');
+  const isComponentSetBorder = nodeData.stroke === '#9747ff' && node.type === "COMPONENT_SET";
+
+  if (isExcludedBySourceGroup || isExcludedByGroupGroup || isComponentSetBorder) {
+    return null; // Возвращаем null, чтобы исключить узел из результатов
+  }
 
   // Если узел имеет заливку (после фильтрации), добавляем его в список результатов заливок
-  if (nodeData.fill) {
+  // Добавляем только если есть цвет и он не является специальным значением
+  if (nodeData.fill && nodeData.fill !== '#MIXED' && nodeData.fill !== '#ERROR') {
+    // Создаем копию nodeData только с нужными полями для заливки
+    const fillData = Object.assign({}, nodeData);
+    delete fillData.stroke;
+    delete fillData.stroke_variable_name;
+    delete fillData.stroke_collection_id;
+    delete fillData.stroke_collection_name;
     if (Array.isArray(colorsResult.instances)) {
-        colorsResult.instances.push(nodeData);
-       // console.log('Added fill to colorsResult.instances:', nodeData);
+      colorsResult.instances.push(fillData);
     } else {
-        console.error('colorsResult.instances is not an array:', colorsResult.instances);
+      console.error('colorsResult.instances is not an array:', colorsResult.instances);
     }
-}
-// Если узел имеет обводку (после фильтрации), добавляем его в список результатов обводок
-if (nodeData.stroke) {
-  if (Array.isArray(colorsResultStroke.instances)) {
-      colorsResultStroke.instances.push(nodeData);
-     // console.log('Added fill to colorsResult.instances:', nodeData);
-  } else {
-      console.error('colorsResult.instances is not an array:', colorsResultStroke.instances);
   }
-}
 
-// Возвращаем данные узла, если он не был отфильтрован
-return nodeData;
+  // Если узел имеет обводку (после фильтрации), добавляем его в список результатов обводок
+  // Добавляем только если есть цвет и он не является специальным значением
+  if (nodeData.stroke && nodeData.stroke !== '#MIXED' && nodeData.stroke !== '#ERROR') {
+    // Создаем копию nodeData только с нужными полями для обводки
+    const strokeData = Object.assign({}, nodeData);
+    delete strokeData.fill;
+    delete strokeData.fill_variable_name;
+    delete strokeData.fill_collection_id;
+    delete strokeData.fill_collection_name;
+    if (Array.isArray(colorsResultStroke.instances)) {
+      colorsResultStroke.instances.push(strokeData);
+    } else {
+      console.error('colorsResultStroke.instances is not an array:', colorsResultStroke.instances);
+    }
+  }
+
+  // Возвращаем данные узла, только если у него есть хотя бы один цвет (fill или stroke),
+  // который не является специальным значением.
+  // Это предотвращает добавление узлов без реальных цветов в общий список,
+  // если они не были отфильтрованы ранее.
+  if ((nodeData.fill && nodeData.fill !== '#MIXED' && nodeData.fill !== '#ERROR') ||
+      (nodeData.stroke && nodeData.stroke !== '#MIXED' && nodeData.stroke !== '#ERROR')) {
+    return nodeData;
+  }
+
+  return null;
 }
 
 /**
  * Обрабатывает компонент или инстанс узла, собирает информацию о нем, его главном компоненте и статусе актуальности.
  * @param {SceneNode} node - Узел (INSTANCE или COMPONENT) для обработки
  * @param {Object} componentsResult - Объект для хранения результатов компонентов
+ * @param {Array<Object>} componentsResult.instances - Массив для данных инстансов/компонентов.
+ * @param {Object} componentsResult.counts - Счетчики для компонентов.
  * @returns {Promise<Object|null>} Объект с данными компонента или null, если узел не является INSTANCE или COMPONENT
  */
 async function processNodeComponent(node, componentsResult) {
@@ -1335,6 +1322,7 @@ async function processNodeComponent(node, componentsResult) {
           mainComponent = await node.getMainComponentAsync(); // Асинхронно получаем главный компонент
           //console.log(`[processNodeComponent] Получен mainComponent:`, mainComponent ? `${mainComponent.name} (${mainComponent.remote})` : 'null');
         } catch (error) {
+          // Обработка ошибок при обработке цвета заливки
           // Обработка ошибок при получении главного компонента
           console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name}:`, error);
           figma.ui.postMessage({
@@ -1352,7 +1340,7 @@ async function processNodeComponent(node, componentsResult) {
       let name = node.name; // Имя узла
 
       // Получаем описание и версию, используя главный компонент (если есть) или сам узел
-      const descriptionDataMain = await getDescription(node, mainComponent);
+      const descriptionDataMain = await getDescription(mainComponent || node); // Передаем mainComponent или сам node
       let parentComponentName = null; // Имя родительского компонента (если вложен в инстанс)
       let mainComponentName = mainComponent ? mainComponent.name : null; // Имя главного компонента
       let mainComponentKey = mainComponent ? mainComponent.key : null; // Имя главного компонента
@@ -1418,28 +1406,7 @@ async function processNodeComponent(node, componentsResult) {
       // Используем await, так как getDescription теперь асинхронная (получаем описание и версию из самого узла, если нет mainComponent)
       const descriptionDataSingle = await getDescription(node);
 
-      // Повторно находим имя родительского компонента (если узел является инстансом внутри инстанса)
-      // Эта логика дублируется с processNodeColors, возможно, стоит вынести в отдельную функцию
-      while (parentNode && !parentComponentName) {
-        if (parentNode.type === 'INSTANCE') {
-          try {
-            // Используем асинхронный метод для получения mainComponent родительского инстанса
-            const parentMainComponent = await parentNode.getMainComponentAsync();
-            if (parentMainComponent) {
-              parentComponentName = parentMainComponent.name;
-              if (parentMainComponent.parent && parentMainComponent.parent.type === 'COMPONENT_SET') {
-                parentComponentName = parentMainComponent.parent.name;
-            //console.log(`Найден родительский компонент в наборе: ${parentComponentName}`);
-              } else {
-                //console.log(`Найден родительский компонент: ${parentComponentName}`);
-              }
-            }
-          } catch (error) {
-            console.error(`Ошибка при получении mainComponent для родителя ${parentNode.name}:`, error);
-          }
-        }
-        parentNode = parentNode.parent;
-      }
+      parentComponentName = await getParentComponentName(node); // Используем новую вспомогательную функцию
 
       // Обрабатываем только узлы типа INSTANCE или COMPONENT (игнорируем COMPONENT_SET здесь)
       if ((node.type === 'INSTANCE' || node.type === 'COMPONENT') && typeof name === 'string' && name.trim() !== "") {
