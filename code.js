@@ -1544,19 +1544,14 @@ async function processNodeComponent(node, componentsResult) {
           pluginDataVersion = node.getPluginData('customVersion') || '';
 
           // Если это инстанс и у него нет своих данных, проверяем PluginData главного компонента
-          if (node.type === 'INSTANCE' && mainComponent && (!pluginDataKey || !pluginDataVersion)) {
-            const pluginDataKey = mainComponent.getPluginData('customKey') || '';
-            //const mainComponentVersion = mainComponent.getPluginData('customVersion') || '';
-
-            // Используем данные из главного компонента, если у инстанса нет своих
-            //if (mainComponentKey && !pluginDataKey) pluginDataKey = mainComponentKey;
-            //if (mainComponentVersion && !pluginDataVersion) pluginDataVersion = mainComponentVersion;
+          if (node.type === 'INSTANCE' && mainComponent && !pluginDataKey) {
+            pluginDataKey = mainComponent.getPluginData('customKey') || '';
           }
 
           //console.log(`Получены данные из PluginData для ${node.name}:`, { ключ: pluginDataKey, версия: pluginDataVersion });
         } catch (error) {
           // Обработка ошибок при получении PluginData
-          console.warn(`Ошибка при получении PluginData для ${node.name}:`, error);
+          console.error(`Ошибка при получении PluginData для ${node.name}:`, error);
         }
 
         let parent = node.parent; // Непосредственный родитель узла
