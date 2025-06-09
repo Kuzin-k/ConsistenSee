@@ -245,7 +245,7 @@ h3 {
 .tab-content.active {display: block;}
 
 /* Results and Icons */
-#results, #icons, #outdated, #colors, #log {
+#results, #icons, #outdated, #colors, #log, #total {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   color: var(--figma-color-text);
@@ -700,10 +700,10 @@ h3 {
 
 .resize-handle {
   position: fixed;
-  bottom: -6;
-  right: -6;
-  width: 32px;
-  height: 32px;
+  bottom: -8;
+  right: -8;
+  width: 40px;
+  height: 40px;
   cursor: nwse-resize;
   padding: 0px;
   box-sizing: content-box;
@@ -787,7 +787,34 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
-</style>
+/* Statistics styles */
+
+.stats-list {
+  list-style: none;
+  width: 150px;
+  padding: 0;
+  margin: 0;
+}
+
+.stats-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dotted var(--figma-color-border);
+}
+
+.stats-list li:last-child {
+  border-bottom: none;
+}
+
+.stats-list .type-name {
+  color: var(--figma-color-text);
+}
+
+.stats-list .type-count {
+  font-weight: var(--font-weight-medium);
+}
+  </style>
 </head>
 <body>
 
@@ -834,7 +861,7 @@ input:checked + .slider:before {
         <path fill-rule="evenodd" clip-rule="evenodd" d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18ZM12 19C15.866 19 19 15.866 19 12C19 8.134 15.866 5 12 5C8.134 5 5 8.134 5 12C5 15.866 8.134 19 12 19ZM12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM13 12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12C11 11.4477 11.4477 11 12 11C12.5523 11 13 11.4477 13 12Z"/>
       </symbol>
       <symbol id="resize-icon" viewBox="0 0 24 24">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M11.5219 16H11.5H8.5C8.22386 16 8 15.7761 8 15.5C8 15.2239 8.22386 15 8.5 15H11.5C12.2083 15 12.7095 14.9996 13.1013 14.9676C13.4872 14.9361 13.7228 14.8764 13.908 14.782C14.2843 14.5903 14.5903 14.2843 14.782 13.908C14.8764 13.7228 14.9361 13.4872 14.9676 13.1013C14.9996 12.7095 15 12.2083 15 11.5V8.5C15 8.22386 15.2239 8 15.5 8C15.7761 8 16 8.22386 16 8.5V11.5V11.5219C16 12.2034 16 12.7454 15.9643 13.1827C15.9277 13.6305 15.8512 14.0123 15.673 14.362C15.3854 14.9265 14.9265 15.3854 14.362 15.673C14.0123 15.8512 13.6305 15.9277 13.1827 15.9643C12.7454 16 12.2034 16 11.5219 16Z"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M11.5219 16H11.5H8.5C8.22386 16 8 15.7761 8 15.5C8 15.2239 8.22386 15 8.5 15H11.5C12.2083 15 12.7095 14.9996 13.1013 14.9676C13.4872 14.9361 13.7228 14.8764 13.908 14.782C14.2843 14.5903 14.5903 14.2843 14.782 13.908C14.8764 13.7228 14.9361 13.4872 14.9676 13.1013C14.9996 12.7095 15 12.2083 15 11.5V8.5C15 8.22386 15.22386 8 15.5 8C15.7761 8 16 8.22386 16 8.5V11.5V11.5219C16 12.2034 16 12.7454 15.9643 13.1827C15.9277 13.6305 15.8512 14.0123 15.673 14.362C15.3854 14.9265 14.9265 15.3854 14.362 15.673C15.0123 15.8512 15.6305 15.9277 15.1827 15.9643C12.7454 16 12.2034 16 11.5219 16Z"/>
       </symbol>
 
       
@@ -875,7 +902,7 @@ input:checked + .slider:before {
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
         <div class="tab" data-tab="outdated">Outdated (0)</div>
         <div class="tab" data-tab="icons">Icons (0)</div>
-        
+        <div class="tab" data-tab="total">Total (0)</div>
       </div>
     </div>
     <!-- Контент --> 
@@ -921,6 +948,12 @@ input:checked + .slider:before {
         <ul id="colorStrokeResultsList"></ul>
       </div>
     </div>
+    <!-- Total Statistics -->
+    <div id="total" class="tab-content">
+        <div class="stats-section">
+          <ul id="overallStatsList" class="stats-list"></ul>
+        </div>
+    </div>
     <!-- Plugin Data --> 
     <div id="component-data" class="tab-content"> 
       <h3>PluginData</h3>
@@ -965,6 +998,7 @@ input:checked + .slider:before {
   </div></div>
 
   <script>
+    console.log('Script started'); // Added log
     function displayResult(message, isError = false) {
       const outputElement = document.getElementById('componentDataOutput');
       if (!outputElement) {
@@ -1949,7 +1983,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
         type: 'debug-search',
         components: window.lastDebugData?.components || {},
         colors: window.lastDebugData?.colors || {},
-        componentTree: window.lastDebugData?.componentTree || null
+        componentTree: window.lastDebugData?.componentTree || null,
+        totalStats: window.lastDebugData?.totalStats || {}
       };
 
       debugContent.innerHTML = '';
@@ -1962,6 +1997,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
     // Обновляем обработчик сообщений для сохранения данных отладки
     window.onmessage = async (event) => {
       const msg = event.data.pluginMessage;
+      if (!msg) return;
+      
+      // Handle special cases first
       if (msg.type === 'user-info') {
         const userInfoElement = document.querySelector('.user-info');
         const metadataTab = document.getElementById('metadata');
@@ -1969,16 +2007,89 @@ document.getElementById('setComponentData').addEventListener('click', function()
           if (!["Konstantin Kuzin", "III", "YYY"].includes(msg.user.name)) metadataTab.style.display = 'none';
           userInfoElement.textContent = msg.user.name;
         }
-  
-        
-       
-            
-    }
-      // console.log('Получено сообщение:', msg);
+        return;
+      }
+      
+      if (msg.type === 'resize') {
+        const width = msg.width;
+        const height = msg.height;
+        window.resizeTo(width, height);
+        return;
+      }
 
+      if (msg.type === 'update-statistics') {
+        updateStatistics(msg.data);
+        return;
+      }
 
+      if (msg.type === 'component-data-result') {
+        if (msg.data) {
+          displayComponentData(msg.data);
+        } else if (msg.message) {
+          displayResult(msg.message, msg.isError);
+        } else {
+          displayResult('Данные компонента не найдены.');
+        }
+        return;
+      }
+
+      if (msg.type === 'component-data-set') {
+        displayResult(msg.message || 'Данные компонента успешно установлены.', msg.isError);
+        return;
+      }
+
+      if (msg.type === 'component-data-cleared') {
+        displayResult(msg.message || 'Данные компонента успешно очищены.', msg.isError);
+        return;
+      }
+
+      const resizeHandle = document.getElementById('resizeHandle');
+    let isResizing = false;
+    let initialWidth;
+    let initialHeight;
+    let initialX;
+    let initialY;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      initialWidth = window.innerWidth;
+      initialHeight = window.innerHeight;
+      initialX = e.clientX;
+      initialY = e.clientY;
+    });
+      
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      
+      const newWidth = initialWidth + (e.clientX - initialX);
+      const newHeight = initialHeight + (e.clientY - initialY);
+      
+      // Ensure minimum dimensions
+      const width = Math.max(newWidth, 300);
+      const height = Math.max(newHeight, 200);
+      
+      // Directly resize the window
+      window.resizeTo(width, height);
+      
+      // Also notify the plugin
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'resize', 
+          width: width,
+          height: height
+        } 
+      }, '*');
+
+      // Prevent selection during resize
+      e.preventDefault();
+    });
+      
+    document.addEventListener('mouseup', () => {isResizing = false;});  
+      
+      
+    
+      
       if (msg.type === 'success') {
-        //console.log('Получены данные о цветах:', msg.instances);
         hideLoader();
         
         // Очищаем предыдущие результаты
@@ -1999,8 +2110,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
         processedCount.textContent = msg.processed;
         totalCount.textContent = msg.total;
         
-      
-        
         // Обновляем прогресс-бар
         const percentage = (msg.processed / msg.total) * 100;
         progressBarFill.style.width = `${percentage}%`;
@@ -2018,7 +2127,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
           components: msg.components,
           colors: msg.colors,
           colorsStroke: msg.colorsStroke,
-          componentTree: msg.componentTree
+          componentTree: msg.componentTree,
+          totalStats: msg.totalStats
         };
 
         // Hide loader
@@ -2030,13 +2140,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
         console.log('Received all-results:', msg);
 
         // Process components and colors...
-        if (msg.components) {
-          processAndDisplayComponents(msg.components);
-        }
+        if (msg.components) {processAndDisplayComponents(msg.components);}
         // Process outdated components if present
-        if (msg.components && msg.components.outdated) {
-          // Используем ту же функцию processAndDisplayComponents, но передаем ей данные устаревших и другой целевой список
-          processAndDisplayOutdatedComponents(msg.components);
+        // Используем ту же функцию processAndDisplayComponents, но передаем ей данные устаревших и другой целевой список
+        if (msg.components && msg.components.outdated) {processAndDisplayOutdatedComponents(msg.components);
         }
 
         // Process colors...
@@ -2055,7 +2162,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
           components: msg.components,
           colors: msg.colors,
           colorsStroke: msg.colorsStroke,
-          componentTree: msg.componentTree
+          componentTree: msg.componentTree,
+          totalStats: msg.totalStats
         };
 
         // Сбрасываем сохраненное оригинальное содержимое при новых данных
@@ -2696,258 +2804,44 @@ document.getElementById('setComponentData').addEventListener('click', function()
     // Закрываем обработчик DOMContentLoaded
     });
     
-    // Обработчик сообщений от плагина
-    window.addEventListener('message', function(event) {
-      if (!event.data.pluginMessage) return;
+    // All message handling is now done in window.onmessage
+
+    // Function to update statistics display
+    function updateStatistics(data) {
+      const { overallStats } = data;
       
-      const msg = event.data.pluginMessage;
+      // Update overall statistics
+      const overallList = document.getElementById('overallStatsList');
+      overallList.innerHTML = '';
       
-      // Если это сообщение о изменении размера, пропускаем дальнейшую обработку
-      if (msg.type === 'resize') return;
+      // Sort node types by count (descending)
+      const sortedTypes = Object.entries(overallStats.nodeTypeCounts)
+        .sort(([,a], [,b]) => b - a);
       
-      // Обработка остальных сообщений
-      switch (msg.type) {
-        case 'component-data-result':
-          if (msg.data) {
-            displayComponentData(msg.data);
-          } else if (msg.message) {
-            displayResult(msg.message, msg.isError);
-          } else {
-            displayResult('Данные компонента не найдены.');
-          }
-          break;
-          
-        case 'component-data-set':
-          displayResult(msg.message || 'Данные компонента успешно установлены.', msg.isError);
-          break;
-          
-        case 'component-data-cleared':
-          displayResult(msg.message || 'Данные компонента успешно очищены.', msg.isError);
-          break;
+      for (const [type, count] of sortedTypes) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class='instance-icon'><span class="type-name">${type}</span>
+          <span class="type-count">${count}</span>
+        `;
+        overallList.appendChild(li);
       }
-    });
-  </script>
-  <!-- Скрипт для исправления проблемы с отображением результатов операций -->
-  <script>
-    // Выполняем после загрузки страницы
-    window.addEventListener('DOMContentLoaded', function() {
-      console.log('Инициализация функций для работы с компонентами');
       
-      // Определяем глобальную функцию displayResult
-      window.displayResult = function(message, isError = false) {
-        const outputElement = document.getElementById('componentDataOutput');
-        if (!outputElement) {
-          console.error('Элемент вывода не найден:', 'componentDataOutput');
-          return;
-        }
-        
-        console.log('Отображение результата:', message);
-        outputElement.innerHTML = '';
-        const resultElement = document.createElement('p');
-        resultElement.textContent = message;
-        resultElement.style.color = isError ? '#d32f2f' : '#2e7d32';
-        resultElement.style.fontWeight = 'bold';
-        resultElement.style.padding = '10px';
-        resultElement.style.border = `1px solid ${isError ? '#d32f2f' : '#2e7d32'}`;
-        resultElement.style.borderRadius = '4px';
-        outputElement.appendChild(resultElement);
-      };
+      // Add total count
+      const totalLi = document.createElement('li');
+      totalLi.innerHTML = `
+        <strong class="type-name">Total Nodes</strong>
+        <strong class="type-count">${overallStats.totalNodes}</strong>
+      `;
+      overallList.appendChild(totalLi);
       
-      // Определяем глобальную функцию displayComponentData
-      window.displayComponentData = function(data) {
-        const outputElement = document.getElementById('componentDataOutput');
-        if (!outputElement) {
-          console.error('Элемент вывода не найден');
-          return;
-        }
-        
-        outputElement.innerHTML = '';
-        
-        if (!data || Object.keys(data).length === 0) {
-          window.displayResult('Данные компонента не найдены.', true);
-          return;
-        }
-        
-        const container = document.createElement('div');
-        container.style.fontFamily = 'monospace';
-        
-        for (const nodeId in data) {
-          const nodeData = data[nodeId];
-          
-          const nodeTitle = document.createElement('h4');
-          nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
-          nodeTitle.style.marginBottom = '5px';
-          container.appendChild(nodeTitle);
-          
-          const nodeInfo = document.createElement('div');
-          nodeInfo.style.marginLeft = '10px';
-          nodeInfo.style.marginBottom = '15px';
-          
-          const idLine = document.createElement('div');
-          idLine.textContent = `ID: ${nodeId}`;
-          nodeInfo.appendChild(idLine);
-          
-          const keyLine = document.createElement('div');
-          keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
-          keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
-          nodeInfo.appendChild(keyLine);
-          
-          const versionLine = document.createElement('div');
-          versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
-          versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
-          nodeInfo.appendChild(versionLine);
-          
-          // Добавляем отображение данных из PluginData
-          if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
-            // Добавляем заголовок для данных из PluginData
-            const pluginDataHeader = document.createElement('div');
-            pluginDataHeader.textContent = 'Данные из PluginData:';
-            pluginDataHeader.style.fontWeight = 'bold';
-            pluginDataHeader.style.marginTop = '8px';
-            pluginDataHeader.style.marginBottom = '4px';
-            nodeInfo.appendChild(pluginDataHeader);
-            
-            // Отображаем ключ из PluginData
-            const pluginDataKeyLine = document.createElement('div');
-            pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
-            pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
-            pluginDataKeyLine.style.marginLeft = '10px';
-            nodeInfo.appendChild(pluginDataKeyLine);
-            
-            // Отображаем версию из PluginData
-            const pluginDataVersionLine = document.createElement('div');
-            pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
-            pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
-            pluginDataVersionLine.style.marginLeft = '10px';
-            nodeInfo.appendChild(pluginDataVersionLine);
-          }
-          
-          container.appendChild(nodeInfo);
-        }
-        
-        outputElement.appendChild(container);
-      };
-      
-      // Переопределяем обработчик сообщений
-      const originalMessageHandler = window.onmessage;
-      window.addEventListener('message', function(event) {
-        if (!event.data.pluginMessage) return;
-        
-        const msg = event.data.pluginMessage;
-        //console.log('Получено сообщение от плагина:', msg);
-        
-        // Обработка сообщений для компонентов
-        switch (msg.type) {
-          case 'component-data-result':
-            if (msg.data) {
-              console.log('Отображение данных компонента:', msg.data);
-              const outputElement = document.getElementById('componentDataOutput');
-              if (!outputElement) {
-                console.error('Элемент вывода не найден');
-                return;
-              }
-              
-              outputElement.innerHTML = '';
-              
-              if (Object.keys(msg.data).length === 0) {
-                window.displayResult('Данные компонента не найдены.', true);
-                return;
-              }
-              
-              const container = document.createElement('div');
-              container.style.fontFamily = 'monospace';
-              
-              for (const nodeId in msg.data) {
-                const nodeData = msg.data[nodeId];
-                
-                const nodeTitle = document.createElement('h4');
-                nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
-                nodeTitle.style.marginBottom = '5px';
-                container.appendChild(nodeTitle);
-                
-                const nodeInfo = document.createElement('div');
-                nodeInfo.style.marginLeft = '10px';
-                nodeInfo.style.marginBottom = '15px';
-                
-                const idLine = document.createElement('div');
-                idLine.textContent = `ID: ${nodeId}`;
-                nodeInfo.appendChild(idLine);
-                
-                const keyLine = document.createElement('div');
-                keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
-                keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
-                nodeInfo.appendChild(keyLine);
-                
-                const versionLine = document.createElement('div');
-                versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
-                versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
-                nodeInfo.appendChild(versionLine);
-                
-                if (nodeData.originalKey) {
-                  const originalKeyLine = document.createElement('div');
-                  originalKeyLine.textContent = `Оригинальный ключ: ${nodeData.originalKey}`;
-                  originalKeyLine.style.color = '#666';
-                  nodeInfo.appendChild(originalKeyLine);
-                }
-                
-                container.appendChild(nodeInfo);
-              }
-              
-              outputElement.appendChild(container);
-            } else if (msg.message) {
-              window.displayResult(msg.message, msg.isError);
-            } else {
-              window.displayResult('Данные компонента не найдены.');
-            }
-            break;
-            
-          case 'component-data-set':
-            window.displayResult(msg.message || 'Данные компонента успешно установлены.', msg.isError);
-            break;
-            
-          case 'component-data-cleared':
-            window.displayResult(msg.message || 'Данные компонента успешно очищены.', msg.isError);
-            break;
-        }
-      });
-      
-      console.log('Инициализация завершена');
-    });
-  </script>
-<script>
-const resizeHandle = document.getElementById('resizeHandle');
-let isResizing = false;
-let initialWidth;
-let initialHeight;
-let initialX;
-let initialY;
+      // Update the Total tab counter
+      const totalTab = document.querySelector('[data-tab="total"]');
+      if (totalTab) totalTab.textContent = `Total (${overallStats.totalNodes})`
+    }
+    
 
-resizeHandle.addEventListener('mousedown', (e) => {
-  isResizing = true;
-  initialWidth = window.innerWidth;
-  initialHeight = window.innerHeight;
-  initialX = e.clientX;
-  initialY = e.clientY;
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (!isResizing) return;
-  
-  const newWidth = initialWidth + (e.clientX - initialX);
-  const newHeight = initialHeight + (e.clientY - initialY);
-  
-  parent.postMessage({ 
-    pluginMessage: { 
-      type: 'resize', 
-      width: Math.max(newWidth, 300), // минимальная ширина
-      height: Math.max(newHeight, 200) // минимальная высота
-    } 
-  }, '*');
-});
-
-document.addEventListener('mouseup', () => {
-  isResizing = false;
-});
+    
 </script>
 </body>
 </html>

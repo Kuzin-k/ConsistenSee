@@ -61,6 +61,9 @@ const publishStatusCache = new Map();
 // Добавляем глобальную переменную для хранения данных о цветах
 let lastColorsData = null;
 
+// Добавляем массив для хранения статистики по каждому выделенному элементу
+let totalStatsList = [];
+
 /**
  * Получает уникальный ключ кэширования для компонента.
  * @param {ComponentNode} component - Компонент для получения ключа
@@ -420,6 +423,53 @@ async function updateProgress(phase, processed, total, message) {
 }
 
 /**
+ * Обрабатывает статистику узлов по типам.
+ * @param {SceneNode|SceneNode[]} nodes - Узел или массив узлов для анализа.
+ * @param {string} [nodeName] - Имя для группы узлов (опционально).
+ * @returns {Object} Объект со статистикой по типам узлов.
+ */
+function processNodeStatistics(nodes, nodeName = 'Unnamed Selection') {
+  const typeStats = {};
+  let totalCount = 0;
+  const processedNodes = new Set(); // Keep track of processed nodes to avoid duplicates
+
+  // Функция для рекурсивного подсчета узлов
+  function countNodeTypes(currentNode) {
+    if (!currentNode || processedNodes.has(currentNode.id)) return;
+    
+    processedNodes.add(currentNode.id); // Mark node as processed
+    
+    // Подсчитываем текущий узел
+    if (!typeStats[currentNode.type]) {
+      typeStats[currentNode.type] = 1;
+    } else {
+      typeStats[currentNode.type]++;
+    }
+    totalCount++;
+
+    // Process children for all node types that have them
+    if ('children' in currentNode) {
+      currentNode.children.forEach(child => countNodeTypes(child));
+    }
+  }
+
+  // Обрабатываем один узел или массив узлов
+  if (Array.isArray(nodes)) {
+    nodes.forEach(node => countNodeTypes(node));
+  } else {
+    countNodeTypes(nodes);
+  }
+
+  return {
+    nodeTypeCounts: typeStats,
+    totalNodes: totalCount,
+    nodeName: nodeName
+  };
+}
+
+
+
+/**
  * Основной обработчик сообщений от UI плагина
  * Обрабатывает различные команды, поступающие из пользовательского интерфейса.
  *
@@ -449,14 +499,13 @@ figma.ui.onmessage = async (msg) => {
       publishStatusCache.clear();
       console.log('Все кэши очищены перед новым поиском.');
 
-      // Записываем время начала выполнения
       const startTime = Date.now();
-
-      // Получаем текущее выделение пользователя
+      
+      // Записываем время начала выполнения
       const selection = figma.currentPage.selection;
 
     // Если ничего не выделено, отправляем сообщение об ошибке в UI и выходим
-    if (!selection || selection.length === 0) {
+     if (!selection || selection.length === 0) {
       figma.ui.postMessage({
         type: 'error',
         message: 'Выберите фрейм, компонент или инстанс!'
@@ -465,17 +514,25 @@ figma.ui.onmessage = async (msg) => {
     }
 
     // Собираем все уникальные узлы для обработки из выделенных элементов и их потомков
-    const uniqueNodesToProcess = new Set();
+    const uniqueNodesToProcess = new Set();      // Очищаем и используем глобальный массив для хранения статистики
+    totalStatsList.length = 0;
 
     // Проходим по каждому выделенному элементу
     for (const selectedNode of selection) {
-      // Добавляем сам выделенный узел, если он является компонентом, инстансом или набором компонентов
-      if (selectedNode.type === 'INSTANCE' || selectedNode.type === 'COMPONENT' || selectedNode.type === 'COMPONENT_SET') {uniqueNodesToProcess.add(selectedNode);}
-
-      // Если узел является контейнером (имеет метод findAll), добавляем всех его потомков
+      // Если узел является контейнером (имеет метод findAll), собираем все его потомки
       if (typeof selectedNode.findAll === 'function') {
+        // Собираем статистику для текущего выделенного элемента и всех его потомков
+        const nodeStats = processNodeStatistics(selectedNode, selectedNode.name);
+        totalStatsList.push(nodeStats);
+
+        // Собираем все узлы для последующей обработки компонентов и цветов
         const allDescendants = selectedNode.findAll();
-        for (const descendant of allDescendants) {uniqueNodesToProcess.add(descendant);}
+        allDescendants.forEach(descendant => {
+          // Добавляем узлы с компонентами в uniqueNodesToProcess
+          if (descendant.type === 'INSTANCE' || descendant.type === 'COMPONENT' || descendant.type === 'COMPONENT_SET') {
+            uniqueNodesToProcess.add(descendant);
+          }
+        });
       }
     }
 
@@ -483,13 +540,15 @@ figma.ui.onmessage = async (msg) => {
     const nodesToProcess = Array.from(uniqueNodesToProcess);
 
     // Если после сбора нет узлов для обработки, отправляем сообщение об ошибке и выходим
-    if (nodesToProcess.length === 0) {
+    /*
+    if (nodeStats.length === 0) {
        figma.ui.postMessage({
          type: 'error',
          message: 'В выделенной области нет поддерживаемых элементов (компоненты, инстансы, элементы с цветами).'
        });
        return;
     }
+    */
 
     // Инициализируем объекты для хранения результатов анализа компонентов и цветов
     let componentsResult = {
@@ -635,12 +694,27 @@ figma.ui.onmessage = async (msg) => {
       componentsResult.executionTime = executionTime;
       console.log(`Время выполнения запроса check-all: ${executionTime}ms`);
       
+      // Подготавливаем общую статистику для всех выделенных элементов
+      // Используем selection вместо uniqueNodesToProcess для полной статистики
+      const totalStats = processNodeStatistics(selection, 'Total');
+
+      // Отправляем статистику в UI
       figma.ui.postMessage({
-        type: 'all-results', // Тип сообщения для UI
-        components: componentsResult, // Результаты компонентов
-        colors: colorsResult, // Результаты цветов заливки
-        colorsStroke: colorsResultStroke, // Результаты цветов обводки
-        componentTree: componentTree // Дерево выбранных элементов
+        type: 'update-statistics',
+        data: {
+          overallStats: totalStats,
+          totalCount: totalStats.totalNodes // Добавляем общее количество явно
+        }
+      });
+
+      // Затем отправляем остальные результаты
+      figma.ui.postMessage({
+        type: 'all-results',
+        components: componentsResult,
+        colors: colorsResult,
+        colorsStroke: colorsResultStroke,
+        componentTree: componentTree,
+        totalStats: totalStats // Включаем статистику и в этом сообщении для синхронизации
       });
 
      
