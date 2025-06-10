@@ -621,7 +621,7 @@ figma.ui.onmessage = async (msg) => {
         await processNodeSafely(nodesToProcess[i], i);
         // Обновляем прогресс после каждого узла
         // Даем браузеру "подышать" после каждого 10 узла, чтобы UI не зависал
-        if (i % 10 === 0) {
+        if (i % 5 === 0) {
           await new Promise(resolve => setTimeout(resolve, 0));
           await updateProgress('processing', i + 1, nodesToProcess.length, 'Обработка элементов');
         }
@@ -1676,7 +1676,7 @@ async function checkComponentUpdates(componentsResult) {
         continue;
       }
 
-      console.log(`Checking component: "${instance.name}" (mainComponentId: ${instance.mainComponentId})`);
+      //console.log(`Checking component: "${instance.name}" (mainComponentId: ${instance.mainComponentId})`);
       
       // Get the main component by ID
       const mainComponent = await figma.getNodeByIdAsync(instance.mainComponentId);

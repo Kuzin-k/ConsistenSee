@@ -502,10 +502,10 @@ h3 {
 }
 
 .progress-phase {
-  color: var(--figma-color-bg-brand);
-  font-weight: var(--font-weight-medium);
-  font-size: var(--font-size-medium);
-  margin-bottom: 10px;
+  color: var(--figma-color-secondary);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-small);
+  margin-top: 4px;
   
 }
 
@@ -520,9 +520,9 @@ h3 {
 
 .progress-bar {
   width: 100%;
-  height: 4px;
+  height: 6px;
   background-color: #eee;
-  border-radius: 2px;
+  border-radius: 6px;
   margin-top: 5px;
   overflow: hidden;
 }
@@ -791,7 +791,7 @@ input:checked + .slider:before {
 
 .stats-list {
   list-style: none;
-  width: 150px;
+  width: 200px;
   padding: 0;
   margin: 0;
 }
@@ -871,11 +871,12 @@ input:checked + .slider:before {
   <!-- Loader --> 
   <div class="loader-container">
     <div class="progress-info">
-      <div class="progress-phase" id="progressPhase"></div>
+      
       <div class="progress-counts">Обработано: <span id="processedCount">0</span> из <span id="totalCount">0</span></div>
       <div class="progress-bar">
         <div class="progress-bar-fill" id="progressBarFill"></div>
       </div>
+      <div class="progress-phase" id="progressPhase"></div>
     </div>
   </div>
   
@@ -2326,7 +2327,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         progressBarFill.style.width = `${percentage}%`;
         // Показываем имя компонента
         if (msg.currentComponentName) {
-          document.getElementById('progressPhase').textContent = `Проверка: ${msg.currentComponentName}`;
+          document.getElementById('progressPhase').textContent = `${msg.currentComponentName}`;
         } else if (msg.type === 'progress-update' && msg.phase === 'check-updates') {
           document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
         } else {
@@ -3069,22 +3070,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const sortedTypes = Object.entries(overallStats.nodeTypeCounts)
         .sort(([,a], [,b]) => b - a);
       
-      for (const [type, count] of sortedTypes) {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <span class='instance-icon'><span class="type-name">${type}</span>
-          <span class="type-count">${count}</span>
-        `;
-        overallList.appendChild(li);
-      }
+      
       
       // Add total count
       const totalLi = document.createElement('li');
       totalLi.innerHTML = `
-        <strong class="type-name">Total Nodes</strong>
+        <strong class="type-name">TOTAL NODES</strong>
         <strong class="type-count">${overallStats.totalNodes}</strong>
       `;
       overallList.appendChild(totalLi);
+
+      for (const [type, count] of sortedTypes) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="type-name">${type}</span>
+          <span class="type-count">${count}</span>
+        `;
+        overallList.appendChild(li);
+      }
       
       // Update the Total tab counter
       const totalTab = document.querySelector('[data-tab="total"]');
