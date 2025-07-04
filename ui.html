@@ -623,7 +623,7 @@ h3 {
 }
 
 .button-main {
-  background-color: var(--figma-color-bg-brand);
+  background: linear-gradient(rgb(180, 6, 148), blue);
   color: var(--figma-color-text-onbrand);
   border: none;
   border-radius: 12px;
@@ -634,6 +634,8 @@ h3 {
   font-weight: 700;
   transition: background-color 0.3s ease;
 }
+
+
 
 .button-secondary {
   background-color: var(--figma-color-bg);
@@ -826,15 +828,15 @@ input:checked + .slider:before {
 
   <!-- Splash Screen -->
   <div class="splash-screen" id="splashScreen">
-    <img 
-      src="https://api.vladey.net/storage/artwork/13013/regular_preview_image-dd5afd7b2671829bd31d8f6eda986def.jpeg" 
-      alt="Welcome" 
+    <img
+      src=""
+      alt="Welcome"
       class="splash-image"
       onload="console.log('Изображение успешно загружено')"
     >
     <div class="splash-content">
-      <h1 class="splash-title">Дизайнер, к борьбе за победу всеобщей консистентности будь готов!</h1>
-      <button id="startCheck" class="button-main">Всегда готов!</button>
+      <h1 class="splash-title"></h1>
+      <button id="startCheck" class="button-main"></button>
     </div>
   </div>
 
@@ -2076,6 +2078,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
         return;
       }
       
+      // Handle splash-data message
+      if (msg.type === 'splash-data') {
+        const splashImageElement = document.querySelector('.splash-image');
+        const splashTitleElement = document.querySelector('.splash-title');
+        const startCheckButton = document.getElementById('startCheck');
+
+        if (splashImageElement && msg.data.imageUrl) {
+          splashImageElement.src = msg.data.imageUrl;
+        }
+        if (splashTitleElement && msg.data.titleText) {
+          splashTitleElement.textContent = msg.data.titleText;
+        }
+        if (startCheckButton && msg.data.buttonText) {
+          startCheckButton.textContent = msg.data.buttonText;
+        }
+        return;
+      }
+
       if (msg.type === 'resize') {
         const width = msg.width;
         const height = msg.height;

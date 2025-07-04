@@ -1,5 +1,5 @@
 {
-    "name": "ConsistenSee 1.1 [HEXA UI TOOLS]",
+    "name": "ConsistenSee 1.2 [HEXA UI TOOLS]",
     "id": "1493892994224385588",
     "api": "1.0.0",
     "main": "code.js",
@@ -8,5 +8,5 @@
     "enablePrivatePluginApi": true,
     "documentAccess": "dynamic-page",
     "ui": "ui.html",
-    "networkAccess": {"allowedDomains": ["https://api.vladey.net"]}
+    "networkAccess": {"allowedDomains": ["https://*.yandex.ru"]}
   }

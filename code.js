@@ -47,7 +47,51 @@ figma.ui.postMessage({
   }
 });
 
+// --- Splash Screen Data ---
+const splashScreenCombinations = [
+  {
+    imageUrl: "https://downloader.disk.yandex.ru/preview/9f312e965a5cb62de3b834fbdbec01be8981c981359610a3e7c562f55be0f4ee/68686aa6/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=0&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&size=2048x2048",
+    titleText: "Дизайнер, к борьбе за победу всеобщей консистентности будь готов!",
+    buttonText: "Всегда готов!"
+  },
+  {
+    imageUrl: "https://downloader.disk.yandex.ru/preview/97f205f91c4e6f96d4f1e89a90d47d476150b4d42ca3cbae2d3c326fb55ab3d0/68686a3d/se5BT60CXEEZWaCAmUtuG9a9f1ieqLEJ2CEJi7gCW4vo8WdCc-b_a2j9gNNYpsGainQW_fPnHiz5W9XoI-cRwQ%3D%3D?uid=0&filename=gagarin.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&size=2048x2048", // Example 2 image
+    titleText: "Ну как вы там потомки, теперь вам AI макеты рисует?",
+    buttonText: "Юра, мы всё раздетачили"
+  },
+  {
+    imageUrl: "https://downloader.disk.yandex.ru/preview/654e2ed50e413289aebd69772e5bf9004956b4ede643f359899c953a6f95cb12/68686adc/DSpXFN1MCoNBFH847La1OcdcOcVWJOdVaM8ulDYd8ldqIYYRgpZNiCjFmG_dfAH83IWKf2Y5r7NSiKBmC1y1SQ%3D%3D?uid=0&filename=rocket.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&size=2048x2048", // Example 3 image
+    titleText: "Люди ракеты на Марс запускают, а вы компоненты обновить не можете",
+    buttonText: "Можем!"
+  },
+];
 
+// User-specific splash screen settings (example structure)
+// Key: Figma User ID, Value: Index of the combination in splashScreenCombinations
+const userSplashSettings = {
+  // 'USER_ID_EXAMPLE_1': 0, // Assign first combination to this user
+  // 'USER_ID_EXAMPLE_2': 1, // Assign second combination to this user
+};
+
+// Select splash screen data based on user or randomly
+let selectedSplashData;
+const currentUser = figma.currentUser;
+const userSettingIndex = userSplashSettings[currentUser.id];
+
+if (typeof userSettingIndex === 'number' && splashScreenCombinations[userSettingIndex]) {
+  selectedSplashData = splashScreenCombinations[userSettingIndex];
+} else {
+  const randomIndex = Math.floor(Math.random() * splashScreenCombinations.length);
+  selectedSplashData = splashScreenCombinations[randomIndex];
+}
+
+// Send splash screen data to UI
+figma.ui.postMessage({
+  type: 'splash-data',
+  data: selectedSplashData
+});
+
+// --- End Splash Screen Data ---
 
 // Добавляем хранилище кэша на верхнем уровне
 const componentUpdateCache = new Map();
