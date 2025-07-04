@@ -1617,26 +1617,35 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
 
 
-        if (firstInstance.nodeVersion || firstInstance.description) {
+        const versionsInGroup = group.map(item => item.nodeVersion);
+        const uniqueVersions = [...new Set(versionsInGroup.filter(v => v))]; // Уникальные непустые версии
+
+        if (uniqueVersions.length > 0) {
+          // В группе есть хотя бы один элемент с версией
           const infoSpan = document.createElement('div');
-          
-          if (firstInstance.nodeVersion) {
-            infoSpan.classList.add('version-tag');
-            infoSpan.textContent = `${firstInstance.nodeVersion}`;
-          } 
-          else if (firstInstance.description && targetList.id !=='iconResultsList') {
+          infoSpan.classList.add('version-tag');
+
+          // Если только одна уникальная версия И у всех элементов есть версия
+          if (uniqueVersions.length === 1 && versionsInGroup.every(v => v)) {
+            infoSpan.textContent = uniqueVersions[0];
+          } else {
+            // Либо несколько версий, либо у некоторых элементов нет версии
+            infoSpan.textContent = '-.-.-';
+          }
+          versionGroup.appendChild(infoSpan);
+        } else if (firstInstance.description && targetList.id !== 'iconResultsList') {
+          // Запасной вариант с описанием, если в группе нет версий
+          const firstDescription = firstInstance.description;
+          if (group.every(item => item.description === firstDescription)) {
+            const infoSpan = document.createElement('div');
             infoSpan.classList.add('description-tag');
             const fullDescription = firstInstance.description;
             const truncatedDescription =
-              fullDescription.length > 10
-              ? `${fullDescription.substring(0, 10)}...`
-              : fullDescription;
-              infoSpan.textContent = truncatedDescription;
-              
-              infoSpan.title = fullDescription;
+              fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription;
+            versionGroup.appendChild(infoSpan);
           }
-          versionGroup.appendChild(infoSpan);
-          
         }
         groupHeader.appendChild(versionGroup);
 
