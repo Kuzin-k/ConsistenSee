@@ -1,4 +1,4 @@
-import { displayGroups } from './displayGroups.js';
+import { displayGroups } from './displayGroups';
 
 /**
  * Обрабатывает и отображает цвета (fill и stroke)
