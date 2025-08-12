@@ -12,7 +12,6 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
@@ -22,7 +21,6 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
@@ -32,21 +30,34 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
-    
-    // Для всех модулей уберите эту строку:
-    // globalName: 'UIModules',  // <- удалите эту строку
-    
-    // Пример для updateStatistics:
-    const updateStatisticsResult = await esbuild.build({
-      entryPoints: ['src/ui/updateStatistics.ts'],
+
+    const displayTotalResult = await esbuild.build({
+      entryPoints: ['src/ui/displayTotal.ts'],
       bundle: true,
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- удалите эту строку
+      loader: { '.ts': 'ts' },
+    });
+    
+    const displayComponentDataResult = await esbuild.build({
+      entryPoints: ['src/ui/displayComponentData.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      loader: { '.ts': 'ts' },
+    });
+    
+    // Добавляем displayResult
+    const displayResultResult = await esbuild.build({
+      entryPoints: ['src/ui/displayResult.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
       loader: { '.ts': 'ts' },
     });
     
@@ -57,12 +68,8 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
-    
-    // Удаляем первое объявление uiModulesCode на строке 61-64
-    // и оставляем только одно объявление после всех build результатов
     
     const processAndDisplayComponentsResult = await esbuild.build({
       entryPoints: ['src/ui/processAndDisplayComponents.ts'],
@@ -70,7 +77,6 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
@@ -80,7 +86,6 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
@@ -90,16 +95,17 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
 
     
     const uiModulesCode = createIconResult.outputFiles[0].text + '\n' + 
+                       displayComponentDataResult.outputFiles[0].text + '\n' +
+                       displayResultResult.outputFiles[0].text + '\n' +
                        showPopoverResult.outputFiles[0].text + '\n' + 
                        sortGroupsResult.outputFiles[0].text + '\n' + 
-                       updateStatisticsResult.outputFiles[0].text + '\n' +
+                       displayTotalResult.outputFiles[0].text + '\n' +
                        displayGroupsResult.outputFiles[0].text + '\n' +
                        processAndDisplayComponentsResult.outputFiles[0].text + '\n' +
                        processAndDisplayColorsResult.outputFiles[0].text + '\n' +

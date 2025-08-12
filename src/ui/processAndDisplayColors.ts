@@ -148,4 +148,10 @@ export function processAndDisplayColors(
             colorsTab.textContent = `Colors (${totalColorIssues})`;
         }
     }
-} 
+}
+
+// В конце файла добавить:
+if (typeof window !== 'undefined') {
+  (window as any).UIModules = (window as any).UIModules || {};
+  (window as any).UIModules.processAndDisplayColors = processAndDisplayColors;
+}

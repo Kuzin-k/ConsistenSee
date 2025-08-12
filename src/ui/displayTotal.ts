@@ -3,10 +3,9 @@
  * @param data - Данные статистики
  */
 export function displayTotal(data: any): void {
-  console.log('updateStatistics called with data:', data);
   
   const { overallStats } = data;
-  console.log('overallStats:', overallStats);
+  console.log('displayTotalStats:', overallStats);
   
   if (!overallStats || !overallStats.nodeTypeCounts) {
     console.log('No nodeTypeCounts found');
@@ -31,8 +30,11 @@ export function displayTotal(data: any): void {
     totalLi.innerHTML = `<span class="stats-type"><strong>TOTAL NODES</strong></span><span class="stats-count"><strong>${overallStats.totalNodes}</strong></span>`;
     overallStatsList.appendChild(totalLi);
     
-    // Add individual node types
-    for (const [type, count] of Object.entries(overallStats.nodeTypeCounts)) {
+    // Sort node types by count (descending) and add individual node types
+    const sortedTypes = Object.entries(overallStats.nodeTypeCounts)
+      .sort(([,a], [,b]) => (b as number) - (a as number));
+    
+    for (const [type, count] of sortedTypes) {
       if ((count as number) > 0) {
         const li = document.createElement('li');
         li.className = 'stats-item';
@@ -40,12 +42,11 @@ export function displayTotal(data: any): void {
         overallStatsList.appendChild(li);
       }
     }
-    console.log('Updated statistics list');
   }
 }
 
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== 'undefined') {
   (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.updateStatistics = updateStatistics;
+  (window as any).UIModules.displayTotal = displayTotal;
 }
