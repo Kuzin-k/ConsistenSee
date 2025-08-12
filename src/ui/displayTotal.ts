@@ -2,7 +2,7 @@
  * Обновляет отображение статистики в UI
  * @param data - Данные статистики
  */
-export function updateStatistics(data: any): void {
+export function displayTotal(data: any): void {
   console.log('updateStatistics called with data:', data);
   
   const { overallStats } = data;

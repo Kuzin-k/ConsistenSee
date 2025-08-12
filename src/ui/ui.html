@@ -192,25 +192,7 @@
 
 
     console.log('Script started'); // Added log
-    function displayResult(message, isError = false) {
-      const outputElement = document.getElementById('componentDataOutput');
-      if (!outputElement) {
-        console.error('Элемент вывода не найден');
-        return;
-      }
-      
-      outputElement.innerHTML = '';
-      const resultElement = document.createElement('p');
-      resultElement.textContent = message;
-      resultElement.style.color = isError ? '#d32f2f' : '#2e7d32';
-      resultElement.style.fontWeight = 'bold';
-      resultElement.style.padding = '10px';
-      resultElement.style.border = `1px solid ${isError ? '#d32f2f' : '#2e7d32'}`;
-      resultElement.style.borderRadius = '4px';
-      outputElement.appendChild(resultElement);
-      
-      console.log('Отображен результат:', message);
-    }
+
     
     // Проверяем наличие элементов
     const splashScreen = document.getElementById('splashScreen');
@@ -565,7 +547,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       }
 
       if (msg.type === 'update-statistics') {
-        UIModules.updateStatistics(msg.data);
+        UIModules.displayTotal(msg.data);
         return;
       }
 
