@@ -1,0 +1,26 @@
+{
+  "name": "consistensee",
+  "version": "1.0.0",
+  "description": "**ConsistenSee** — это плагин для Figma, представляющий собой линтер дизайн-системы. Плагин помогает дизайнерам и командам поддерживать консистентность в использовании компонентов и цветов в проектах Figma, выявляя устаревшие компоненты, некорректное использование цветов и предоставляя удобные инструменты для навигации и анализа.",
+  "main": "code.js",
+  "scripts": {
+        "build": "node esbuild.config.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Konstantin-Kuzin/ConsistenSee.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Konstantin-Kuzin/ConsistenSee/issues"
+  },
+  "homepage": "https://github.com/Konstantin-Kuzin/ConsistenSee#readme",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.116.0",
+    "esbuild": "^0.25.8",
+    "typescript": "^5.9.2"
+  }
+}

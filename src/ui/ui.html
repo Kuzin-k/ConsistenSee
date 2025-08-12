@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Figma Plugin UI</title>
+  
+</head>
+<body>
+
+<div id="resizeHandle" class="resize-handle">
+  <svg width="16" height="16">
+    <use href="#resize-icon"/>
+  </svg>
+</div>
+
+  <!-- Splash Screen -->
+  <div class="splash-screen" id="splashScreen">
+    <img
+      src=""
+      alt="Welcome"
+      class="splash-image"
+      onload="console.log('Изображение успешно загружено')"
+    >
+    <div class="splash-content">
+      <h1 class="splash-title"></h1>
+      <button id="startCheck" class="button-main"></button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content" id="mainContent">
+    <!-- Добавляем SVG-спрайт в начало body -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+      <symbol id="instance-icon" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M7.29289 2.29289C7.68342 1.90237 8.31658 1.90237 8.70711 2.29289L13.7071 7.29289C14.0976 7.68342 14.0976 8.31658 13.7071 8.70711L8.70711 13.7071C8.31658 14.0976 7.68342 14.0976 7.29289 13.7071L2.29289 8.70711C1.90237 8.31658 1.90237 7.68342 2.29289 7.29289L7.29289 2.29289ZM3.70711 8.70711L3 8L3.70711 7.29289L7.29289 3.70711L8 3L8.70711 3.70711L12.2929 7.29289L13 8L12.2929 8.70711L8.70711 12.2929L8 13L7.29289 12.2929L3.70711 8.70711Z"/>
+      </symbol>
+      <symbol id="info-icon" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M13 8C13 10.7614 10.7614 13 8 13C5.23858 13 3 10.7614 3 8C3 5.23858 5.23858 3 8 3C10.7614 3 13 5.23858 13 8ZM14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8ZM7.48297 10.5355C7.48297 10.8195 7.71318 11.0497 7.99717 11.0497C8.28116 11.0497 8.51137 10.8195 8.51137 10.5355V7.20027C8.51137 6.91629 8.28116 6.68607 7.99717 6.68607C7.71318 6.68607 7.48297 6.91629 7.48297 7.20027V10.5355ZM7.57956 5.90482C7.69698 6.01277 7.83713 6.06675 8.00001 6.06675C8.16478 6.06675 8.30493 6.01277 8.42047 5.90482C8.53789 5.79497 8.5966 5.66334 8.5966 5.50993C8.5966 5.35463 8.53789 5.223 8.42047 5.11505C8.30493 5.0052 8.16478 4.95027 8.00001 4.95027C7.83713 4.95027 7.69698 5.0052 7.57956 5.11505C7.46213 5.223 7.40342 5.35463 7.40342 5.50993C7.40342 5.66334 7.46213 5.79497 7.57956 5.90482Z"/>
+      </symbol>
+      <symbol id="frame-icon" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 3C5.77614 3 6 3.22386 6 3.5V5H10V3.5C10 3.22386 10.2239 3 10.5 3C10.7761 3 11 3.22386 11 3.5V5H12.5C12.7761 5 13 5.22386 13 5.5C13 5.77614 12.7761 6 12.5 6H11V10H12.5C12.7761 10 13 10.2239 13 10.5C13 10.7761 12.7761 11 12.5 11H11V12.5C11 12.7761 10.7761 13 10.5 13C10.2239 13 10 12.7761 10 12.5V11H6V12.5C6 12.7761 5.77614 13 5.5 13C5.22386 13 5 12.7761 5 12.5V11H3.5C3.22386 11 3 10.7761 3 10.5C3 10.2239 3.22386 10 3.5 10H5V6H3.5C3.22386 6 3 5.77614 3 5.5C3 5.22386 3.22386 5 3.5 5H5V3.5C5 3.22386 5.22386 3 5.5 3ZM10 10L10 6H6V10H10Z"/>
+      </symbol>
+      <symbol id="text-icon" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M3 3.5C3 3.22386 3.22386 3 3.5 3H8H12.5C12.7761 3 13 3.22386 13 3.5V5C13 5.27614 12.7761 5.5 12.5 5.5C12.2239 5.5 12 5.27614 12 5V4H8.5V12H9.5C9.77614 12 10 12.2239 10 12.5C10 12.7761 9.77614 13 9.5 13H8H6.5C6.22386 13 6 12.7761 6 12.5C6 12.2239 6.22386 12 6.5 12H7.5V4H4V5C4 5.27614 3.77614 5.5 3.5 5.5C3.22386 5.5 3 5.27614 3 5V3.5Z"/>
+      </symbol>
+      <symbol id="rectangle-icon" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M11.5 4H4.5C4.22386 4 4 4.22386 4 4.5V11.5C4 11.7761 4.22386 12 4.5 12H11.5C11.7761 12 12 11.7761 12 11.5V4.5C12 4.22386 11.7761 4 11.5 4ZM4.5 3C3.67157 3 3 3.67157 3 4.5V11.5C3 12.3284 3.67157 13 4.5 13H11.5C12.3284 13 13 12.3284 13 11.5V4.5C13 3.67157 12.3284 3 11.5 3H4.5Z"/>
+      </symbol>
+      <symbol id="select-all-icon" viewBox="0 0 24 24">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18ZM12 19C15.866 19 19 15.866 19 12C19 8.134 15.866 5 12 5C8.134 5 5 8.134 5 12C5 15.866 8.134 19 12 19ZM12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM13 12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12C11 11.4477 11.4477 11 12 11C12.5523 11 13 11.4477 13 12Z"/>
+      </symbol>
+      <symbol id="resize-icon" viewBox="0 0 24 24">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M11.5219 16H11.5H8.5C8.22386 16 8 15.7761 8 15.5C8 15.2239 8.22386 15 8.5 15H11.5C12.2083 15 12.7095 14.9996 13.1013 14.9676C13.4872 14.9361 13.7228 14.8764 13.908 14.782C14.2843 14.5903 14.5903 14.2843 14.782 13.908C14.8764 13.7228 14.9361 13.4872 14.9676 13.1013C14.9996 12.7095 15 12.2083 15 11.5V8.5C15 8.22386 15.22386 8 15.5 8C15.7761 8 16 8.22386 16 8.5V11.5V11.5219C16 12.2034 16 12.7454 15.9643 13.1827C15.9277 13.6305 15.8512 14.0123 15.673 14.362C15.3854 14.9265 14.9265 15.3854 14.362 15.673C15.0123 15.8512 15.6305 15.9277 15.1827 15.9643C12.7454 16 12.2034 16 11.5219 16Z"/>
+      </symbol>
+
+      
+
+    </svg>
+   
+  <!-- Loader --> 
+  <div class="loader-container">
+    <div class="progress-info">
+      
+      <div class="progress-counts">Обработано: <span id="processedCount">0</span> из <span id="totalCount">0</span></div>
+      <div class="progress-bar">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
+      </div>
+      <div class="progress-phase" id="progressPhase"></div>
+    </div>
+  </div>
+  
+  <!-- Весь контент --> 
+  <div class="container">
+    <!-- Header --> 
+    <div class="header">
+    <!-- Кнопка --> 
+      <div class="button-wrapper">
+        <button id="checkAll" class="button-main">New search</button>
+        <button id="check-updates" class="button-main">Updates</button>
+        <div class="switch-container">
+          <label for="showHiddenToggle" class="switch" style="text-decoration: none; cursor: pointer;">
+            <input type="checkbox" id="showHiddenToggle" class="checkbox" checked>
+            <span class="slider round"></span>
+          </label>hidden
+        </div>
+      </div>
+      <!-- Tabs --> 
+      <div class="tabs">
+        <div class="tab active" data-tab="instances">All instances (0)</div>
+        <div class="tab" data-tab="colors">Colors</div>
+        <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
+        <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
+        <div class="tab" data-tab="outdated">Outdated (0)</div>
+        <div class="tab" data-tab="icons">Icons (0)</div>
+        <div class="tab" data-tab="total">Total (0)</div>
+      </div>
+    </div>
+    <!-- Контент --> 
+    <div class="tabs-content"> 
+      <!-- Все инстансы --> 
+      <div id="instances" class="tab-content active">
+        <div id="results">
+          <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="resultsList"></ul>
+      </div>
+    </div>
+    <!-- Устаревшие инстансы -->
+    <div id="outdated" class="tab-content">
+      <div id="outdatedResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="outdatedResultsList"></ul>
+      </div>
+    </div>
+    <!-- Changelog --> 
+    <div id="log" class="tab-content">
+      <h3>ToDo</h3>
+      <p class="todo">Причесать UI
+        <br>Не все иконки определяются корректно
+        <br>Заменить hidden на иконку и добавить к группам из 1 элемента
+        <br>В инстансах переписать вывод аналогично группам
+        <br> Проверять fillStyleId для цветов
+        <br> Поправить тег группы если внутри разные версии
+        <br> Дополнительно в цветах группировать по типу элемента
+      </p>
+    </div>
+    <!-- Иконки --> 
+    <div id="icons" class="tab-content">
+      <div id="iconResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="iconResultsList"></ul>
+      </div>
+    </div>
+    <!-- Цвета --> 
+    <div id="colors" class="tab-content">
+      <div id="colorResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="colorResultsList"></ul>
+        <ul id="colorStrokeResultsList"></ul>
+      </div>
+    </div>
+    <!-- Total Statistics -->
+    <div id="total" class="tab-content">
+        <div class="stats-section">
+          <ul id="overallStatsList" class="stats-list"></ul>
+        </div>
+    </div>
+    <!-- Plugin Data --> 
+    <div id="component-data" class="tab-content"> 
+      <h3>PluginData</h3>
+      <p>Это трогать не надо!</p>
+      <div style="margin-bottom: 15px;">
+        <label for="componentKey">Ключ компонента:</label>
+        <input type="text" id="componentKey" placeholder="Введите ключ" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label for="componentVersion">Версия компонента:</label>
+        <input type="text" id="componentVersion" placeholder="Например, 1.0.0" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+        
+      <div class="small-button-wrapper">
+        <button id="readComponentData" class="button-secondary">Прочитать данные</button>
+        <button id="setComponentData" class="button-secondary">Установить данные</button>
+        <button id="clearComponentData" class="button-secondary">Очистить данные</button>
+      </div>
+      
+      <div id="componentDataOutput" style="margin-top: 20px; min-height: 100px; border: 1px solid #eee; border-radius: 4px; padding: 10px; background-color: #f9f9f9;">
+        <p class="placeholder-text" style="color: #888; font-style: italic;">Здесь будет отображаться результат операций.</p>
+      </div>
+    </div>
+    <!-- Debug --> 
+    <div id="debug" class="tab-content">
+      <h3>RAW Data</h3>
+      <div class="search-container">
+        <input type="text" id="debugSearchInput" placeholder="Поиск в отладочной информации...">
+      </div>
+      <div id="debugContent" class="debug-tree"></div>
+    </div>
+  </div>
+  <!-- Footer --> 
+    <div class='footer'><div class='wrapper'>
+      <div class="user-info"></div>
+      <div class="tabs">
+        <div class="tab" id='metadata' data-tab="component-data">Metadata</div>
+        <div class="tab" data-tab="debug">Debug</div>
+        <div class="tab" data-tab="log">Backlog</div> 
+      </div>
+  </div></div>
+
+  <script>
+    console.log('Script started'); // Added log
+    function displayResult(message, isError = false) {
+      const outputElement = document.getElementById('componentDataOutput');
+      if (!outputElement) {
+        console.error('Элемент вывода не найден');
+        return;
+      }
+      
+      outputElement.innerHTML = '';
+      const resultElement = document.createElement('p');
+      resultElement.textContent = message;
+      resultElement.style.color = isError ? '#d32f2f' : '#2e7d32';
+      resultElement.style.fontWeight = 'bold';
+      resultElement.style.padding = '10px';
+      resultElement.style.border = `1px solid ${isError ? '#d32f2f' : '#2e7d32'}`;
+      resultElement.style.borderRadius = '4px';
+      outputElement.appendChild(resultElement);
+      
+      console.log('Отображен результат:', message);
+    }
+    
+    // Проверяем наличие элементов
+    const splashScreen = document.getElementById('splashScreen');
+    const splashImage = document.querySelector('.splash-image');
+    const loaderContainer = document.querySelector('.loader-container');
+    const processedCount = document.getElementById('processedCount');
+    const totalCount = document.getElementById('totalCount');
+    const progressBarFill = document.querySelector('.progress-bar-fill');
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+    
+    // Инициализация вкладок
+    const tabs = document.querySelectorAll('.tab[data-tab]'); // Выбираем только вкладки с атрибутом data-tab
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-tab');
+            
+            // Показываем соответствующий контент
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = content.id === tabId ? 'block' : 'none';
+            });
+            
+            // Обновляем активную вкладку
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+        });
+    });
+
+    // Все переменные объявляем внутри этого блока
+    const loaderContainer = document.querySelector('.loader-container');
+    const processedCount = document.getElementById('processedCount');
+    const totalCount = document.getElementById('totalCount');
+    const progressBarFill = document.querySelector('.progress-bar-fill');
+    const checkUpdatesButton = document.getElementById('check-updates');
+
+    if (checkUpdatesButton) {
+      checkUpdatesButton.addEventListener('click', () => {
+        // Check if we have component data
+        if (!window.lastDebugData?.components?.instances?.length) {
+          // Show error message if no components data available
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          const errorText = document.createElement('p');
+          errorText.textContent = 'Пожалуйста, сначала выполните поиск компонентов';
+          errorDiv.appendChild(errorText);
+          document.body.appendChild(errorDiv);
+          
+          setTimeout(() => {
+            errorDiv.remove();
+          }, 3000);
+          return;
+        }
+
+        // Show loader
+        loaderContainer.style.display = 'flex';
+        
+        // Reset progress
+        processedCount.textContent = '0';
+        totalCount.textContent = '0';
+        progressBarFill.style.width = '0%';
+        
+        // Show phase
+        document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+        
+        // Send message to backend
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'check-updates',
+            components: window.lastDebugData.components // Send cached component data
+          } 
+        }, '*');
+      });
+    }
+
+    // ...все остальные инициализации и обработчики...
+});
+      
+      
+    
+    
+    // Добавляем обработчик для кнопки на splash screen
+    document.getElementById('startCheck').addEventListener('click', () => {
+      console.log('Кнопка startCheck нажата');
+      const loaderContainer = document.querySelector('.loader-container');
+      loaderContainer.style.display = 'flex';
+      
+      // Скрываем splash screen и показываем основной контент
+      document.getElementById('splashScreen').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      
+      // Запускаем проверку
+      parent.postMessage({ pluginMessage: { type: 'check-all' } }, '*');
+    });
+
+    document.getElementById('checkAll').addEventListener('click', () => {
+      const loaderContainer = document.querySelector('.loader-container');
+      loaderContainer.style.display = 'flex';
+      parent.postMessage({ pluginMessage: { type: 'check-all' } }, '*');
+    });
+
+
+    // Обработчик для кнопки "Прочитать данные"
+    document.getElementById('readComponentData').addEventListener('click', function() {
+        console.log('Запрос на чтение данных компонента');
+        parent.postMessage({ pluginMessage: { type: 'get-component-data' } }, '*');
+      });
+
+
+// Обработчик для кнопки "Установить данные"
+document.getElementById('setComponentData').addEventListener('click', function() {
+        const key = document.getElementById('componentKey').value.trim();
+        const version = document.getElementById('componentVersion').value.trim();
+        
+        console.log('Запрос на установку данных компонента:', { key, version });
+        
+        if (!key || !version) {
+          displayResult('Пожалуйста, введите ключ и версию компонента.', true);
+          return;
+        }
+        
+        parent.postMessage({pluginMessage: {type: 'set-component-data', key, version}}, '*');
+      });
+      
+      // Обработчик для кнопки "Очистить данные"
+      document.getElementById('clearComponentData').addEventListener('click', function() {
+        console.log('Запрос на очистку данных компонента');
+        parent.postMessage({ pluginMessage: { type: 'clear-component-data' } }, '*');
+      });
+
+    
+   
+    const tabs = document.querySelectorAll('.tab');
+    
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Deactivate all tabs and tab contents
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(tc => tc.classList.remove('active'));
+        // Activate the clicked tab and its corresponding content
+        tab.classList.add('active');
+        const target = document.getElementById(tab.dataset.tab);
+        target.classList.add('active');
+      });
+    });
+    
+   
+
+
+
+    // Add after the existing tab switching logic
+    document.querySelectorAll('.toggle-groups').forEach(toggle => {
+      toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        const container = e.target.closest('div');
+        const groupItems = container.querySelectorAll('.group-items');
+        const isExpanding = e.target.dataset.action === 'expand';
+
+        // Toggle all groups
+        groupItems.forEach(group => {
+          group.classList.toggle('expanded', isExpanding);
+        });
+
+        // Update toggle text and action
+        e.target.textContent = isExpanding ? 'collapse all' : 'expand all';
+        e.target.dataset.action = isExpanding ? 'collapse' : 'expand';
+      });
+    });
+
+    function getDescription(node) {
+      let description = node.description;
+
+      if (!description && node.mainComponent) {
+        description = node.mainComponent.description;
+        if (!description && node.mainComponent.parent) {
+          description = node.mainComponent.parent.description;
+        }
+      }
+      return description || "";
+    }
+
+    // Обновляем функцию создания иконки для использования SVG-спрайта
+    const createIcon = (type) => {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      
+      // Определяем класс иконки на основе типа
+      let iconClass = 'info-icon'; // По умолчанию используем info-icon
+      let iconId = 'info-icon';    // По умолчанию используем info иконку
+      
+      switch (type) {
+        case 'INSTANCE':
+          iconClass = 'instance-icon';
+          iconId = 'instance-icon';
+          break;
+        case 'TEXT':
+          iconClass = 'text-icon';
+          iconId = 'text-icon';
+          break;
+        case 'FRAME':
+          iconClass = 'frame-icon';
+          iconId = 'frame-icon';
+          break;
+        case 'RECTANGLE':
+          iconClass = 'rectangle-icon';
+          iconId = 'rectangle-icon';
+          break;
+        case 'VECTOR':
+          iconClass = 'frame-icon'; // Используем frame иконку для vector
+          iconId = 'frame-icon';
+          break;
+      }
+      
+      svg.classList.add(iconClass);
+      
+      const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
+      svg.appendChild(use);
+      
+      return svg;
+    };
+
+    // Функция для отображения popover
+    const showPopover = (icon, instance) => {
+      const popover = document.createElement('div');
+      popover.classList.add('popover');
+      popover.style.maxWidth = '500px';
+      popover.style.position = 'fixed';
+      popover.style.zIndex = '10000';
+      
+      const content = Object.entries(instance).map(([key, value]) => {
+        const boldKey = `<strong>${key}:</strong>`;
+        if (typeof value === 'object' && value !== null) {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        }
+        return `${boldKey} ${value}`;
+      }).join('<br>');
+      
+      popover.innerHTML = content;
+      document.body.appendChild(popover);
+
+      const rect = icon.getBoundingClientRect();
+      // Temporarily display popover to get its dimensions
+      popover.style.visibility = 'hidden';
+      popover.style.display = 'block';
+      const popoverRect = popover.getBoundingClientRect();
+      popover.style.display = 'none';
+      popover.style.visibility = 'visible';
+
+      let top = rect.bottom + 5;
+      let left = rect.left;
+
+      // Adjust popover position to stay within the iframe boundaries
+      // This is a preliminary adjustment within the iframe, the main adjustment will be done by resizing the plugin window
+      if (left + popoverRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - popoverRect.width - 10;
+      }
+      if (left < 10) {
+        left = 10;
+      }
+
+      if (top + popoverRect.height > window.innerHeight - 10) {
+        top = rect.top - popoverRect.height - 5;
+      }
+      if (top < 10) {
+        top = 10;
+      }
+
+      popover.style.left = `${left}px`;
+      popover.style.top = `${top}px`;
+      popover.style.display = 'block';
+
+      // Send message to code.js to resize the plugin window
+      parent.postMessage({
+        pluginMessage: {
+          type: 'resize-plugin-window',
+          width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20), // Ensure enough width for popover + padding
+          height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20) // Ensure enough height for popover + padding
+        }
+      }, '*');
+
+      icon.addEventListener('mouseleave', () => {
+        popover.remove();
+        // Send message to code.js to reset plugin window size (optional, but good practice)
+        parent.postMessage({
+          pluginMessage: {
+            type: 'reset-plugin-window-size'
+          }
+        }, '*');
+      });
+    };
+
+    // СПИСОК ЭЛЕМЕНТОВ
+    const displayGroups = (groupedData, targetList) => {
+      //console.log('Displaying groups for:', targetList.id, groupedData);
+      const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+      targetList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
+      
+      // Добавляем заголовок перед списком элементов
+      let headerText = '';
+      // Сначала проверим, существует ли targetList и его id
+      if (!targetList || !targetList.id) {
+        console.error('Target list or its ID is undefined.');
+        return;
+      }
+      if (targetList.id === 'colorResultsList') headerText = 'Fill';
+      if (targetList.id === 'colorStrokeResultsList') headerText = 'Stroke';
+      if (headerText) {
+        // Удаляем предыдущий заголовок, если он есть
+        const prevHeader = targetList.previousElementSibling;
+        if (prevHeader && prevHeader.classList.contains('section-header')) {
+          prevHeader.remove();
+        }
+        const header = document.createElement('div');
+        header.className = 'section-header';
+        header.textContent = headerText;
+        targetList.parentNode.insertBefore(header, targetList);
+      }
+      //console.log('Displaying groups for:', targetList.id, groupedData);
+      
+      // Логика для подсчета имен
+      const nameCount = {};
+
+      for (const key in groupedData) {
+        const group = groupedData[key];
+        // Теперь group уже должен быть отфильтрован по hidden перед вызовом displayGroups
+
+        if (group.length === 0) continue; // Пропускаем группу, если она пуста
+
+        const firstInstance = group[0];
+        // название - имя компонента из библиотеки
+
+        
+
+        const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName 
+          : firstInstance.mainComponentName ? firstInstance.mainComponentName 
+          : firstInstance.name;
+        
+        // Если в группе только один элемент и это не вкладка Colors, показываем его без группировки
+        if (group.length === 1 && (targetList.id !== 'colorResultsList' && targetList.id !== 'colorStrokeResultsList')) {
+          const instance = group[0];
+          const groupItem = document.createElement('ul');
+          groupItem.classList.add('group-header');
+
+          const componentNameContainer = document.createElement('span');
+          componentNameContainer.classList.add('component-name-container');
+
+          // Добавляем иконку для элемента
+          const itemIcon = createIcon(instance.type);
+          componentNameContainer.insertBefore(itemIcon, groupItem.firstChild);
+
+          // Добавляем обработчик клика для иконки
+          itemIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            parent.postMessage(
+              {
+                pluginMessage: {
+                  type: 'scroll-to-node',
+                  nodeId: instance.nodeId,
+                },
+              },
+              '*'
+            );
+          });
+
+          // Добавляем popover при наведении на иконку
+          itemIcon.addEventListener('mouseenter', () => {
+            showPopover(itemIcon, instance);
+          });
+
+          // Создаем ссылку на название инстанса
+          const nameLink = document.createElement('a');
+          nameLink.href = '#';
+          nameLink.classList.add('component-link');
+          nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName;
+          
+          nameLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            parent.postMessage(
+              {
+                pluginMessage: {
+                  type: 'scroll-to-node',
+                  nodeId: instance.nodeId,
+                },
+              },
+              '*'
+            );
+          });
+
+          componentNameContainer.appendChild(nameLink);
+          
+          // Добавляем имя родительского компонента
+          if (instance.parentName) {
+            const parentName = document.createElement('span');
+            parentName.classList.add('parent-component-name');
+            parentName.textContent = 'in ' + instance.parentName;
+            componentNameContainer.appendChild(parentName);
+          }
+
+          // Добавляем метку hidden, если элемент скрыт
+          if (instance.hidden) {
+              const hiddenLabel = document.createElement('span');
+              hiddenLabel.classList.add('hidden-label');
+              hiddenLabel.textContent = 'hidden';
+              componentNameContainer.appendChild(hiddenLabel);
+            }
+
+          const versionGroup = document.createElement('span');
+          versionGroup.classList.add('version-group');
+
+          if (instance.isOutdated) {
+            const outdatedBadge = document.createElement('span');
+            outdatedBadge.classList.add('version-tag-updated');
+            outdatedBadge.textContent = instance.libraryComponentVersion;
+            versionGroup.appendChild(outdatedBadge);
+          }
+
+          // Добавляем версию или описание
+          if (instance.nodeVersion || instance.description) {
+            const infoSpan = document.createElement('div');
+            
+            if (instance.nodeVersion) {
+              infoSpan.classList.add('version-tag');
+              infoSpan.textContent = `${instance.nodeVersion}`;
+            } 
+            else if (instance.description && targetList.id !=='iconResultsList') {
+              infoSpan.classList.add('description-tag');
+              const fullDescription = instance.description;
+              const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+              infoSpan.textContent = truncatedDescription;
+              infoSpan.title = fullDescription;
+            }
+
+            versionGroup.appendChild(infoSpan);
+          }
+
+          componentNameContainer.appendChild(versionGroup);
+
+          //componentContainer.appendChild(componentNameContainer);
+          groupItem.appendChild(componentNameContainer);
+          targetList.appendChild(groupItem);
+          continue; // Переходим к следующей группе
+        }
+
+        // Для групп с более чем одним элементом оставляем существующую логику
+        const groupHeader = document.createElement('ul');
+        groupHeader.classList.add('group-header');
+
+        
+
+        const groupName = document.createElement('div');
+        groupName.classList.add('group-name');
+
+        // Создаем цветной квадратик для fill
+        if (targetList.id === 'colorResultsList') {
+            const fillSwatch = document.createElement('div');
+            fillSwatch.classList.add('group-color-icon');
+            fillSwatch.style.backgroundColor = firstInstance.fill;
+            if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") fillSwatch.style.borderRadius = '999px'; // круг
+            groupHeader.appendChild(fillSwatch);
+          }
+
+          else if (targetList.id === 'colorStrokeResultsList') {
+            // Создаем цветной квадратик для stroke
+            const strokeSwatch = document.createElement('div');
+            strokeSwatch.classList.add('group-color-icon');
+            strokeSwatch.style.backgroundColor = firstInstance.stroke;
+            // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
+              if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") strokeSwatch.style.borderRadius = '999px'; // круг
+              groupHeader.appendChild(strokeSwatch);
+          }
+          else  {
+            // иконка для инстансов и прочих элементов
+            const groupicon = document.createElement('div');
+            groupicon.classList.add('instance-icon');
+            const icon = createIcon(firstInstance.type);
+            groupicon.appendChild(icon);
+            groupHeader.appendChild(groupicon);
+          }
+
+        
+        //ТУТ заголовки групп
+         // Формируем groupName через innerHTML для корректного применения форматирования
+          let groupNameHtml = '';
+          if (targetList.id === 'colorResultsList') 
+          {
+            groupNameHtml += (firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill);
+            groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : '';
+          } else if (targetList.id === 'colorStrokeResultsList') 
+          {
+            groupNameHtml += (firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke);
+            groupNameHtml += firstInstance.stroke_collection_name? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : '';
+          } else {
+            groupNameHtml += name;
+          }
+          groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+          
+          groupName.innerHTML = groupNameHtml;
+          
+
+        
+
+        // Остальная логика для создания контейнера select all и добавления его в заголовок группы
+        
+          // Создаем контейнер для select all, который будет виден только при наведении
+          const selectAllContainer = document.createElement('span');
+          selectAllContainer.classList.add('select-all-container');
+          
+          // Создаем ссылку select all
+          const selectAllLink = document.createElement('a');
+          selectAllLink.href = '#';
+          selectAllLink.classList.add('select-all-link');
+          selectAllLink.title = 'Select all'; // Добавляем атрибут title для отображения tooltip
+          // Создаем SVG иконку вместо текста
+          const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svgIcon.setAttribute('width', '20');
+          svgIcon.setAttribute('height', '20');
+          svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+          selectAllLink.appendChild(svgIcon);
+          selectAllLink.style.visibility = 'hidden'; // Изначально скрыта
+          selectAllLink.style.marginLeft = 'auto';
+          
+          // Добавляем обработчик клика для выбора всех элементов группы
+          selectAllLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Предотвращаем раскрытие/закрытие группы при клике на ссылку
+            
+            // Собираем nodeIds всех элементов группы
+            const nodeIds = group.map(item => item.nodeId);
+            
+            // Отправляем сообщение в плагин для выбора элементов
+            parent.postMessage({
+              pluginMessage: {
+                type: 'select-nodes',
+                nodeIds: nodeIds
+              }
+            }, '*');
+          });
+          
+          selectAllContainer.appendChild(selectAllLink);
+          
+          groupName.appendChild(selectAllContainer);
+          groupHeader.appendChild(groupName);
+          
+          // Добавляем обработчики событий для показа/скрытия ссылки при наведении
+          groupHeader.addEventListener('mouseenter', () => {
+            selectAllLink.style.visibility = 'visible';
+          });
+          
+          groupHeader.addEventListener('mouseleave', () => {
+            selectAllLink.style.visibility = 'hidden';
+          });
+        
+          // Проверяем, есть ли в группе устаревшие элементы
+        
+        const versionGroup = document.createElement('span');
+        versionGroup.classList.add('version-group');
+
+        const hasOutdatedItems = group.some(item => item.isOutdated);
+        if (hasOutdatedItems) {
+          if (group.length === 1) {
+            // Для группы с одним элементом показываем оба бейджа
+            const item = group[0];
+
+            // Бейдж текущей версии
+            if (item.nodeVersion) {
+              const currentVersionBadge = document.createElement('span');
+              currentVersionBadge.classList.add('version-tag');
+              currentVersionBadge.textContent = item.nodeVersion;
+              currentVersionBadge.title = 'Текущая версия';
+              versionGroup.appendChild(currentVersionBadge);
+            }
+            
+            // Бейдж актуальной версии
+            
+            if (item.libraryComponentVersion) {
+              const libraryVersionBadge = document.createElement('span');
+              libraryVersionBadge.classList.add('version-tag-updated');
+              libraryVersionBadge.textContent = item.libraryComponentVersion;
+              libraryVersionBadge.title = 'Доступна новая версия';
+              groupHeader.appendChild(libraryVersionBadge);
+            }
+        } else {
+            // Для групп с несколькими элементами показываем 'NEW'
+            const versionBadge = document.createElement('span');
+            versionBadge.classList.add('version-tag-updated');
+            versionBadge.textContent = 'NEW';
+            versionBadge.title = 'Доступна новая версия';
+            versionGroup.appendChild(versionBadge);
+            
+          }
+            
+        }
+
+
+
+        const versionsInGroup = group.map(item => item.nodeVersion);
+        const uniqueVersions = [...new Set(versionsInGroup.filter(v => v))]; // Уникальные непустые версии
+
+        if (uniqueVersions.length > 0) {
+          // В группе есть хотя бы один элемент с версией
+          const infoSpan = document.createElement('div');
+          infoSpan.classList.add('version-tag');
+
+          // Если только одна уникальная версия И у всех элементов есть версия
+          if (uniqueVersions.length === 1 && versionsInGroup.every(v => v)) {
+            infoSpan.textContent = uniqueVersions[0];
+          } else {
+            // Либо несколько версий, либо у некоторых элементов нет версии
+            infoSpan.textContent = '-.-.-';
+          }
+          versionGroup.appendChild(infoSpan);
+        } else if (firstInstance.description && targetList.id !== 'iconResultsList') {
+          // Запасной вариант с описанием, если в группе нет версий
+          const firstDescription = firstInstance.description;
+          if (group.every(item => item.description === firstDescription)) {
+            const infoSpan = document.createElement('div');
+            infoSpan.classList.add('description-tag');
+            const fullDescription = firstInstance.description;
+            const truncatedDescription =
+              fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription;
+            versionGroup.appendChild(infoSpan);
+          }
+        }
+        groupHeader.appendChild(versionGroup);
+
+        targetList.appendChild(groupHeader);
+
+        const groupItems = document.createElement('ul');
+        groupItems.classList.add('group-items');
+
+        group.forEach((instance) => {
+          const groupItem = document.createElement('li');
+          const componentNameContainer = document.createElement('div');
+          componentNameContainer.classList.add('component-name-container');
+          componentNameContainer.style.display = 'flex';
+          componentNameContainer.style.alignItems = 'right';
+          // Добавляем иконку для элемента на основе его типа
+          const itemIcon = createIcon(instance.type);
+          componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+
+          // Добавляем обработчик клика для иконки
+          itemIcon.addEventListener('click', (e) => {
+            e.stopPropagation(); // Предотвращаем всплытие события
+            parent.postMessage(
+              {
+                pluginMessage: {
+                  type: 'scroll-to-node',
+                  nodeId: instance.nodeId,
+                },
+              },
+              '*'
+            );
+          });
+
+          // Добавляем popover при наведении на иконку
+          itemIcon.addEventListener('mouseenter', () => {
+            showPopover(itemIcon, instance);
+          });
+
+          // Создаем ссылку на название инстанса
+          const nameLink = document.createElement('a');
+          nameLink.href = '#'; // Убираем стандартное поведение ссылки
+          nameLink.classList.add('component-link');
+          nameLink.textContent = instance.name || 'Без названия';
+          
+         
+
+          // Добавляем обработчик клика для отправки nodeId в плагин
+          nameLink.addEventListener('click', (e) => {
+            e.preventDefault(); // Отменяем стандартное поведение ссылки
+            parent.postMessage(
+              {
+                pluginMessage: {
+                  type: 'scroll-to-node',
+                  nodeId: instance.nodeId, // Передаем nodeId инстанса
+                },
+              },
+              '*'
+            );
+          });
+
+          
+
+          componentNameContainer.appendChild(nameLink);
+
+          // Add parent component name if exists
+          if (instance.parentName) {
+            const parentName = document.createElement('span');
+            parentName.classList.add('parent-component-name');
+            parentName.textContent = 'in ' + instance.parentName;
+            componentNameContainer.appendChild(parentName);
+          }
+
+          // Добавляем метку (hidden), если элемент скрыт
+          if (instance.hidden) {
+            const hiddenLabel = document.createElement('span');
+            hiddenLabel.classList.add('hidden-label');
+            hiddenLabel.textContent = 'hidden';
+            componentNameContainer.appendChild(hiddenLabel);
+          }
+
+          // Добавляем информацию о цвете, если это элемент с цветом
+          if (instance.color) {
+            // Проверяем, есть ли переменные без имен
+            const hasMissingVariables = 
+              (instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === '')) ||
+              (instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === ''));
+            
+            
+            
+            // Перемещаем название элемента наверх перед отображением цветов
+            groupItem.appendChild(componentNameContainer);
+            
+            // Отображаем информацию о fill
+            if (instance.fill) {
+              const fillContainer = document.createElement('div');
+              fillContainer.style.display = 'flex';
+              fillContainer.style.alignItems = 'center';
+              fillContainer.style.marginTop = '0px';
+              fillContainer.style.marginLeft = '0px';
+              fillContainer.style.marginBottom = '4px';
+              
+              // Создаем цветной квадратик для fill
+              const fillSwatch = document.createElement('div');
+              fillSwatch.style.width = '16px';
+              fillSwatch.style.height = '16px';
+              fillSwatch.style.backgroundColor = instance.fill;
+              
+              // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
+              if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
+                fillSwatch.style.borderRadius = '999px'; // круг
+              } else {
+                fillSwatch.style.borderRadius = '4px'; // квадрат со скругленными углами
+              }
+              
+              fillSwatch.style.marginRight = '4px';
+              fillSwatch.style.marginLeft = '00px';
+              fillSwatch.style.border = '1px solid #ddd';
+              
+              // Создаем контейнер для информации о цвете
+              const fillInfo = document.createElement('div');
+              fillInfo.style.display = 'flex';
+              fillInfo.style.flexDirection = 'row';
+              fillInfo.style.gap = '4px';
+              fillInfo.style.justifyContent = 'space-between';
+              fillInfo.style.width = '100%';
+
+              groupItem.appendChild(componentNameContainer);
+              
+              // Добавляем информацию о переменной, если она есть
+              const varInfo = document.createElement('span');
+              // Добавляем надпись Fill
+              const fillType = document.createElement('span');
+              fillType.textContent = 'Fill';
+              fillType.style.color = 'var(--text-light-color)';
+              fillType.style.fontWeight = '300';
+              fillType.style.marginLeft = 'auto';
+              fillType.style.fontSize = 'var(--font-small)';
+
+              // Создаем элемент для информации о коллекции
+              const collectionName = document.createElement('span');
+
+              if (instance.fill_variable_name) {
+                // Отображаем переменную
+                varInfo.textContent = instance.fill_variable_name;
+                varInfo.style.color = 'var(--text-light-color)';
+                varInfo.style.fontWeight = '400';
+                
+                // Добавляем коллекцию в скобках, если она есть
+                if (instance.fill_collection_name) {
+                  collectionName.textContent = ` from ${instance.fill_collection_name}`;
+                  collectionName.style.color = 'var(--text-light-color)';
+                  collectionName.style.fontWeight = '300';
+                  
+                }
+              } else {
+                // Отображаем hex-код цвета
+                varInfo.textContent = instance.fill;
+                varInfo.style.color = 'var(--text-light-color)';
+                varInfo.style.fontWeight = '400';
+              }
+
+              // Добавляем элементы в контейнер информации
+              
+              fillInfo.appendChild(varInfo);
+              fillInfo.appendChild(collectionName);
+              fillInfo.appendChild(fillType);
+              
+              
+              //fillContainer.appendChild(fillSwatch);
+              //fillContainer.appendChild(fillInfo);
+              
+              groupItem.appendChild(fillContainer);
+            }
+            
+            // Отображаем информацию о stroke
+            if (instance.stroke) {
+              const collectionName = document.createElement('span');
+              const strokeContainer = document.createElement('div');
+              strokeContainer.style.display = 'flex';
+              strokeContainer.style.alignItems = 'center';
+              strokeContainer.style.marginTop = '0px';
+              strokeContainer.style.marginLeft = '0px';
+              strokeContainer.style.marginBottom = '4px';
+             
+              
+              // Создаем цветной квадратик для stroke
+              const strokeSwatch = document.createElement('div');
+              strokeSwatch.style.width = '16px';
+              strokeSwatch.style.height = '16px';
+              strokeSwatch.style.backgroundColor = instance.stroke;
+              
+              // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
+              if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
+                strokeSwatch.style.borderRadius = '999px'; // круг
+              } else {
+                strokeSwatch.style.borderRadius = '3px'; // квадрат со скругленными углами
+              }
+              
+              strokeSwatch.style.marginRight = '8px';
+              strokeSwatch.style.border = '1px solid #ddd';
+              
+              // Создаем контейнер для информации о цвете
+              const strokeInfo = document.createElement('div');
+              strokeInfo.style.display = 'flex';
+              strokeInfo.style.flexDirection = 'row';
+              strokeInfo.style.gap = '4px';
+              strokeInfo.style.justifyContent = 'space-between';
+              strokeInfo.style.width = '100%';
+              
+              // Добавляем информацию о переменной, если она есть
+              const varInfo = document.createElement('span');
+              if (instance.stroke_variable_name) {
+                // Отображаем переменную
+                varInfo.textContent = instance.stroke_variable_name;
+                varInfo.style.color = 'var(--text-light-color)';
+                varInfo.style.fontWeight = '400';
+                
+                
+                // Добавляем коллекцию в скобках, если она есть
+                if (instance.stroke_collection_name) {
+                  collectionName.textContent = ` from ${instance.stroke_collection_name}`;
+                  collectionName.style.color = 'var(--text-light-color)';
+                  collectionName.style.fontWeight = '300';
+                }
+              } else {
+                // Отображаем hex-код цвета
+                varInfo.textContent = instance.stroke;
+                varInfo.style.color = 'var(--text-light-color)';
+                varInfo.style.fontWeight = '400';
+              }
+              
+              
+              
+              // Добавляем надпись Stroke и вес обводки
+              const strokeType = document.createElement('span');
+              strokeType.textContent = 'Stroke';
+              strokeType.style.color = 'var(--text-light-color)';
+              strokeType.style.fontWeight = '300';
+              strokeType.style.marginLeft = 'auto';
+              strokeType.style.fontSize = 'var(--font-small)';
+              
+              
+              strokeInfo.appendChild(varInfo);
+              strokeInfo.appendChild(collectionName);
+              strokeInfo.appendChild(strokeType);
+
+              groupItem.appendChild(strokeContainer);
+            }
+          } else {
+            groupItem.appendChild(componentNameContainer);
+          }
+
+          
+            
+          const versionGroup = document.createElement('div');
+          versionGroup.classList.add('version-group');
+
+          
+
+          if (instance.isOutdated) {
+            const infoSpan = document.createElement('span');
+            infoSpan.classList.add('version-tag-updated');
+            infoSpan.textContent = instance.libraryComponentVersion || 'NEW';
+            infoSpan.title = 'Доступна новая версия';
+            infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
+            versionGroup.appendChild(infoSpan);
+          }
+
+
+          if (instance.nodeVersion || instance.description) {
+            infoSpan = document.createElement('div');
+            infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
+            
+            if (instance.nodeVersion) {
+              infoSpan.classList.add('version-tag');
+              infoSpan.textContent = `${instance.nodeVersion}`;
+            } 
+            else if (instance.description && targetList.id !=='iconResultsList') {
+              infoSpan.classList.add('description-tag');
+              const fullDescription = typeof instance.description === 'string' 
+                ? instance.description 
+                : (instance.description?.description || '');
+            const truncatedDescription =
+              fullDescription.length > 10
+                ? `${fullDescription.substring(0, 10)}...`
+                : fullDescription;
+              infoSpan.textContent = truncatedDescription;
+             infoSpan.title = fullDescription;
+            }
+            versionGroup.appendChild(infoSpan);  
+          }
+          componentNameContainer.appendChild(versionGroup);
+          groupItems.appendChild(groupItem);
+        });
+        targetList.appendChild(groupItems);
+        // Добавляем обработчик клика для заголовка группы
+        groupHeader.addEventListener('click', () => {
+          groupItems.classList.toggle('expanded');
+        });
+      }
+    };
+
+    // Добавляем обработчик для нового toggle "Show hidden"
+    const showHiddenToggle = document.getElementById('showHiddenToggle');
+    if (showHiddenToggle) {
+        showHiddenToggle.addEventListener('change', () => {
+            // Перерисовываем список инстансов при изменении состояния toggle
+            if (window.lastDebugData) {
+                if (window.lastDebugData.components) {
+                    processAndDisplayComponents(window.lastDebugData.components);
+                }
+                if (window.lastDebugData.components && window.lastDebugData.components.outdated) {
+                    processAndDisplayOutdatedComponents(window.lastDebugData.components); 
+                }
+                // Re-process and display colors
+                processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
+            }
+        });
+    }
+    const searchInput = document.getElementById('searchInput');
+    const clearSearch = document.getElementById('clearSearch');
+    const searchResults = document.getElementById('searchResults');
+    const debugContent = document.getElementById('debug').querySelector('#debugContent');
+    let allInstances = []; // Store all instances for searching
+    let originalDebugContent = null;
+
+    const debugSearchInput = document.getElementById('debugSearchInput');
+    const debugClearSearch = document.getElementById('debugClearSearch');
+
+    // Добавляем обработчик для поиска в debug
+    debugSearchInput.addEventListener('input', function() {
+      const searchTerm = this.value.trim();
+      //console.log('Debug search term:', searchTerm);
+
+      // Если это первый поиск, сохраняем оригинальное содержимое
+      if (!originalDebugContent) {
+        originalDebugContent = debugContent.innerHTML;
+      }
+
+      // Если поле поиска пустое, восстанавливаем оригинальное содержимое
+      if (!searchTerm) {
+        debugContent.innerHTML = originalDebugContent;
+        return;
+      }
+
+      // Пересоздаем дерево с учетом поискового запроса
+      const debugData = {
+        type: 'debug-search',
+        components: window.lastDebugData?.components || {},
+        colors: window.lastDebugData?.colors || {},
+        componentTree: window.lastDebugData?.componentTree || null,
+        totalStats: window.lastDebugData?.totalStats || {}
+      };
+
+      debugContent.innerHTML = '';
+      const newTree = createDebugTree(debugData, searchTerm);
+      if (newTree) {
+        debugContent.appendChild(newTree);
+      }
+    });
+
+    // Обновляем обработчик сообщений для сохранения данных отладки
+    // Define displayComponentData in the global scope first
+    window.displayComponentData = function(data) {
+      const outputElement = document.getElementById('componentDataOutput');
+      if (!outputElement) {
+        console.error('Элемент вывода не найден');
+        return;
+      }
+
+      outputElement.innerHTML = '';
+
+      if (!data || Object.keys(data).length === 0) {
+        window.displayResult('Данные компонента не найдены.', true);
+        return;
+      }
+
+      const container = document.createElement('div');
+      container.style.fontFamily = 'monospace';
+
+      for (const nodeId in data) {
+        const nodeData = data[nodeId];
+
+        const nodeTitle = document.createElement('h4');
+        nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
+        nodeTitle.style.marginBottom = '5px';
+        container.appendChild(nodeTitle);
+
+        const nodeInfo = document.createElement('div');
+        nodeInfo.style.marginLeft = '10px';
+        nodeInfo.style.marginBottom = '15px';
+
+        const idLine = document.createElement('div');
+        idLine.textContent = `ID: ${nodeId}`;
+        nodeInfo.appendChild(idLine);
+
+        const keyLine = document.createElement('div');
+        keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
+        keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
+        nodeInfo.appendChild(keyLine);
+
+        const versionLine = document.createElement('div');
+        versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
+        versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
+        nodeInfo.appendChild(versionLine);
+
+        if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
+          const pluginDataKeyLine = document.createElement('div');
+          pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
+          pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
+          pluginDataKeyLine.style.marginLeft = '10px';
+          nodeInfo.appendChild(pluginDataKeyLine);
+
+          const pluginDataVersionLine = document.createElement('div');
+          pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
+          pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
+          pluginDataVersionLine.style.marginLeft = '10px';
+          nodeInfo.appendChild(pluginDataVersionLine);
+        }
+
+        container.appendChild(nodeInfo);
+      }
+
+      outputElement.appendChild(container);
+    };
+
+    // Then define the message handler
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+      
+      // Handle special cases first
+      if (msg.type === 'user-info') {
+        const userInfoElement = document.querySelector('.user-info');
+        const metadataTab = document.getElementById('metadata');
+        if (userInfoElement) {
+          if (!["Konstantin Kuzin", "III", "YYY"].includes(msg.user.name)) metadataTab.style.display = 'none';
+          userInfoElement.textContent = msg.user.name;
+        }
+        return;
+      }
+      
+      // Handle splash-data message
+      if (msg.type === 'splash-data') {
+        const splashImageElement = document.querySelector('.splash-image');
+        const splashTitleElement = document.querySelector('.splash-title');
+        const startCheckButton = document.getElementById('startCheck');
+
+        if (splashImageElement && msg.data.imageUrl) {
+          splashImageElement.src = msg.data.imageUrl;
+        }
+        if (splashTitleElement && msg.data.titleText) {
+          splashTitleElement.textContent = msg.data.titleText;
+        }
+        if (startCheckButton && msg.data.buttonText) {
+          startCheckButton.textContent = msg.data.buttonText;
+        }
+        return;
+      }
+
+      if (msg.type === 'resize') {
+        const width = msg.width;
+        const height = msg.height;
+        window.resizeTo(width, height);
+        return;
+      }
+
+      if (msg.type === 'update-statistics') {
+        updateStatistics(msg.data);
+        return;
+      }
+
+      if (msg.type === 'component-data-result') {
+        if (msg.data) {
+          displayComponentData(msg.data);
+        } else if (msg.message) {
+          displayResult(msg.message, msg.isError);
+        } else {
+          displayResult('Данные компонента не найдены.');
+        }
+        return;
+      }
+
+      if (msg.type === 'component-data-set') {
+        displayResult(msg.message || 'Данные компонента успешно установлены.', msg.isError);
+        return;
+      }
+
+      if (msg.type === 'component-data-cleared') {
+        displayResult(msg.message || 'Данные компонента успешно очищены.', msg.isError);
+        return;
+      }
+
+
+// Выполняем после загрузки страницы
+    window.addEventListener('DOMContentLoaded', function() {
+      console.log('Инициализация функций для работы с компонентами');
+
+      // Определяем глобальную функцию displayResult
+      window.displayResult = function(message, isError = false) {
+        const outputElement = document.getElementById('componentDataOutput');
+        if (!outputElement) {
+          console.error('Элемент вывода не найден:', 'componentDataOutput');
+          return;
+        }
+
+        console.log('Отображение результата:', message);
+        outputElement.innerHTML = '';
+        const resultElement = document.createElement('p');
+        resultElement.textContent = message;
+        resultElement.style.color = isError ? '#d32f2f' : '#2e7d32';
+        resultElement.style.fontWeight = 'bold';
+        resultElement.style.padding = '10px';
+        resultElement.style.border = `1px solid ${isError ? '#d32f2f' : '#2e7d32'}`;
+        resultElement.style.borderRadius = '4px';
+        outputElement.appendChild(resultElement);
+      };
+
+      // Определяем глобальную функцию displayComponentData
+      window.displayComponentData = function(data) {
+        const outputElement = document.getElementById('componentDataOutput');
+        if (!outputElement) {
+          console.error('Элемент вывода не найден');
+          return;
+        }
+
+        outputElement.innerHTML = '';
+
+        if (!data || Object.keys(data).length === 0) {
+          window.displayResult('Данные компонента не найдены.', true);
+          return;
+        }
+
+        const container = document.createElement('div');
+        container.style.fontFamily = 'monospace';
+
+        for (const nodeId in data) {
+          const nodeData = data[nodeId];
+
+          const nodeTitle = document.createElement('h4');
+          nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
+          nodeTitle.style.marginBottom = '5px';
+          container.appendChild(nodeTitle);
+
+          const nodeInfo = document.createElement('div');
+          nodeInfo.style.marginLeft = '10px';
+          nodeInfo.style.marginBottom = '15px';
+
+          const idLine = document.createElement('div');
+          idLine.textContent = `ID: ${nodeId}`;
+          nodeInfo.appendChild(idLine);
+
+          const keyLine = document.createElement('div');
+          keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
+          keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
+          nodeInfo.appendChild(keyLine);
+
+          const versionLine = document.createElement('div');
+          versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
+          versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
+          nodeInfo.appendChild(versionLine);
+
+          // Добавляем отображение данных из PluginData
+          if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
+            // Добавляем заголовок для данных из PluginData
+            const pluginDataHeader = document.createElement('div');
+            pluginDataHeader.textContent = 'Данные из PluginData:';
+            pluginDataHeader.style.fontWeight = 'bold';
+            pluginDataHeader.style.marginTop = '8px';
+            pluginDataHeader.style.marginBottom = '4px';
+            nodeInfo.appendChild(pluginDataHeader);
+
+            // Отображаем ключ из PluginData
+            const pluginDataKeyLine = document.createElement('div');
+            pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
+            pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
+            pluginDataKeyLine.style.marginLeft = '10px';
+            nodeInfo.appendChild(pluginDataKeyLine);
+
+            // Отображаем версию из PluginData
+            const pluginDataVersionLine = document.createElement('div');
+            pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
+            pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
+            pluginDataVersionLine.style.marginLeft = '10px';
+            nodeInfo.appendChild(pluginDataVersionLine);
+          }
+
+          container.appendChild(nodeInfo);
+        }
+
+        outputElement.appendChild(container);
+      };
+
+      // Переопределяем обработчик сообщений
+      const originalMessageHandler = window.onmessage;
+      window.addEventListener('message', function(event) {
+        if (!event.data.pluginMessage) return;
+
+        const msg = event.data.pluginMessage;
+        //console.log('Получено сообщение от плагина:', msg);
+
+        // Обработка сообщений для компонентов
+        switch (msg.type) {
+          case 'component-data-result':
+            if (msg.data) {
+              console.log('Отображение данных компонента:', msg.data);
+              const outputElement = document.getElementById('componentDataOutput');
+              if (!outputElement) {
+                console.error('Элемент вывода не найден');
+                return;
+              }
+
+              outputElement.innerHTML = '';
+
+              if (Object.keys(msg.data).length === 0) {
+                window.displayResult('Данные компонента не найдены.', true);
+                return;
+              }
+
+              const container = document.createElement('div');
+              container.style.fontFamily = 'monospace';
+
+              for (const nodeId in msg.data) {
+                const nodeData = msg.data[nodeId];
+
+                const nodeTitle = document.createElement('h4');
+                nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
+                nodeTitle.style.marginBottom = '5px';
+                container.appendChild(nodeTitle);
+
+                const nodeInfo = document.createElement('div');
+                nodeInfo.style.marginLeft = '10px';
+                nodeInfo.style.marginBottom = '15px';
+
+                const idLine = document.createElement('div');
+                idLine.textContent = `ID: ${nodeId}`;
+                nodeInfo.appendChild(idLine);
+
+                const keyLine = document.createElement('div');
+                keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
+                keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
+                nodeInfo.appendChild(keyLine);
+
+                const versionLine = document.createElement('div');
+                versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
+                versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
+                nodeInfo.appendChild(versionLine);
+
+                if (nodeData.originalKey) {
+                  const originalKeyLine = document.createElement('div');
+                  originalKeyLine.textContent = `Оригинальный ключ: ${nodeData.originalKey}`;
+                  originalKeyLine.style.color = '#666';
+                  nodeInfo.appendChild(originalKeyLine);
+                }
+
+                container.appendChild(nodeInfo);
+              }
+
+              outputElement.appendChild(container);
+            } else if (msg.message) {
+              window.displayResult(msg.message, msg.isError);
+            } else {
+              window.displayResult('Данные компонента не найдены.');
+            }
+            break;
+
+          case 'component-data-set':
+            window.displayResult(msg.message || 'Данные компонента успешно установлены.', msg.isError);
+            break;
+
+          case 'component-data-cleared':
+            window.displayResult(msg.message || 'Данные компонента успешно очищены.', msg.isError);
+            break;
+        }
+      });
+
+      console.log('Инициализация завершена');
+    });
+
+
+
+
+
+
+
+    if (msg.type === 'success') {
+        hideLoader();
+        
+        // Очищаем предыдущие результаты
+        const resultsList = document.getElementById('colorResultsList');
+        if (resultsList) {
+          resultsList.innerHTML = '';
+          
+          if (msg.instances && msg.instances.length > 0) {displayGroups(msg.instances, resultsList, msg.counts);
+          } else {resultsList.innerHTML = '<p>Цвета не найдены</p>';}} 
+          else {
+          //console.error('Не найден элемент colorResultsList');
+        }
+      } else if (msg.type === 'progress-update') {
+        // Показываем контейнер загрузки, если он еще не показан
+        loaderContainer.style.display = 'flex';
+        
+        // Обновляем информацию о прогрессе
+        processedCount.textContent = msg.processed;
+        totalCount.textContent = msg.total;
+        
+        // Обновляем прогресс-бар
+        const percentage = (msg.processed / msg.total) * 100;
+        progressBarFill.style.width = `${percentage}%`;
+        // Показываем имя компонента
+        if (msg.currentComponentName) {
+          document.getElementById('progressPhase').textContent = `${msg.currentComponentName}`;
+        } else if (msg.type === 'progress-update' && msg.phase === 'check-updates') {
+          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+        } else {
+          document.getElementById('progressPhase').textContent = '';
+        }
+      } else if (msg.type === 'all-results') {
+        // Save data for search
+        window.lastDebugData = {
+          components: msg.components,
+          colors: msg.colors,
+          colorsStroke: msg.colorsStroke,
+          componentTree: msg.componentTree,
+          totalStats: msg.totalStats
+        };
+
+        // Hide loader
+        const loaderContainer = document.querySelector('.loader-container');
+        if (loaderContainer) {
+          loaderContainer.style.display = 'none';
+        }
+
+        console.log('Received all-results:', msg);
+
+        // Process components and colors...
+        if (msg.components) {processAndDisplayComponents(msg.components);}
+        // Process outdated components if present
+        // Используем ту же функцию processAndDisplayComponents, но передаем ей данные устаревших и другой целевой список
+        if (msg.components && msg.components.outdated) {processAndDisplayOutdatedComponents(msg.components);
+        }
+
+        // Process colors...
+        if (msg.colors) {
+          processAndDisplayColors(msg.colors, msg.colorsStroke);
+        }
+
+        // Update debug information
+        debugContent.innerHTML = '';
+        debugContent.className = 'debug-tree';
+
+        // Create formatted debug output
+        const debugData = {
+          type: msg.type,
+          timestamp: new Date().toISOString(),
+          components: msg.components,
+          colors: msg.colors,
+          colorsStroke: msg.colorsStroke,
+          componentTree: msg.componentTree,
+          totalStats: msg.totalStats
+        };
+
+        // Сбрасываем сохраненное оригинальное содержимое при новых данных
+        originalDebugContent = null;
+
+        // Преобразуем данные в древовидную структуру
+        const tree = createDebugTree(debugData);
+        if (tree) {
+          debugContent.appendChild(tree);
+          //console.log('Отладочная информация обновлена');
+        } else {
+          //console.error('Не удалось создать дерево отладки');
+        }
+      } else if (msg.type === 'error') {
+          loaderContainer.style.display = 'none';
+        
+          // Удаляем предыдущее сообщение об ошибке, если оно есть
+          const existingError = document.querySelector('.error-message');
+          if (existingError) {
+            existingError.remove();
+          }
+          
+          // Создаем новое сообщение об ошибке
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          const errorText = document.createElement('p');
+          errorText.textContent = msg.message;
+          errorDiv.appendChild(errorText);
+          document.body.appendChild(errorDiv);
+          
+          // Автоматически скрываем сообщение через 3 секунды
+          setTimeout(() => {errorDiv.remove();}, 5000);
+        
+          // Добавляем ошибку в отладочную информацию
+          const debugError = document.createElement('div');
+          debugError.style.color = 'red';
+          debugError.textContent = `Error: ${msg.message}`;
+          debugContent.appendChild(debugError);
+          }
+        };
+
+        
+
+    // Обработка ресайза окна
+        const resizeHandle = document.getElementById('resizeHandle');
+        let isResizing = false;
+        let initialWidth;
+        let initialHeight;
+        let initialX;
+        let initialY;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      initialWidth = window.innerWidth;
+      initialHeight = window.innerHeight;
+      initialX = e.clientX;
+      initialY = e.clientY;
+    });
+      
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      
+      const newWidth = initialWidth + (e.clientX - initialX);
+      const newHeight = initialHeight + (e.clientY - initialY);
+      
+      // Ensure minimum dimensions
+      const width = Math.max(newWidth, 300);
+      const height = Math.max(newHeight, 200);
+      
+      // Directly resize the window
+      window.resizeTo(width, height);
+      
+      // Also notify the plugin
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'resize', 
+          width: width,
+          height: height
+        } 
+      }, '*');
+
+      // Prevent selection during resize
+      e.preventDefault();
+    });
+      
+    document.addEventListener('mouseup', () => {isResizing = false;}); 
+    
+    
+    
+    
+        function processAndDisplayComponents(componentsData) {
+        allInstances = componentsData.instances;
+        const groupedInstances = {};
+        const groupedIcons = {};
+
+        const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+
+        let nonIconCount = 0;
+        let iconCount = 0;
+        let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === 'number' ? componentsData.counts.outdated : (componentsData.outdated ? componentsData.outdated.length : 0);
+
+        componentsData.instances.forEach((instance) => {
+            if (!showHidden && instance.hidden) {
+                return; // Пропускаем скрытые элементы, если toggle выключен
+            }
+
+            
+            
+            const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+            //const groupKey = `${instance.mainComponentKey || ''}`; // Добавил || '' для случая undefined mainComponentKey
+            if (instance.isIcon === true) {
+                if (!groupedIcons[groupKey]) {
+                    groupedIcons[groupKey] = [];
+                }
+                groupedIcons[groupKey].push(instance);
+                iconCount++;
+            } else {
+                if (!groupedInstances[groupKey]) {
+                    groupedInstances[groupKey] = [];
+                }
+                groupedInstances[groupKey].push(instance);
+                nonIconCount++;
+            }
+        });
+
+        // Sort items within each group alphabetically by their instance name
+        for (const key in groupedInstances) {
+            groupedInstances[key].sort((a, b) => {
+                const aName = a.name || '';
+                const bName = b.name || '';
+                return aName.localeCompare(bName);
+            });
+        }
+
+        for (const key in groupedIcons) {
+            groupedIcons[key].sort((a, b) => {
+                const aName = a.name || '';
+                const bName = b.name || '';
+                return aName.localeCompare(bName);
+            });
+        }
+
+
+        // Обновляем заголовки вкладок
+        const componentsTab = document.querySelector('[data-tab="instances"]');
+        const iconsTab = document.querySelector('[data-tab="icons"]');
+        const outdatedTab = document.querySelector('[data-tab="outdated"]');
+
+        if (componentsTab) componentsTab.textContent = `All instances (${nonIconCount})`;
+        if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
+        if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+        // Сортируем группы по mainComponentName перед отображением
+        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
+            const firstItemA = groupAItems[0];
+            const firstItemB = groupBItems[0];
+
+            const aSetName = firstItemA.mainComponentSetName || '';
+            const bSetName = firstItemB.mainComponentSetName || '';
+
+            const aCompName = firstItemA.mainComponentName || firstItemA.name || ''; // Добавляем firstItemA.name как fallback
+            const bCompName = firstItemB.mainComponentName || firstItemB.name || ''; // Добавляем firstItemB.name как fallback
+
+            // Helper functions for cleaning and checking names
+            const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
+            const startsWithSpecial = (str) => /^[._]/.test(str);
+
+            // Функция для "нормализации" имени: удаляет эмодзи и небуквенно-цифровые символы в начале (кроме /)
+            const normalizeNamePart = (str) => {
+                let cleaned = removeEmoji(str);
+                // Удаляем небуквенно-цифровые символы с начала строки,
+                // которые не являются частью пути (т.е. не /)
+                // Это более агрессивная очистка, чем startsWithSpecial
+                cleaned = cleaned.replace(/^[^a-zA-Z0-9\/]+/, '');
+                return cleaned;
+            };
+
+            const normalizedASetName = normalizeNamePart(aSetName);
+            const normalizedBSetName = normalizeNamePart(bSetName);
+            const normalizedACompName = normalizeNamePart(aCompName);
+            const normalizedBCompName = normalizeNamePart(bCompName);
+
+            // Конструируем имена для сортировки из нормализованных частей
+            const sortableNameA = normalizedASetName ? `${normalizedASetName}/${normalizedACompName}` : normalizedACompName;
+            const sortableNameB = normalizedBSetName ? `${normalizedBSetName}/${normalizedBCompName}` : normalizedBCompName;
+
+            // Проверка на специальные символы (._) теперь применяется к уже нормализованным именам
+            const aSpecial = startsWithSpecial(sortableNameA);
+            const bSpecial = startsWithSpecial(sortableNameB);
+
+            if (aSpecial && !bSpecial) return 1; // Items with special characters go later
+            if (!aSpecial && bSpecial) return -1; // Items without special characters go earlier
+            return sortableNameA.localeCompare(sortableNameB, undefined, { numeric: true, sensitivity: 'accent' });
+        }));
+
+        displayGroups(sortGroups(groupedInstances), resultsList);
+        displayGroups(sortGroups(groupedIcons), iconResultsList);
+    }
+
+    function processAndDisplayOutdatedComponents(componentsData) {
+        // Эта функция будет очень похожа на processAndDisplayComponents,
+        // но будет работать с componentsData.outdated и отображать их в outdatedResultsList
+        const outdatedInstancesArray = componentsData.outdated || [];
+        const groupedOutdatedInstances = {};
+
+        const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+        let outdatedCount = 0;
+
+        // Filter instances based on the showHidden toggle state
+        const filteredOutdatedInstances = showHidden ? outdatedInstancesArray : outdatedInstancesArray.filter(instance => !instance.hidden);
+
+        filteredOutdatedInstances.forEach((instance) => {
+            if (!showHidden && instance.hidden) {
+                return; 
+            }
+            // Для устаревших не будем делить на иконки и не иконки, просто группируем все
+            const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+            if (!groupedOutdatedInstances[groupKey]) {
+                groupedOutdatedInstances[groupKey] = [];
+            }
+            groupedOutdatedInstances[groupKey].push(instance);
+            // outdatedCount will be set later based on filteredOutdatedInstances.length
+        });
+
+        // Считаем количество после фильтрации
+        outdatedCount = filteredOutdatedInstances.length;
+
+        for (const key in groupedOutdatedInstances) {
+            groupedOutdatedInstances[key].sort((a, b) => {
+                const aName = a.name || '';
+                const bName = b.name || '';
+                return aName.localeCompare(bName);
+            });
+        }
+
+        const outdatedTab = document.querySelector('[data-tab="outdated"]');
+        if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+
+        // Используем ту же функцию сортировки групп
+        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
+            const firstItemA = groupAItems[0];
+            const firstItemB = groupBItems[0];
+            const aName = (firstItemA.mainComponentSetName || firstItemA.mainComponentName || firstItemA.name || '').replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim().replace(/^[^a-zA-Z0-9\/]+/, '');
+            const bName = (firstItemB.mainComponentSetName || firstItemB.mainComponentName || firstItemB.name || '').replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim().replace(/^[^a-zA-Z0-9\/]+/, '');
+            const aSpecial = /^[._]/.test(aName);
+            const bSpecial = /^[._]/.test(bName);
+            if (aSpecial && !bSpecial) return 1;
+            if (!aSpecial && bSpecial) return -1;
+            return aName.localeCompare(bName, undefined, { numeric: true, sensitivity: 'accent' });
+        }));
+        displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
+    }
+
+    function processAndDisplayColors(colorsData, colorsStrokeData) {
+        const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
+        let fillFilteredCount = 0;
+        let strokeFilteredCount = 0;
+
+        const colorResultsList = document.getElementById('colorResultsList');
+        const colorStrokeResultsList = document.getElementById('colorStrokeResultsList');
+
+        const fillHeader = colorResultsList.previousElementSibling;
+        const strokeHeader = colorStrokeResultsList.previousElementSibling;
+
+        colorResultsList.innerHTML = '';
+        colorStrokeResultsList.innerHTML = '';
+
+        // Process Fill Colors
+        if (colorsData && colorsData.instances) {
+            const groupedFillColors = {};
+            let rawFillInstances = colorsData.instances;
+
+            if (!showHidden) {
+                rawFillInstances = rawFillInstances.filter(instance => !instance.hidden);
+            }
+
+            rawFillInstances.forEach((instance) => {
+                const hasFill = instance.fill && instance.fill !== '#MIXED';
+                if (!hasFill) return;
+
+                const wrongFill = instance.fill_collection_name !== "Component tokens" &&
+                                  instance.fill_collection_name !== "Service tokens" &&
+                                  instance.fill_collection_name !== "product colors";
+                if (!wrongFill) return;
+
+                fillFilteredCount++;
+
+                const cleanInstance = { ...instance }; // Create a shallow copy
+                delete cleanInstance.stroke;
+                delete cleanInstance.stroke_variable_name;
+                delete cleanInstance.stroke_collection_name;
+                delete cleanInstance.stroke_collection_id;
+                
+                // Формируем ключ группы, учитывая имя цвета/переменной и имя коллекции
+                const colorIdentifier = cleanInstance.fill_variable_name ? cleanInstance.fill_variable_name : cleanInstance.fill;
+                const collectionName = cleanInstance.fill_collection_name || 'no_collection'; // Используем 'no_collection' если имя коллекции отсутствует
+                const groupKey = `${colorIdentifier}-${collectionName}-${cleanInstance.type}`;
+                
+                if (!groupedFillColors[groupKey]) { groupedFillColors[groupKey] = []; }
+                groupedFillColors[groupKey].push(cleanInstance);
+            });
+
+            const sortedFillGroupKeys = Object.keys(groupedFillColors).sort((a, b) => a.localeCompare(b));
+            const sortedGroupedFillColors = {};
+            sortedFillGroupKeys.forEach(key => {
+                sortedGroupedFillColors[key] = groupedFillColors[key];
+            });
+            if (fillFilteredCount > 0) {
+                displayGroups(sortedGroupedFillColors, colorResultsList);
+            } else {
+                colorResultsList.innerHTML = '';
+                if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
+                    fillHeader.remove();
+                }
+            }
+        } else {
+            colorResultsList.innerHTML = '';
+             if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
+                fillHeader.remove();
+            }
+        }
+
+        // Process Stroke Colors
+        if (colorsStrokeData && colorsStrokeData.instances) {
+            const groupedStrokeColors = {};
+            let rawStrokeInstances = colorsStrokeData.instances;
+
+            if (!showHidden) {
+                rawStrokeInstances = rawStrokeInstances.filter(instance => !instance.hidden);
+            }
+
+            rawStrokeInstances.forEach((instance) => {
+                const hasStroke = instance.stroke && instance.stroke !== '#MIXED';
+                if (!hasStroke) return;
+
+                const wrongStroke = instance.stroke_collection_name !== "Component tokens" &&
+                                    instance.stroke_collection_name !== "Service tokens" &&
+                                    instance.stroke_collection_name !== "product colors";
+                if (!wrongStroke) return;
+
+                strokeFilteredCount++;
+                
+                const cleanInstance = { ...instance }; // Create a shallow copy
+                delete cleanInstance.fill;
+                delete cleanInstance.fill_variable_name;
+                delete cleanInstance.fill_collection_name;
+                delete cleanInstance.fill_collection_id;
+
+                // Формируем ключ группы, учитывая имя цвета/переменной и имя коллекции
+                const colorIdentifier = cleanInstance.stroke_variable_name ? cleanInstance.stroke_variable_name : cleanInstance.stroke;
+                const collectionName = cleanInstance.stroke_collection_name || 'no_collection'; // Используем 'no_collection' если имя коллекции отсутствует
+                const groupKey = `${colorIdentifier}-${collectionName}-${cleanInstance.type}`;
+
+                if (!groupedStrokeColors[groupKey]) { groupedStrokeColors[groupKey] = []; }
+                groupedStrokeColors[groupKey].push(cleanInstance);
+            });
+
+            const sortedStrokeGroupKeys = Object.keys(groupedStrokeColors).sort((a, b) => a.localeCompare(b));
+            const sortedGroupedStrokeColors = {};
+            sortedStrokeGroupKeys.forEach(key => {
+                sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
+            });
+
+            if (strokeFilteredCount > 0) {displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+            } else {
+                colorStrokeResultsList.innerHTML = '';
+                if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
+                    strokeHeader.remove();
+                }
+            }
+        } else {
+            colorStrokeResultsList.innerHTML = '';
+            if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
+                strokeHeader.remove();
+            }
+        }
+
+        // Update Colors Tab Header
+        const colorsTab = document.querySelector('[data-tab="colors"]');
+        const totalColorIssues = fillFilteredCount + strokeFilteredCount;
+        if (colorsTab) { // Ensure colorsTab exists
+            if (totalColorIssues === 0) {
+                colorsTab.classList.remove('tab');
+                colorsTab.classList.add('tab_success');
+                colorsTab.textContent = `Colors (OK)`;
+            } else {
+                colorsTab.classList.remove('tab_success');
+                colorsTab.classList.add('tab');
+                colorsTab.textContent = `Colors (${totalColorIssues})`;
+            }
+        }
+    }
+
+    function createDebugTree(data, searchTerm = '') {
+      try {
+        let hasMatchingChild = false;
+        
+        // Если это примитивное значение, возвращаем простой элемент
+        if (data === null || typeof data !== 'object') {
+          return createValueElement(data, searchTerm);
+      }
+
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      const container = document.createElement('div');
+        container.style.paddingLeft = '20px'; // Добавляем отступ для вложенных элементов
+
+        // Создаем заголовок
+      const isArray = Array.isArray(data);
+        summary.textContent = isArray ? `Array [${data.length}]` : 'Object';
+      details.appendChild(summary);
+
+        // Обрабатываем элементы объекта/массива
+      Object.entries(data).forEach(([key, value]) => {
+        const line = document.createElement('div');
+          line.style.marginBottom = '5px';
+        
+          // Создаем элемент ключа
+        const keySpan = document.createElement('span');
+        keySpan.className = 'key';
+        keySpan.textContent = `${key}: `;
+          keySpan.style.color = '#905';
+        line.appendChild(keySpan);
+
+          // Создаем элемент значения
+        const valueContainer = createDebugTree(value, searchTerm);
+        
+          // Проверяем совпадение с поиском
+        const matchesSearch = searchTerm && (
+          key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (typeof value === 'string' && value.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (typeof value === 'number' && String(value).includes(searchTerm))
+        );
+
+        if (matchesSearch || valueContainer.hasMatch) {
+          hasMatchingChild = true;
+          details.open = true;
+        }
+
+        line.appendChild(valueContainer);
+        container.appendChild(line);
+      });
+
+      details.appendChild(container);
+      details.hasMatch = hasMatchingChild;
+
+      return details;
+      } catch (error) {
+        console.error('Ошибка при создании дерева отладки:', error);
+        const errorElement = document.createElement('div');
+        errorElement.style.color = 'red';
+        errorElement.textContent = `Error creating debug tree: ${error.message}`;
+        return errorElement;
+      }
+    }
+
+    function createValueElement(value, searchTerm = '') {
+      const span = document.createElement('span');
+      const stringValue = String(value);
+
+      // Устанавливаем соответствующий класс и содержимое
+      if (typeof value === 'string') {
+        span.className = 'string';
+        span.textContent = `"${value}"`;
+        span.style.color = '#690';
+      } else if (typeof value === 'number') {
+        span.className = 'number';
+        span.textContent = value;
+        span.style.color = '#2f6f9f';
+      } else if (typeof value === 'boolean') {
+        span.className = 'boolean';
+        span.textContent = value;
+        span.style.color = '#2f6f9f';
+      } else {
+        span.textContent = stringValue;
+      }
+
+      // Проверяем совпадение с поиском
+      if (searchTerm && stringValue.toLowerCase().includes(searchTerm.toLowerCase())) {
+        span.className += ' match';
+        span.style.backgroundColor = 'yellow';
+        span.hasMatch = true;
+      } else {
+        span.hasMatch = false;
+      }
+
+      return span;
+    }
+
+    // Search functionality
+    searchInput.addEventListener('input', () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      clearSearch.style.display = searchTerm ? 'block' : 'none';
+
+      if (!searchTerm) {
+        searchResults.innerHTML = '';
+        return;
+      }
+
+      const results = allInstances.filter(instance => {
+        const name = instance.name.toLowerCase();
+        const description = (instance.description || '').toLowerCase();
+        return name.includes(searchTerm) || description.includes(searchTerm);
+      });
+
+      displaySearchResults(results, searchTerm);
+    });
+
+    // Clear search
+    clearSearch.addEventListener('click', () => {
+      searchInput.value = '';
+      searchResults.innerHTML = '';
+      clearSearch.style.display = 'none';
+    });
+
+    // Function to display search results
+    function displaySearchResults(results, searchTerm) {
+      searchResults.innerHTML = '';
+      
+      if (results.length === 0) {
+        searchResults.innerHTML = '<p>No matches found</p>';
+        return;
+      }
+
+      const resultList = document.createElement('ul');
+      results.forEach(instance => {
+        const li = document.createElement('li');
+        
+        // Highlight matching text in name
+        const nameText = instance.name;
+        const highlightedName = highlightText(nameText, searchTerm);
+        
+        // Create result item
+        const resultItem = document.createElement('div');
+        resultItem.classList.add('search-result-item');
+        resultItem.innerHTML = highlightedName;
+        
+        // Add description if exists
+        if (instance.description) {
+          const description = document.createElement('span');
+          description.classList.add('description-tag');
+          description.innerHTML = ' - ' + highlightText(instance.description, searchTerm);
+          resultItem.appendChild(description);
+        }
+        
+        li.appendChild(resultItem);
+        resultList.appendChild(li);
+      });
+      
+      searchResults.appendChild(resultList);
+    }
+
+    // Function to highlight matching text
+    function highlightText(text, searchTerm) {
+      const regex = new RegExp(`(${searchTerm})`, 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    // Добавляем обработчик для кнопки "Проверить обновления"
+    document.addEventListener('DOMContentLoaded', () => {
+      const checkUpdatesButton = document.getElementById('check-updates');
+      if (checkUpdatesButton) {
+        checkUpdatesButton.addEventListener('click', () => {
+          // Показываем лоадер
+          loaderContainer.style.display = 'flex';
+          // Сбрасываем прогресс
+          processedCount.textContent = '0';
+          totalCount.textContent = '0';
+          progressBarFill.style.width = '0%';
+          // Показываем фазу
+          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+          // Отправляем сообщение в backend
+          parent.postMessage({ pluginMessage: { type: 'check-updates' } }, '*');
+        });
+      }
+      
+      const keyInput = document.getElementById('componentKey');
+      const versionInput = document.getElementById('componentVersion');
+      const readButton = document.getElementById('readComponentData');
+      const setButton = document.getElementById('setComponentData');
+      const clearButton = document.getElementById('clearComponentData');
+      const outputElement = document.getElementById('componentDataOutput');
+      
+      // Проверяем, что все элементы найдены
+      if (!keyInput || !versionInput || !outputElement) {
+        console.error('Один или несколько элементов для работы с данными компонентов не найдены.');
+        return;
+      }
+
+      
+      
+      // Функция для отображения результатов операций
+      function displayResult(message, isError = false) {
+        outputElement.innerHTML = '';
+        const resultElement = document.createElement('p');
+        resultElement.textContent = message;
+        resultElement.style.color = isError ? '#d32f2f' : '#2e7d32';
+        resultElement.style.fontWeight = 'bold';
+        resultElement.style.padding = '10px';
+        resultElement.style.border = `1px solid ${isError ? '#d32f2f' : '#2e7d32'}`;
+        resultElement.style.borderRadius = '4px';
+        outputElement.appendChild(resultElement);
+      }
+      
+      // Функция для отображения данных компонента
+      function displayComponentData(data) {
+        outputElement.innerHTML = '';
+        
+        if (Object.keys(data).length === 0) {
+          displayResult('Данные компонента не найдены.', true);
+          return;
+        }
+        
+        const container = document.createElement('div');
+        container.style.fontFamily = 'monospace';
+        
+        for (const nodeId in data) {
+          const nodeData = data[nodeId];
+          
+          const nodeTitle = document.createElement('h4');
+          nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
+          nodeTitle.style.marginBottom = '5px';
+          container.appendChild(nodeTitle);
+          
+          const nodeInfo = document.createElement('div');
+          nodeInfo.style.marginLeft = '10px';
+          nodeInfo.style.marginBottom = '15px';
+          
+          const idLine = document.createElement('div');
+          idLine.textContent = `ID: ${nodeId}`;
+          nodeInfo.appendChild(idLine);
+          
+          const keyLine = document.createElement('div');
+          keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
+          keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
+          nodeInfo.appendChild(keyLine);
+          
+          const versionLine = document.createElement('div');
+          versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
+          versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
+          nodeInfo.appendChild(versionLine);
+          
+          // Добавляем отображение данных из PluginData
+          if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
+            // Добавляем заголовок для данных из PluginData
+            const pluginDataHeader = document.createElement('div');
+            pluginDataHeader.textContent = 'Данные из PluginData:';
+            pluginDataHeader.style.fontWeight = 'bold';
+            pluginDataHeader.style.marginTop = '8px';
+            pluginDataHeader.style.marginBottom = '4px';
+            nodeInfo.appendChild(pluginDataHeader);
+            
+            // Отображаем ключ из PluginData
+            const pluginDataKeyLine = document.createElement('div');
+            pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
+            pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
+            pluginDataKeyLine.style.marginLeft = '10px';
+            nodeInfo.appendChild(pluginDataKeyLine);
+            
+            // Отображаем версию из PluginData
+            const pluginDataVersionLine = document.createElement('div');
+            pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
+            pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
+            pluginDataVersionLine.style.marginLeft = '10px';
+            nodeInfo.appendChild(pluginDataVersionLine);
+          }
+          
+          container.appendChild(nodeInfo);
+        }
+        
+        outputElement.appendChild(container);
+      }
+      
+      
+      
+      
+    
+    
+    // Закрываем обработчик DOMContentLoaded
+    });
+    
+    // All message handling is now done in window.onmessage
+
+    // Function to update statistics display
+    function updateStatistics(data) {
+      const { overallStats } = data;
+      
+      // Update overall statistics
+      const overallList = document.getElementById('overallStatsList');
+      overallList.innerHTML = '';
+      
+      // Sort node types by count (descending)
+      const sortedTypes = Object.entries(overallStats.nodeTypeCounts)
+        .sort(([,a], [,b]) => b - a);
+      
+      
+      
+      // Add total count
+      const totalLi = document.createElement('li');
+      totalLi.innerHTML = `
+        <strong class="type-name">TOTAL NODES</strong>
+        <strong class="type-count">${overallStats.totalNodes}</strong>
+      `;
+      overallList.appendChild(totalLi);
+
+      for (const [type, count] of sortedTypes) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="type-name">${type}</span>
+          <span class="type-count">${count}</span>
+        `;
+        overallList.appendChild(li);
+      }
+      
+      // Update the Total tab counter
+      const totalTab = document.querySelector('[data-tab="total"]');
+      if (totalTab) totalTab.textContent = `Total (${overallStats.totalNodes})`
+    }
+    
+
+    // Define displayComponentData in the global scope
+    window.displayComponentData = function(data) {
+      const outputElement = document.getElementById('componentDataOutput');
+      if (!outputElement) {
+        console.error('Элемент вывода не найден');
+        return;
+      }
+
+      outputElement.innerHTML = '';
+
+      if (!data || Object.keys(data).length === 0) {
+        window.displayResult('Данные компонента не найдены.', true);
+        return;
+      }
+
+      const container = document.createElement('div');
+      container.style.fontFamily = 'monospace';
+
+      for (const nodeId in data) {
+        const nodeData = data[nodeId];
+
+        const nodeTitle = document.createElement('h4');
+        nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
+        nodeTitle.style.marginBottom = '5px';
+        container.appendChild(nodeTitle);
+
+        const nodeInfo = document.createElement('div');
+        nodeInfo.style.marginLeft = '10px';
+        nodeInfo.style.marginBottom = '15px';
+
+        const idLine = document.createElement('div');
+        idLine.textContent = `ID: ${nodeId}`;
+        nodeInfo.appendChild(idLine);
+
+        const keyLine = document.createElement('div');
+        keyLine.textContent = `Ключ: ${nodeData.key || 'Не установлен'}`;
+        keyLine.style.color = nodeData.key ? '#2e7d32' : '#d32f2f';
+        nodeInfo.appendChild(keyLine);
+
+        const versionLine = document.createElement('div');
+        versionLine.textContent = `Версия: ${nodeData.version || 'Не установлена'}`;
+        versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
+        nodeInfo.appendChild(versionLine);
+
+        if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
+          const pluginDataKeyLine = document.createElement('div');
+          pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
+          pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
+          pluginDataKeyLine.style.marginLeft = '10px';
+          nodeInfo.appendChild(pluginDataKeyLine);
+
+          const pluginDataVersionLine = document.createElement('div');
+          pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
+          pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
+          pluginDataVersionLine.style.marginLeft = '10px';
+          nodeInfo.appendChild(pluginDataVersionLine);
+        }
+
+        container.appendChild(nodeInfo);
+      }
+
+      outputElement.appendChild(container);
+    };
+    
+</script>
+</body>
+</html>
