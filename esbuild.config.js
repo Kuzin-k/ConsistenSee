@@ -26,7 +26,17 @@ async function build() {
       loader: { '.ts': 'ts' },
     });
     
-    const uiModulesCode = createIconResult.outputFiles[0].text + '\n' + showPopoverResult.outputFiles[0].text;
+    const sortGroupsResult = await esbuild.build({
+      entryPoints: ['src/ui/sortGroups.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      globalName: 'UIModules',
+      loader: { '.ts': 'ts' },
+    });
+    
+    const uiModulesCode = createIconResult.outputFiles[0].text + '\n' + showPopoverResult.outputFiles[0].text + '\n' + sortGroupsResult.outputFiles[0].text;
 
     // 2. Собираем основной код плагина (backend)
     await esbuild.build({

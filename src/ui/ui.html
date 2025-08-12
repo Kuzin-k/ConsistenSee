@@ -189,6 +189,8 @@
   </div></div>
 
   <script>
+
+
     console.log('Script started'); // Added log
     function displayResult(message, isError = false) {
       const outputElement = document.getElementById('componentDataOutput');
@@ -1677,50 +1679,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
         if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
         // Сортируем группы по mainComponentName перед отображением
-        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
-            const firstItemA = groupAItems[0];
-            const firstItemB = groupBItems[0];
+        // ... existing code ...
 
-            const aSetName = firstItemA.mainComponentSetName || '';
-            const bSetName = firstItemB.mainComponentSetName || '';
-
-            const aCompName = firstItemA.mainComponentName || firstItemA.name || ''; // Добавляем firstItemA.name как fallback
-            const bCompName = firstItemB.mainComponentName || firstItemB.name || ''; // Добавляем firstItemB.name как fallback
-
-            // Helper functions for cleaning and checking names
-            const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim();
-            const startsWithSpecial = (str) => /^[._]/.test(str);
-
-            // Функция для "нормализации" имени: удаляет эмодзи и небуквенно-цифровые символы в начале (кроме /)
-            const normalizeNamePart = (str) => {
-                let cleaned = removeEmoji(str);
-                // Удаляем небуквенно-цифровые символы с начала строки,
-                // которые не являются частью пути (т.е. не /)
-                // Это более агрессивная очистка, чем startsWithSpecial
-                cleaned = cleaned.replace(/^[^a-zA-Z0-9\/]+/, '');
-                return cleaned;
-            };
-
-            const normalizedASetName = normalizeNamePart(aSetName);
-            const normalizedBSetName = normalizeNamePart(bSetName);
-            const normalizedACompName = normalizeNamePart(aCompName);
-            const normalizedBCompName = normalizeNamePart(bCompName);
-
-            // Конструируем имена для сортировки из нормализованных частей
-            const sortableNameA = normalizedASetName ? `${normalizedASetName}/${normalizedACompName}` : normalizedACompName;
-            const sortableNameB = normalizedBSetName ? `${normalizedBSetName}/${normalizedBCompName}` : normalizedBCompName;
-
-            // Проверка на специальные символы (._) теперь применяется к уже нормализованным именам
-            const aSpecial = startsWithSpecial(sortableNameA);
-            const bSpecial = startsWithSpecial(sortableNameB);
-
-            if (aSpecial && !bSpecial) return 1; // Items with special characters go later
-            if (!aSpecial && bSpecial) return -1; // Items without special characters go earlier
-            return sortableNameA.localeCompare(sortableNameB, undefined, { numeric: true, sensitivity: 'accent' });
-        }));
-
-        displayGroups(sortGroups(groupedInstances), resultsList);
-        displayGroups(sortGroups(groupedIcons), iconResultsList);
+        displayGroups(groupedInstances, resultsList);
+        displayGroups(groupedIcons, iconResultsList);
     }
 
     function processAndDisplayOutdatedComponents(componentsData) {
@@ -1762,19 +1724,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
         const outdatedTab = document.querySelector('[data-tab="outdated"]');
         if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
 
-        // Используем ту же функцию сортировки групп
-        const sortGroups = (groups) => Object.fromEntries(Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
-            const firstItemA = groupAItems[0];
-            const firstItemB = groupBItems[0];
-            const aName = (firstItemA.mainComponentSetName || firstItemA.mainComponentName || firstItemA.name || '').replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim().replace(/^[^a-zA-Z0-9\/]+/, '');
-            const bName = (firstItemB.mainComponentSetName || firstItemB.mainComponentName || firstItemB.name || '').replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, '').trim().replace(/^[^a-zA-Z0-9\/]+/, '');
-            const aSpecial = /^[._]/.test(aName);
-            const bSpecial = /^[._]/.test(bName);
-            if (aSpecial && !bSpecial) return 1;
-            if (!aSpecial && bSpecial) return -1;
-            return aName.localeCompare(bName, undefined, { numeric: true, sensitivity: 'accent' });
-        }));
-        displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
+        // Используем функцию сортировки групп из UIModules
+        // ... existing code ...
+        displayGroups(groupedOutdatedInstances, outdatedResultsList);
     }
 
     function processAndDisplayColors(colorsData, colorsStrokeData) {
