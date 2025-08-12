@@ -1,4 +1,4 @@
-import { displayGroups } from './displayGroups.js';
+import { displayGroups } from './displayGroups';
 import { sortGroups } from './sortGroups.js';
 
 /**

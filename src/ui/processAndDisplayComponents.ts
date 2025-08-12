@@ -1,5 +1,5 @@
-import { displayGroups } from './displayGroups.js';
-import { sortGroups } from './sortGroups.js';
+import { displayGroups } from './displayGroups';
+import { sortGroups } from './sortGroups';
 
 /**
  * Обрабатывает и отображает компоненты, разделяя их на обычные и иконки
