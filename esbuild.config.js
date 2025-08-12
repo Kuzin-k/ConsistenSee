@@ -99,17 +99,28 @@ async function build() {
     });
     
 
+    // Добавьте сборку displayDebugTab после processAndDisplayOutdatedComponentsResult
+    const displayDebugTabResult = await esbuild.build({
+      entryPoints: ['src/ui/displayDebugTab.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      loader: { '.ts': 'ts' },
+    });
     
+    // Обновите uiModulesCode, добавив displayDebugTabResult
     const uiModulesCode = createIconResult.outputFiles[0].text + '\n' + 
-                       displayComponentDataResult.outputFiles[0].text + '\n' +
-                       displayResultResult.outputFiles[0].text + '\n' +
-                       showPopoverResult.outputFiles[0].text + '\n' + 
-                       sortGroupsResult.outputFiles[0].text + '\n' + 
-                       displayTotalResult.outputFiles[0].text + '\n' +
-                       displayGroupsResult.outputFiles[0].text + '\n' +
-                       processAndDisplayComponentsResult.outputFiles[0].text + '\n' +
-                       processAndDisplayColorsResult.outputFiles[0].text + '\n' +
-                       processAndDisplayOutdatedComponentsResult.outputFiles[0].text;
+                   displayComponentDataResult.outputFiles[0].text + '\n' +
+                   displayResultResult.outputFiles[0].text + '\n' +
+                   showPopoverResult.outputFiles[0].text + '\n' + 
+                   sortGroupsResult.outputFiles[0].text + '\n' + 
+                   displayTotalResult.outputFiles[0].text + '\n' +
+                   displayGroupsResult.outputFiles[0].text + '\n' +
+                   processAndDisplayComponentsResult.outputFiles[0].text + '\n' +
+                   processAndDisplayColorsResult.outputFiles[0].text + '\n' +
+                   processAndDisplayOutdatedComponentsResult.outputFiles[0].text + '\n' +
+                   displayDebugTabResult.outputFiles[0].text;
 
     // 2. Собираем основной код плагина (backend)
     await esbuild.build({
@@ -144,5 +155,12 @@ async function build() {
     process.exit(1);
   }
 }
+
+// Добавьте displayDebugTab.ts в список файлов для сборки
+const uiFiles = [
+  'src/ui/displayResult.ts',
+  'src/ui/displayComponentData.ts',
+  'src/ui/displayDebugTab.ts', // Новый файл
+];
 
 build();

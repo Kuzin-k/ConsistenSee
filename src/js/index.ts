@@ -294,7 +294,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         // Даем браузеру "подышать" после каждого 10 узла, чтобы UI не зависал
         if (i % 5 === 0) {
           await new Promise(resolve => setTimeout(resolve, 0));
-          await updateProgress('processing', i + 1, nodesToProcess.length, 'Обработка элементов');
+          await updateProgress('processing', i + 1, nodesToProcess.length, 'Обработка элементов', (nodesToProcess[i] as InstanceNode).name);
         }
       }
 
@@ -364,7 +364,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
       // Отправляем статистику в UI
       figma.ui.postMessage({
-        type: 'update-statistics',
+        type: 'display-total',
         data: {
           overallStats: totalStats,
           totalCount: totalStats.totalNodes // Добавляем общее количество явно

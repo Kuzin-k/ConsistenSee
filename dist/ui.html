@@ -818,25 +818,26 @@ input:checked + .slider:before {
 }</style>
 <body>
 
+<!-- resize icon -->
 <div id="resizeHandle" class="resize-handle">
   <svg width="16" height="16">
     <use href="#resize-icon"/>
   </svg>
 </div>
 
-  <!-- Splash Screen -->
-  <div class="splash-screen" id="splashScreen">
-    <img
-      src=""
-      alt="Welcome"
-      class="splash-image"
-      onload="console.log('Изображение успешно загружено')"
-    >
-    <div class="splash-content">
-      <h1 class="splash-title"></h1>
-      <button id="startCheck" class="button-main"></button>
-    </div>
+<!-- Splash Screen -->
+<div class="splash-screen" id="splashScreen">
+  <img
+    src=""
+    alt="Welcome"
+    class="splash-image"
+    onload="console.log('Изображение успешно загружено')"
+  >
+  <div class="splash-content">
+    <h1 class="splash-title"></h1>
+    <button id="startCheck" class="button-main"></button>
   </div>
+</div>
 
   <!-- Main Content -->
   <div class="main-content" id="mainContent">
@@ -863,15 +864,11 @@ input:checked + .slider:before {
       <symbol id="resize-icon" viewBox="0 0 24 24">
         <path fill-rule="evenodd" clip-rule="evenodd" d="M11.5219 16H11.5H8.5C8.22386 16 8 15.7761 8 15.5C8 15.2239 8.22386 15 8.5 15H11.5C12.2083 15 12.7095 14.9996 13.1013 14.9676C13.4872 14.9361 13.7228 14.8764 13.908 14.782C14.2843 14.5903 14.5903 14.2843 14.782 13.908C14.8764 13.7228 14.9361 13.4872 14.9676 13.1013C14.9996 12.7095 15 12.2083 15 11.5V8.5C15 8.22386 15.22386 8 15.5 8C15.7761 8 16 8.22386 16 8.5V11.5V11.5219C16 12.2034 16 12.7454 15.9643 13.1827C15.9277 13.6305 15.8512 14.0123 15.673 14.362C15.3854 14.9265 14.9265 15.3854 14.362 15.673C15.0123 15.8512 15.6305 15.9277 15.1827 15.9643C12.7454 16 12.2034 16 11.5219 16Z"/>
       </symbol>
-
-      
-
     </svg>
    
   <!-- Loader --> 
   <div class="loader-container">
     <div class="progress-info">
-      
       <div class="progress-counts">Обработано: <span id="processedCount">0</span> из <span id="totalCount">0</span></div>
       <div class="progress-bar">
         <div class="progress-bar-fill" id="progressBarFill"></div>
@@ -998,46 +995,39 @@ input:checked + .slider:before {
       </div>
   </div></div>
 
-  <script>
+<script>
+console.log('Script started'); // Added log
+
+// Проверяем наличие элементов
+const splashScreen = document.getElementById('splashScreen');
+const splashImage = document.querySelector('.splash-image');
+const loaderContainer = document.querySelector('.loader-container');
+const processedCount = document.getElementById('processedCount');
+const totalCount = document.getElementById('totalCount');
+const progressBarFill = document.querySelector('.progress-bar-fill');
+const checkUpdatesButton = document.getElementById('check-updates');
 
 
-    console.log('Script started'); // Added log
+document.addEventListener('DOMContentLoaded', function() {
+    
+  // Инициализация вкладок
+  const tabs = document.querySelectorAll('.tab[data-tab]'); // Выбираем только вкладки с атрибутом data-tab
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.getAttribute('data-tab');
+            
+      // Показываем соответствующий контент
+      document.querySelectorAll('.tab-content').forEach(content => {
+          content.style.display = content.id === tabId ? 'block' : 'none';
+      });
+            
+      // Обновляем активную вкладку
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      });
+  });
 
     
-    // Проверяем наличие элементов
-    const splashScreen = document.getElementById('splashScreen');
-    const splashImage = document.querySelector('.splash-image');
-    const loaderContainer = document.querySelector('.loader-container');
-    const processedCount = document.getElementById('processedCount');
-    const totalCount = document.getElementById('totalCount');
-    const progressBarFill = document.querySelector('.progress-bar-fill');
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-    
-    // Инициализация вкладок
-    const tabs = document.querySelectorAll('.tab[data-tab]'); // Выбираем только вкладки с атрибутом data-tab
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            
-            // Показываем соответствующий контент
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.style.display = content.id === tabId ? 'block' : 'none';
-            });
-            
-            // Обновляем активную вкладку
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-        });
-    });
-
-    // Все переменные объявляем внутри этого блока
-    const loaderContainer = document.querySelector('.loader-container');
-    const processedCount = document.getElementById('processedCount');
-    const totalCount = document.getElementById('totalCount');
-    const progressBarFill = document.querySelector('.progress-bar-fill');
-    const checkUpdatesButton = document.getElementById('check-updates');
 
     if (checkUpdatesButton) {
       checkUpdatesButton.addEventListener('click', () => {
@@ -1051,9 +1041,7 @@ input:checked + .slider:before {
           errorDiv.appendChild(errorText);
           document.body.appendChild(errorDiv);
           
-          setTimeout(() => {
-            errorDiv.remove();
-          }, 3000);
+          setTimeout(() => {errorDiv.remove();}, 3000);
           return;
         }
 
@@ -1077,8 +1065,6 @@ input:checked + .slider:before {
         }, '*');
       });
     }
-
-    // ...все остальные инициализации и обработчики...
 });
       
       
@@ -1174,13 +1160,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
 
 
-
-    
-
-
-
-
-
     // Добавляем обработчик для нового toggle "Show hidden"
     const showHiddenToggle = document.getElementById('showHiddenToggle');
     if (showHiddenToggle) {
@@ -1225,19 +1204,19 @@ document.getElementById('setComponentData').addEventListener('click', function()
       }
 
       // Пересоздаем дерево с учетом поискового запроса
-      const debugData = {
-        type: 'debug-search',
-        components: window.lastDebugData?.components || {},
-        colors: window.lastDebugData?.colors || {},
-        componentTree: window.lastDebugData?.componentTree || null,
-        totalStats: window.lastDebugData?.totalStats || {}
-      };
+        const debugData = {
+          type: 'debug-search',
+          components: window.lastDebugData?.components || {},
+          colors: window.lastDebugData?.colors || {},
+          componentTree: window.lastDebugData?.componentTree || null,
+          totalStats: window.lastDebugData?.totalStats || {}
+        };
 
-      debugContent.innerHTML = '';
-      const newTree = createDebugTree(debugData, searchTerm);
-      if (newTree) {
-        debugContent.appendChild(newTree);
-      }
+        debugContent.innerHTML = '';
+        const newTree = UIModules.createDebugTree(debugData, searchTerm);
+        if (newTree) {
+          debugContent.appendChild(newTree);
+        }
     });
 
     // Обновляем обработчик сообщений для сохранения данных отладки
@@ -1346,10 +1325,133 @@ document.getElementById('setComponentData').addEventListener('click', function()
         return;
       }
 
-      if (msg.type === 'update-statistics') {
+      if (msg.type === 'display-total') {
         UIModules.displayTotal(msg.data);
         return;
       }
+
+      if (msg.type === 'success') {
+        hideLoader();
+        
+        // Очищаем предыдущие результаты
+        const resultsList = document.getElementById('colorResultsList');
+        if (resultsList) {
+          resultsList.innerHTML = '';
+          
+          if (msg.instances && msg.instances.length > 0) {UIModules.displayGroups(msg.instances, resultsList, msg.counts);
+          } else {resultsList.innerHTML = '<p>Цвета не найдены</p>';}} 
+          else {
+          //console.error('Не найден элемент colorResultsList');
+        }
+      } 
+      if (msg.type === 'progress-update') {
+        // Показываем контейнер загрузки, если он еще не показан
+        loaderContainer.style.display = 'flex';
+        
+        // Обновляем информацию о прогрессе
+        processedCount.textContent = msg.processed;
+        totalCount.textContent = msg.total;
+        
+        // Обновляем прогресс-бар
+        const percentage = (msg.processed / msg.total) * 100;
+        progressBarFill.style.width = `${percentage}%`;
+        // Показываем имя компонента
+        if (msg.currentComponentName) {
+          document.getElementById('progressPhase').textContent = `${msg.currentComponentName}`;
+        } else if (msg.type === 'progress-update' && msg.phase === 'check-updates') {
+          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
+        } else {
+          document.getElementById('progressPhase').textContent = '';
+        }
+      } 
+      if (msg.type === 'all-results') {
+        // Save data for search
+        window.lastDebugData = {
+          components: msg.components,
+          colors: msg.colors,
+          colorsStroke: msg.colorsStroke,
+          componentTree: msg.componentTree,
+          totalStats: msg.totalStats
+        };
+
+        // Hide loader
+        const loaderContainer = document.querySelector('.loader-container');
+        if (loaderContainer) {loaderContainer.style.display = 'none';}
+
+        console.log('Received all-results:', msg);
+
+        // Process components
+        if (msg.components) {
+            const resultsList = document.getElementById('resultsList');
+            const iconResultsList = document.getElementById('iconResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, resultsList, iconResultsList);
+        }
+        
+        // Process outdated components if present
+        if (msg.components && msg.components.outdated) {
+            const outdatedResultsList = document.getElementById('outdatedResultsList');
+            UIModules.processAndDisplayOutdatedComponents(msg.components, outdatedResultsList);
+        }
+
+        // Process colors
+        if (msg.colors) {
+            UIModules.processAndDisplayColors(msg.colors, msg.colorsStroke);
+        }
+
+        // Update debug information
+        debugContent.innerHTML = '';
+        debugContent.className = 'debug-tree';
+
+        // Create formatted debug output
+        const debugData = {
+          type: msg.type,
+          timestamp: new Date().toISOString(),
+          components: msg.components,
+          colors: msg.colors,
+          colorsStroke: msg.colorsStroke,
+          componentTree: msg.componentTree,
+          totalStats: msg.totalStats
+        };
+
+        // Сбрасываем сохраненное оригинальное содержимое при новых данных
+        originalDebugContent = null;
+
+        // Преобразуем данные в древовидную структуру
+        const tree = UIModules.createDebugTree(debugData);
+        if (tree) {
+          debugContent.appendChild(tree);
+          //console.log('Отладочная информация обновлена');
+        } else {
+          //console.error('Не удалось создать дерево отладки');
+        }
+      } 
+      if (msg.type === 'error') {
+          loaderContainer.style.display = 'none';
+        
+          // Удаляем предыдущее сообщение об ошибке, если оно есть
+          const existingError = document.querySelector('.error-message');
+          if (existingError) {
+            existingError.remove();
+          }
+          
+          // Создаем новое сообщение об ошибке
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          const errorText = document.createElement('p');
+          errorText.textContent = msg.message;
+          errorDiv.appendChild(errorText);
+          document.body.appendChild(errorDiv);
+          
+          // Автоматически скрываем сообщение через 3 секунды
+          setTimeout(() => {errorDiv.remove();}, 5000);
+        
+          // Добавляем ошибку в отладочную информацию
+          const debugError = document.createElement('div');
+          debugError.style.color = 'red';
+          debugError.textContent = `Error: ${msg.message}`;
+          debugContent.appendChild(debugError);
+          }
 
       if (msg.type === 'component-data-result') {
         if (msg.data) {
@@ -1537,133 +1639,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
       console.log('Инициализация завершена');
     });
-
-
-
-
-
-
-
-    if (msg.type === 'success') {
-        hideLoader();
-        
-        // Очищаем предыдущие результаты
-        const resultsList = document.getElementById('colorResultsList');
-        if (resultsList) {
-          resultsList.innerHTML = '';
-          
-          if (msg.instances && msg.instances.length > 0) {UIModules.displayGroups(msg.instances, resultsList, msg.counts);
-          } else {resultsList.innerHTML = '<p>Цвета не найдены</p>';}} 
-          else {
-          //console.error('Не найден элемент colorResultsList');
-        }
-      } else if (msg.type === 'progress-update') {
-        // Показываем контейнер загрузки, если он еще не показан
-        loaderContainer.style.display = 'flex';
-        
-        // Обновляем информацию о прогрессе
-        processedCount.textContent = msg.processed;
-        totalCount.textContent = msg.total;
-        
-        // Обновляем прогресс-бар
-        const percentage = (msg.processed / msg.total) * 100;
-        progressBarFill.style.width = `${percentage}%`;
-        // Показываем имя компонента
-        if (msg.currentComponentName) {
-          document.getElementById('progressPhase').textContent = `${msg.currentComponentName}`;
-        } else if (msg.type === 'progress-update' && msg.phase === 'check-updates') {
-          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
-        } else {
-          document.getElementById('progressPhase').textContent = '';
-        }
-      } else if (msg.type === 'all-results') {
-        // Save data for search
-        window.lastDebugData = {
-          components: msg.components,
-          colors: msg.colors,
-          colorsStroke: msg.colorsStroke,
-          componentTree: msg.componentTree,
-          totalStats: msg.totalStats
-        };
-
-        // Hide loader
-        const loaderContainer = document.querySelector('.loader-container');
-        if (loaderContainer) {loaderContainer.style.display = 'none';}
-
-        console.log('Received all-results:', msg);
-
-        // Process components
-        if (msg.components) {
-            const resultsList = document.getElementById('resultsList');
-            const iconResultsList = document.getElementById('iconResultsList');
-            let allInstances = [];
-            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, resultsList, iconResultsList);
-        }
-        
-        // Process outdated components if present
-        if (msg.components && msg.components.outdated) {
-            const outdatedResultsList = document.getElementById('outdatedResultsList');
-            UIModules.processAndDisplayOutdatedComponents(msg.components, outdatedResultsList);
-        }
-
-        // Process colors
-        if (msg.colors) {
-            UIModules.processAndDisplayColors(msg.colors, msg.colorsStroke);
-        }
-
-        // Update debug information
-        debugContent.innerHTML = '';
-        debugContent.className = 'debug-tree';
-
-        // Create formatted debug output
-        const debugData = {
-          type: msg.type,
-          timestamp: new Date().toISOString(),
-          components: msg.components,
-          colors: msg.colors,
-          colorsStroke: msg.colorsStroke,
-          componentTree: msg.componentTree,
-          totalStats: msg.totalStats
-        };
-
-        // Сбрасываем сохраненное оригинальное содержимое при новых данных
-        originalDebugContent = null;
-
-        // Преобразуем данные в древовидную структуру
-        const tree = createDebugTree(debugData);
-        if (tree) {
-          debugContent.appendChild(tree);
-          //console.log('Отладочная информация обновлена');
-        } else {
-          //console.error('Не удалось создать дерево отладки');
-        }
-      } else if (msg.type === 'error') {
-          loaderContainer.style.display = 'none';
-        
-          // Удаляем предыдущее сообщение об ошибке, если оно есть
-          const existingError = document.querySelector('.error-message');
-          if (existingError) {
-            existingError.remove();
-          }
-          
-          // Создаем новое сообщение об ошибке
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'error-message';
-          const errorText = document.createElement('p');
-          errorText.textContent = msg.message;
-          errorDiv.appendChild(errorText);
-          document.body.appendChild(errorDiv);
-          
-          // Автоматически скрываем сообщение через 3 секунды
-          setTimeout(() => {errorDiv.remove();}, 5000);
-        
-          // Добавляем ошибку в отладочную информацию
-          const debugError = document.createElement('div');
-          debugError.style.color = 'red';
-          debugError.textContent = `Error: ${msg.message}`;
-          debugContent.appendChild(debugError);
-          }
-        };
+    
+    };
 
         
 
@@ -1714,101 +1691,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
     
 
 
-    function createDebugTree(data, searchTerm = '') {
-      try {
-        let hasMatchingChild = false;
-        
-        // Если это примитивное значение, возвращаем простой элемент
-        if (data === null || typeof data !== 'object') {
-          return createValueElement(data, searchTerm);
-      }
-
-      const details = document.createElement('details');
-      const summary = document.createElement('summary');
-      const container = document.createElement('div');
-        container.style.paddingLeft = '20px'; // Добавляем отступ для вложенных элементов
-
-        // Создаем заголовок
-      const isArray = Array.isArray(data);
-        summary.textContent = isArray ? `Array [${data.length}]` : 'Object';
-      details.appendChild(summary);
-
-        // Обрабатываем элементы объекта/массива
-      Object.entries(data).forEach(([key, value]) => {
-        const line = document.createElement('div');
-          line.style.marginBottom = '5px';
-        
-          // Создаем элемент ключа
-        const keySpan = document.createElement('span');
-        keySpan.className = 'key';
-        keySpan.textContent = `${key}: `;
-          keySpan.style.color = '#905';
-        line.appendChild(keySpan);
-
-          // Создаем элемент значения
-        const valueContainer = createDebugTree(value, searchTerm);
-        
-          // Проверяем совпадение с поиском
-        const matchesSearch = searchTerm && (
-          key.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (typeof value === 'string' && value.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (typeof value === 'number' && String(value).includes(searchTerm))
-        );
-
-        if (matchesSearch || valueContainer.hasMatch) {
-          hasMatchingChild = true;
-          details.open = true;
-        }
-
-        line.appendChild(valueContainer);
-        container.appendChild(line);
-      });
-
-      details.appendChild(container);
-      details.hasMatch = hasMatchingChild;
-
-      return details;
-      } catch (error) {
-        console.error('Ошибка при создании дерева отладки:', error);
-        const errorElement = document.createElement('div');
-        errorElement.style.color = 'red';
-        errorElement.textContent = `Error creating debug tree: ${error.message}`;
-        return errorElement;
-      }
-    }
-
-    function createValueElement(value, searchTerm = '') {
-      const span = document.createElement('span');
-      const stringValue = String(value);
-
-      // Устанавливаем соответствующий класс и содержимое
-      if (typeof value === 'string') {
-        span.className = 'string';
-        span.textContent = `"${value}"`;
-        span.style.color = '#690';
-      } else if (typeof value === 'number') {
-        span.className = 'number';
-        span.textContent = value;
-        span.style.color = '#2f6f9f';
-      } else if (typeof value === 'boolean') {
-        span.className = 'boolean';
-        span.textContent = value;
-        span.style.color = '#2f6f9f';
-      } else {
-        span.textContent = stringValue;
-      }
-
-      // Проверяем совпадение с поиском
-      if (searchTerm && stringValue.toLowerCase().includes(searchTerm.toLowerCase())) {
-        span.className += ' match';
-        span.style.backgroundColor = 'yellow';
-        span.hasMatch = true;
-      } else {
-        span.hasMatch = false;
-      }
-
-      return span;
-    }
+    // Functions moved to UIModules
 
     // Search functionality
     searchInput.addEventListener('input', () => {
@@ -1826,7 +1709,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         return name.includes(searchTerm) || description.includes(searchTerm);
       });
 
-      displaySearchResults(results, searchTerm);
+      UIModules.displaySearchResults(results, searchTerm);
     });
 
     // Clear search
@@ -1836,48 +1719,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       clearSearch.style.display = 'none';
     });
 
-    // Function to display search results
-    function displaySearchResults(results, searchTerm) {
-      searchResults.innerHTML = '';
-      
-      if (results.length === 0) {
-        searchResults.innerHTML = '<p>No matches found</p>';
-        return;
-      }
-
-      const resultList = document.createElement('ul');
-      results.forEach(instance => {
-        const li = document.createElement('li');
-        
-        // Highlight matching text in name
-        const nameText = instance.name;
-        const highlightedName = highlightText(nameText, searchTerm);
-        
-        // Create result item
-        const resultItem = document.createElement('div');
-        resultItem.classList.add('search-result-item');
-        resultItem.innerHTML = highlightedName;
-        
-        // Add description if exists
-        if (instance.description) {
-          const description = document.createElement('span');
-          description.classList.add('description-tag');
-          description.innerHTML = ' - ' + highlightText(instance.description, searchTerm);
-          resultItem.appendChild(description);
-        }
-        
-        li.appendChild(resultItem);
-        resultList.appendChild(li);
-      });
-      
-      searchResults.appendChild(resultList);
-    }
-
-    // Function to highlight matching text
-    function highlightText(text, searchTerm) {
-      const regex = new RegExp(`(${searchTerm})`, 'gi');
-      return text.replace(regex, '<span class="highlight">$1</span>');
-    }
+    // Functions moved to UIModules
 
     // Добавляем обработчик для кнопки "Проверить обновления"
     document.addEventListener('DOMContentLoaded', () => {
@@ -1909,9 +1751,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
         console.error('Один или несколько элементов для работы с данными компонентов не найдены.');
         return;
       }
-
-
-    // Закрываем обработчик DOMContentLoaded
     });
 </script>
 <script>"use strict";
@@ -4539,6 +4378,120 @@ document.getElementById('setComponentData').addEventListener('click', function()
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
     window.UIModules.processAndDisplayOutdatedComponents = processAndDisplayOutdatedComponents;
+  }
+})();
+
+"use strict";
+(() => {
+  // src/ui/displayDebugTab.ts
+  function createDebugTree(data, searchTerm = "") {
+    try {
+      let hasMatchingChild = false;
+      if (data === null || typeof data !== "object") {
+        return createValueElement(data, searchTerm);
+      }
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      const container = document.createElement("div");
+      container.style.paddingLeft = "20px";
+      const isArray = Array.isArray(data);
+      summary.textContent = isArray ? `Array [${data.length}]` : "Object";
+      details.appendChild(summary);
+      Object.entries(data).forEach(([key, value]) => {
+        const line = document.createElement("div");
+        line.style.marginBottom = "5px";
+        const keySpan = document.createElement("span");
+        keySpan.className = "key";
+        keySpan.textContent = `${key}: `;
+        keySpan.style.color = "#905";
+        line.appendChild(keySpan);
+        const valueContainer = createDebugTree(value, searchTerm);
+        const matchesSearch = searchTerm && (key.toLowerCase().includes(searchTerm.toLowerCase()) || typeof value === "string" && value.toLowerCase().includes(searchTerm.toLowerCase()) || typeof value === "number" && String(value).includes(searchTerm));
+        if (matchesSearch || valueContainer.hasMatch) {
+          hasMatchingChild = true;
+          details.open = true;
+        }
+        line.appendChild(valueContainer);
+        container.appendChild(line);
+      });
+      details.appendChild(container);
+      details.hasMatch = hasMatchingChild;
+      return details;
+    } catch (error) {
+      console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0434\u0435\u0440\u0435\u0432\u0430 \u043E\u0442\u043B\u0430\u0434\u043A\u0438:", error);
+      const errorElement = document.createElement("div");
+      errorElement.style.color = "red";
+      errorElement.textContent = `Error creating debug tree: ${error.message}`;
+      return errorElement;
+    }
+  }
+  function createValueElement(value, searchTerm = "") {
+    const span = document.createElement("span");
+    const stringValue = String(value);
+    if (typeof value === "string") {
+      span.className = "string";
+      span.textContent = `"${value}"`;
+      span.style.color = "#690";
+    } else if (typeof value === "number") {
+      span.className = "number";
+      span.textContent = String(value);
+      span.style.color = "#2f6f9f";
+    } else if (typeof value === "boolean") {
+      span.className = "boolean";
+      span.textContent = String(value);
+      span.style.color = "#2f6f9f";
+    } else {
+      span.textContent = stringValue;
+    }
+    if (searchTerm && stringValue.toLowerCase().includes(searchTerm.toLowerCase())) {
+      span.className += " match";
+      span.style.backgroundColor = "yellow";
+      span.hasMatch = true;
+    } else {
+      span.hasMatch = false;
+    }
+    return span;
+  }
+  function displaySearchResults(results, searchTerm) {
+    const searchResults = document.getElementById("searchResults");
+    if (!searchResults) {
+      console.error("\u042D\u043B\u0435\u043C\u0435\u043D\u0442 searchResults \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D");
+      return;
+    }
+    searchResults.innerHTML = "";
+    if (results.length === 0) {
+      searchResults.innerHTML = "<p>No matches found</p>";
+      return;
+    }
+    const resultList = document.createElement("ul");
+    results.forEach((instance) => {
+      const li = document.createElement("li");
+      const nameText = instance.name;
+      const highlightedName = highlightText(nameText, searchTerm);
+      const resultItem = document.createElement("div");
+      resultItem.classList.add("search-result-item");
+      resultItem.innerHTML = highlightedName;
+      if (instance.description) {
+        const description = document.createElement("span");
+        description.classList.add("description-tag");
+        description.innerHTML = " - " + highlightText(instance.description, searchTerm);
+        resultItem.appendChild(description);
+      }
+      li.appendChild(resultItem);
+      resultList.appendChild(li);
+    });
+    searchResults.appendChild(resultList);
+  }
+  function highlightText(text, searchTerm) {
+    const regex = new RegExp(`(${searchTerm})`, "gi");
+    return text.replace(regex, '<span class="highlight">$1</span>');
+  }
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.createDebugTree = createDebugTree;
+    window.UIModules.createValueElement = createValueElement;
+    window.UIModules.displaySearchResults = displaySearchResults;
+    window.UIModules.highlightText = highlightText;
   }
 })();
 </script></body>
