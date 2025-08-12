@@ -1,30 +1,66 @@
 // Типы для данных компонентов
+/**
+ * @interface ComponentInstance
+ * @description Определяет структуру данных для одного экземпляра компонента или узла,
+ * который будет отображаться в UI. Содержит всю необходимую информацию для рендеринга и интерактивности.
+ */
 interface ComponentInstance {
+  /** Тип узла в Figma (например, 'INSTANCE', 'FRAME', 'TEXT'). */
   type: string;
+  /** Имя самого узла (инстанса). */
   name: string;
+  /** Уникальный ID узла в документе Figma. */
   nodeId: string;
+  /** Имя родительского набора компонентов (Component Set), если применимо. */
   mainComponentSetName?: string;
+  /** Имя главного компонента (main component). */
   mainComponentName?: string;
+  /** Имя родительского компонента, если узел вложен в другой инстанс. */
   parentName?: string;
+  /** Флаг, указывающий, скрыт ли узел или его родитель. */
   hidden: boolean;
+  /** Флаг, указывающий, является ли компонент устаревшим по сравнению с библиотечной версией. */
   isOutdated?: boolean;
+  /** Версия компонента из библиотеки (если доступна). */
   libraryComponentVersion?: string | null;
+  /** Версия, извлеченная из описания локального компонента. */
   nodeVersion?: string | null;
+  /** Полное описание компонента. */
   description?: string | null;
+  /** Флаг, указывающий, что это узел с информацией о цвете. */
   color?: boolean;
+  /** HEX-код цвета заливки. */
   fill?: string;
+  /** Имя переменной цвета заливки. `false`, если переменная не найдена. */
   fill_variable_name?: string | false;
+  /** Имя коллекции, к которой принадлежит переменная цвета заливки. */
   fill_collection_name?: string;
+  /** HEX-код цвета обводки. */
   stroke?: string;
+  /** Имя переменной цвета обводки. `false`, если переменная не найдена. */
   stroke_variable_name?: string | false;
+  /** Имя коллекции, к которой принадлежит переменная цвета обводки. */
   stroke_collection_name?: string;
 }
 
+/**
+ * @interface GroupedData
+ * @description Представляет объект, в котором данные сгруппированы по ключу.
+ */
 interface GroupedData {
+  /** Ключ - это идентификатор группы, значение - массив экземпляров в этой группе. */
   [key: string]: ComponentInstance[];
 }
 
 // Функция создания иконки
+/**
+ * @function createIcon
+ * @description Создает и возвращает SVG-элемент иконки на основе типа узла Figma.
+ * Использует SVG-спрайт, определенный в `ui.html`, для получения нужной иконки.
+ *
+ * @param {string} type - Тип узла Figma (например, 'INSTANCE', 'FRAME', 'TEXT').
+ * @returns {SVGElement} Готовый SVG-элемент с иконкой.
+ */
 const createIcon = (type: string): SVGElement => {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   
@@ -65,6 +101,16 @@ const createIcon = (type: string): SVGElement => {
 };
 
 // Функция для отображения popover
+/**
+ * @function showPopover
+ * @description Отображает всплывающее окно (popover) с подробной информацией об экземпляре.
+ * Popover появляется при наведении курсора на иконку элемента в списке.
+ * Функция также отправляет сообщение в бэкенд для изменения размера окна плагина,
+ * чтобы popover полностью поместился.
+ *
+ * @param {Element} icon - DOM-элемент иконки, к которому привязывается popover.
+ * @param {ComponentInstance} instance - Объект с данными экземпляра для отображения.
+ */
 const showPopover = (icon: Element, instance: ComponentInstance): void => {
   const popover = document.createElement('div');
   popover.classList.add('popover');
@@ -135,6 +181,41 @@ const showPopover = (icon: Element, instance: ComponentInstance): void => {
 };
 
 // Основная функция отображения групп
+/**
+ * @description
+ * Рендерит сгруппированные данные (компоненты, цвета и т.д.) в виде интерактивного списка в указанном DOM-элементе.
+ * Функция динамически создает HTML-структуру для каждой группы и ее элементов, добавляя интерактивность,
+ * такую как прокрутка к элементу в Figma, выделение группы и отображение детальной информации во всплывающем окне.
+ *
+ * @param {GroupedData} groupedData - Объект, где ключи — это идентификаторы групп (например, ключ главного компонента),
+ * а значения — массивы объектов `ComponentInstance`, принадлежащих этой группе.
+ * @param {HTMLElement} targetList - DOM-элемент (обычно `<ul>`), в который будут добавлены сгенерированные группы.
+ *
+ * @details
+ * **Логика работы:**
+ * 1.  **Очистка:** Перед рендерингом полностью очищает содержимое `targetList`.
+ * 2.  **Заголовки для цветов:** Если `targetList` предназначен для отображения цветов (ID `colorResultsList` или `colorStrokeResultsList`),
+ *     добавляет соответствующий заголовок ("Fill" или "Stroke").
+ * 3.  **Итерация по группам:** Проходит по каждой группе в `groupedData`.
+ * 4.  **Одиночные элементы:** Если группа содержит только один элемент (и это не список цветов), она отображается как
+ *     одна негруппированная строка для более компактного вида.
+ * 5.  **Группы элементов:** Если в группе несколько элементов, создается сворачиваемый блок:
+ *     - **Заголовок группы (`group-header`):**
+ *       - Отображает иконку типа (для компонентов) или цветовой образец (для цветов).
+ *       - Показывает имя группы (например, имя главного компонента) и количество элементов в ней.
+ *       - При наведении появляется иконка "Выделить все", которая отправляет команду `select-nodes` в бэкенд.
+ *       - Отображает общую информацию о версиях в группе (например, "NEW", если есть обновления, или "...", если версии различаются).
+ *       - Заголовок является кликабельным и раскрывает/сворачивает список элементов.
+ *     - **Список элементов (`group-items`):**
+ *       - Для каждого элемента в группе создается отдельная строка (`<li>`).
+ *       - **Иконка:** Рядом с каждым элементом отображается иконка его типа. Клик по иконке отправляет команду `scroll-to-node` в бэкенд.
+ *         При наведении на иконку появляется popover с полной информацией об элементе (`showPopover`).
+ *       - **Имя:** Имя элемента является ссылкой, которая также вызывает `scroll-to-node`.
+ *       - **Доп. информация:** Отображаются имя родительского компонента (если есть), метка "hidden" для скрытых элементов,
+ *         а также индивидуальные метки версии и статуса обновления (`isOutdated`).
+ *       - **Для цветов:** Дополнительно рендерится детальная информация о цвете (HEX-код, имя переменной, коллекция).
+ * 6.  **Фильтрация:** Учитывает состояние переключателя "Show hidden" для отображения или скрытия невидимых элементов.
+ */
 export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement): void => {
   const showHidden = document.getElementById('showHiddenToggle') ? 
     (document.getElementById('showHiddenToggle') as HTMLInputElement).checked : true;
@@ -423,11 +504,11 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
           groupHeader.appendChild(libraryVersionBadge);
         }
     } else {
-        // Для групп с несколькими элементами
+        // Для групп с несколькими элементами показываем общую метку "NEW"
         const versionBadge = document.createElement('span');
         versionBadge.classList.add('version-tag-updated');
-        versionBadge.textContent = group[0].libraryComponentVersion || '';
-        versionBadge.title = 'Доступна новая версия';
+        versionBadge.textContent = 'NEW';
+        versionBadge.title = 'В этой группе есть устаревшие компоненты';
         versionGroup.appendChild(versionBadge);
         
       }
@@ -440,7 +521,7 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
     const uniqueVersions = [...new Set(versionsInGroup.filter(v => v))]; // Уникальные непустые версии
 
     if (uniqueVersions.length > 0) {
-      // В группе есть хотя бы один элемент с версией
+      // В группе есть хотя бы один элемент с версией.
       const infoSpan = document.createElement('div');
       infoSpan.classList.add('version-tag');
 
@@ -449,7 +530,7 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
         infoSpan.textContent = uniqueVersions[0];
       } else {
         // Либо несколько версий, либо у некоторых элементов нет версии
-        infoSpan.textContent = '*.*.*';
+        infoSpan.textContent = '...';
       }
       versionGroup.appendChild(infoSpan);
     } else if (firstInstance.description && targetList.id !== 'iconResultsList') {
