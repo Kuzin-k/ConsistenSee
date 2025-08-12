@@ -999,9 +999,7 @@ input:checked + .slider:before {
   </div></div>
 
   <script>
-    // UI Modules for better organization
-    const UIModules = {
-    };
+
 
     console.log('Script started'); // Added log
     function displayResult(message, isError = false) {
@@ -1205,681 +1203,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
       return description || "";
     }
 
-    // Обновляем функцию создания иконки для использования SVG-спрайта
-    const createIcon = (type) => {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      
-      // Определяем класс иконки на основе типа
-      let iconClass = 'info-icon'; // По умолчанию используем info-icon
-      let iconId = 'info-icon';    // По умолчанию используем info иконку
-      
-      switch (type) {
-        case 'INSTANCE':
-          iconClass = 'instance-icon';
-          iconId = 'instance-icon';
-          break;
-        case 'TEXT':
-          iconClass = 'text-icon';
-          iconId = 'text-icon';
-          break;
-        case 'FRAME':
-          iconClass = 'frame-icon';
-          iconId = 'frame-icon';
-          break;
-        case 'RECTANGLE':
-          iconClass = 'rectangle-icon';
-          iconId = 'rectangle-icon';
-          break;
-        case 'VECTOR':
-          iconClass = 'frame-icon'; // Используем frame иконку для vector
-          iconId = 'frame-icon';
-          break;
-      }
-      
-      svg.classList.add(iconClass);
-      
-      const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-      use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
-      svg.appendChild(use);
-      
-      return svg;
-    };
+    
 
 
 
-    // СПИСОК ЭЛЕМЕНТОВ
-    const displayGroups = (groupedData, targetList) => {
-      //console.log('Displaying groups for:', targetList.id, groupedData);
-      const showHidden = document.getElementById('showHiddenToggle') ? document.getElementById('showHiddenToggle').checked : true;
-      targetList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
-      
-      // Добавляем заголовок перед списком элементов
-      let headerText = '';
-      // Сначала проверим, существует ли targetList и его id
-      if (!targetList || !targetList.id) {
-        console.error('Target list or its ID is undefined.');
-        return;
-      }
-      if (targetList.id === 'colorResultsList') headerText = 'Fill';
-      if (targetList.id === 'colorStrokeResultsList') headerText = 'Stroke';
-      if (headerText) {
-        // Удаляем предыдущий заголовок, если он есть
-        const prevHeader = targetList.previousElementSibling;
-        if (prevHeader && prevHeader.classList.contains('section-header')) {
-          prevHeader.remove();
-        }
-        const header = document.createElement('div');
-        header.className = 'section-header';
-        header.textContent = headerText;
-        targetList.parentNode.insertBefore(header, targetList);
-      }
-      //console.log('Displaying groups for:', targetList.id, groupedData);
-      
-      // Логика для подсчета имен
-      const nameCount = {};
 
-      for (const key in groupedData) {
-        const group = groupedData[key];
-        // Теперь group уже должен быть отфильтрован по hidden перед вызовом displayGroups
-
-        if (group.length === 0) continue; // Пропускаем группу, если она пуста
-
-        const firstInstance = group[0];
-        // название - имя компонента из библиотеки
-
-        
-
-        const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName 
-          : firstInstance.mainComponentName ? firstInstance.mainComponentName 
-          : firstInstance.name;
-        
-        // Если в группе только один элемент и это не вкладка Colors, показываем его без группировки
-        if (group.length === 1 && (targetList.id !== 'colorResultsList' && targetList.id !== 'colorStrokeResultsList')) {
-          const instance = group[0];
-          const groupItem = document.createElement('ul');
-          groupItem.classList.add('group-header');
-
-          const componentNameContainer = document.createElement('span');
-          componentNameContainer.classList.add('component-name-container');
-
-          // Добавляем иконку для элемента
-          const itemIcon = createIcon(instance.type);
-          componentNameContainer.insertBefore(itemIcon, groupItem.firstChild);
-
-          // Добавляем обработчик клика для иконки
-          itemIcon.addEventListener('click', (e) => {
-            e.stopPropagation();
-            parent.postMessage(
-              {
-                pluginMessage: {
-                  type: 'scroll-to-node',
-                  nodeId: instance.nodeId,
-                },
-              },
-              '*'
-            );
-          });
-
-          // Добавляем popover при наведении на иконку
-          itemIcon.addEventListener('mouseenter', () => {
-            showPopover(itemIcon, instance);
-          });
-
-          // Создаем ссылку на название инстанса
-          const nameLink = document.createElement('a');
-          nameLink.href = '#';
-          nameLink.classList.add('component-link');
-          nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName;
-          
-          nameLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            parent.postMessage(
-              {
-                pluginMessage: {
-                  type: 'scroll-to-node',
-                  nodeId: instance.nodeId,
-                },
-              },
-              '*'
-            );
-          });
-
-          componentNameContainer.appendChild(nameLink);
-          
-          // Добавляем имя родительского компонента
-          if (instance.parentName) {
-            const parentName = document.createElement('span');
-            parentName.classList.add('parent-component-name');
-            parentName.textContent = 'in ' + instance.parentName;
-            componentNameContainer.appendChild(parentName);
-          }
-
-          // Добавляем метку hidden, если элемент скрыт
-          if (instance.hidden) {
-              const hiddenLabel = document.createElement('span');
-              hiddenLabel.classList.add('hidden-label');
-              hiddenLabel.textContent = 'hidden';
-              componentNameContainer.appendChild(hiddenLabel);
-            }
-
-          const versionGroup = document.createElement('span');
-          versionGroup.classList.add('version-group');
-
-          if (instance.isOutdated) {
-            const outdatedBadge = document.createElement('span');
-            outdatedBadge.classList.add('version-tag-updated');
-            outdatedBadge.textContent = instance.libraryComponentVersion;
-            versionGroup.appendChild(outdatedBadge);
-          }
-
-          // Добавляем версию или описание
-          if (instance.nodeVersion || instance.description) {
-            const infoSpan = document.createElement('div');
-            
-            if (instance.nodeVersion) {
-              infoSpan.classList.add('version-tag');
-              infoSpan.textContent = `${instance.nodeVersion}`;
-            } 
-            else if (instance.description && targetList.id !=='iconResultsList') {
-              infoSpan.classList.add('description-tag');
-              const fullDescription = instance.description;
-              const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-              infoSpan.textContent = truncatedDescription;
-              infoSpan.title = fullDescription;
-            }
-
-            versionGroup.appendChild(infoSpan);
-          }
-
-          componentNameContainer.appendChild(versionGroup);
-
-          //componentContainer.appendChild(componentNameContainer);
-          groupItem.appendChild(componentNameContainer);
-          targetList.appendChild(groupItem);
-          continue; // Переходим к следующей группе
-        }
-
-        // Для групп с более чем одним элементом оставляем существующую логику
-        const groupHeader = document.createElement('ul');
-        groupHeader.classList.add('group-header');
-
-        
-
-        const groupName = document.createElement('div');
-        groupName.classList.add('group-name');
-
-        // Создаем цветной квадратик для fill
-        if (targetList.id === 'colorResultsList') {
-            const fillSwatch = document.createElement('div');
-            fillSwatch.classList.add('group-color-icon');
-            fillSwatch.style.backgroundColor = firstInstance.fill;
-            if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") fillSwatch.style.borderRadius = '999px'; // круг
-            groupHeader.appendChild(fillSwatch);
-          }
-
-          else if (targetList.id === 'colorStrokeResultsList') {
-            // Создаем цветной квадратик для stroke
-            const strokeSwatch = document.createElement('div');
-            strokeSwatch.classList.add('group-color-icon');
-            strokeSwatch.style.backgroundColor = firstInstance.stroke;
-            // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
-              if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") strokeSwatch.style.borderRadius = '999px'; // круг
-              groupHeader.appendChild(strokeSwatch);
-          }
-          else  {
-            // иконка для инстансов и прочих элементов
-            const groupicon = document.createElement('div');
-            groupicon.classList.add('instance-icon');
-            const icon = createIcon(firstInstance.type);
-            groupicon.appendChild(icon);
-            groupHeader.appendChild(groupicon);
-          }
-
-        
-        //ТУТ заголовки групп
-         // Формируем groupName через innerHTML для корректного применения форматирования
-          let groupNameHtml = '';
-          if (targetList.id === 'colorResultsList') 
-          {
-            groupNameHtml += (firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill);
-            groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : '';
-          } else if (targetList.id === 'colorStrokeResultsList') 
-          {
-            groupNameHtml += (firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke);
-            groupNameHtml += firstInstance.stroke_collection_name? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : '';
-          } else {
-            groupNameHtml += name;
-          }
-          groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
-          
-          groupName.innerHTML = groupNameHtml;
-          
-
-        
-
-        // Остальная логика для создания контейнера select all и добавления его в заголовок группы
-        
-          // Создаем контейнер для select all, который будет виден только при наведении
-          const selectAllContainer = document.createElement('span');
-          selectAllContainer.classList.add('select-all-container');
-          
-          // Создаем ссылку select all
-          const selectAllLink = document.createElement('a');
-          selectAllLink.href = '#';
-          selectAllLink.classList.add('select-all-link');
-          selectAllLink.title = 'Select all'; // Добавляем атрибут title для отображения tooltip
-          // Создаем SVG иконку вместо текста
-          const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svgIcon.setAttribute('width', '20');
-          svgIcon.setAttribute('height', '20');
-          svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
-          selectAllLink.appendChild(svgIcon);
-          selectAllLink.style.visibility = 'hidden'; // Изначально скрыта
-          selectAllLink.style.marginLeft = 'auto';
-          
-          // Добавляем обработчик клика для выбора всех элементов группы
-          selectAllLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation(); // Предотвращаем раскрытие/закрытие группы при клике на ссылку
-            
-            // Собираем nodeIds всех элементов группы
-            const nodeIds = group.map(item => item.nodeId);
-            
-            // Отправляем сообщение в плагин для выбора элементов
-            parent.postMessage({
-              pluginMessage: {
-                type: 'select-nodes',
-                nodeIds: nodeIds
-              }
-            }, '*');
-          });
-          
-          selectAllContainer.appendChild(selectAllLink);
-          
-          groupName.appendChild(selectAllContainer);
-          groupHeader.appendChild(groupName);
-          
-          // Добавляем обработчики событий для показа/скрытия ссылки при наведении
-          groupHeader.addEventListener('mouseenter', () => {
-            selectAllLink.style.visibility = 'visible';
-          });
-          
-          groupHeader.addEventListener('mouseleave', () => {
-            selectAllLink.style.visibility = 'hidden';
-          });
-        
-          // Проверяем, есть ли в группе устаревшие элементы
-        
-        const versionGroup = document.createElement('span');
-        versionGroup.classList.add('version-group');
-
-        const hasOutdatedItems = group.some(item => item.isOutdated);
-        if (hasOutdatedItems) {
-          if (group.length === 1) {
-            // Для группы с одним элементом показываем оба бейджа
-            const item = group[0];
-
-            // Бейдж текущей версии
-            if (item.nodeVersion) {
-              const currentVersionBadge = document.createElement('span');
-              currentVersionBadge.classList.add('version-tag');
-              currentVersionBadge.textContent = item.nodeVersion;
-              currentVersionBadge.title = 'Текущая версия';
-              versionGroup.appendChild(currentVersionBadge);
-            }
-            
-            // Бейдж актуальной версии
-            
-            if (item.libraryComponentVersion) {
-              const libraryVersionBadge = document.createElement('span');
-              libraryVersionBadge.classList.add('version-tag-updated');
-              libraryVersionBadge.textContent = item.libraryComponentVersion;
-              libraryVersionBadge.title = 'Доступна новая версия';
-              groupHeader.appendChild(libraryVersionBadge);
-            }
-        } else {
-            // Для групп с несколькими элементами показываем 'NEW'
-            const versionBadge = document.createElement('span');
-            versionBadge.classList.add('version-tag-updated');
-            versionBadge.textContent = 'NEW';
-            versionBadge.title = 'Доступна новая версия';
-            versionGroup.appendChild(versionBadge);
-            
-          }
-            
-        }
-
-
-
-        const versionsInGroup = group.map(item => item.nodeVersion);
-        const uniqueVersions = [...new Set(versionsInGroup.filter(v => v))]; // Уникальные непустые версии
-
-        if (uniqueVersions.length > 0) {
-          // В группе есть хотя бы один элемент с версией
-          const infoSpan = document.createElement('div');
-          infoSpan.classList.add('version-tag');
-
-          // Если только одна уникальная версия И у всех элементов есть версия
-          if (uniqueVersions.length === 1 && versionsInGroup.every(v => v)) {
-            infoSpan.textContent = uniqueVersions[0];
-          } else {
-            // Либо несколько версий, либо у некоторых элементов нет версии
-            infoSpan.textContent = '-.-.-';
-          }
-          versionGroup.appendChild(infoSpan);
-        } else if (firstInstance.description && targetList.id !== 'iconResultsList') {
-          // Запасной вариант с описанием, если в группе нет версий
-          const firstDescription = firstInstance.description;
-          if (group.every(item => item.description === firstDescription)) {
-            const infoSpan = document.createElement('div');
-            infoSpan.classList.add('description-tag');
-            const fullDescription = firstInstance.description;
-            const truncatedDescription =
-              fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription;
-            versionGroup.appendChild(infoSpan);
-          }
-        }
-        groupHeader.appendChild(versionGroup);
-
-        targetList.appendChild(groupHeader);
-
-        const groupItems = document.createElement('ul');
-        groupItems.classList.add('group-items');
-
-        group.forEach((instance) => {
-          const groupItem = document.createElement('li');
-          const componentNameContainer = document.createElement('div');
-          componentNameContainer.classList.add('component-name-container');
-          componentNameContainer.style.display = 'flex';
-          componentNameContainer.style.alignItems = 'right';
-          // Добавляем иконку для элемента на основе его типа
-          const itemIcon = createIcon(instance.type);
-          componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
-
-          // Добавляем обработчик клика для иконки
-          itemIcon.addEventListener('click', (e) => {
-            e.stopPropagation(); // Предотвращаем всплытие события
-            parent.postMessage(
-              {
-                pluginMessage: {
-                  type: 'scroll-to-node',
-                  nodeId: instance.nodeId,
-                },
-              },
-              '*'
-            );
-          });
-
-          // Добавляем popover при наведении на иконку
-          itemIcon.addEventListener('mouseenter', () => {
-            showPopover(itemIcon, instance);
-          });
-
-          // Создаем ссылку на название инстанса
-          const nameLink = document.createElement('a');
-          nameLink.href = '#'; // Убираем стандартное поведение ссылки
-          nameLink.classList.add('component-link');
-          nameLink.textContent = instance.name || 'Без названия';
-          
-         
-
-          // Добавляем обработчик клика для отправки nodeId в плагин
-          nameLink.addEventListener('click', (e) => {
-            e.preventDefault(); // Отменяем стандартное поведение ссылки
-            parent.postMessage(
-              {
-                pluginMessage: {
-                  type: 'scroll-to-node',
-                  nodeId: instance.nodeId, // Передаем nodeId инстанса
-                },
-              },
-              '*'
-            );
-          });
-
-          
-
-          componentNameContainer.appendChild(nameLink);
-
-          // Add parent component name if exists
-          if (instance.parentName) {
-            const parentName = document.createElement('span');
-            parentName.classList.add('parent-component-name');
-            parentName.textContent = 'in ' + instance.parentName;
-            componentNameContainer.appendChild(parentName);
-          }
-
-          // Добавляем метку (hidden), если элемент скрыт
-          if (instance.hidden) {
-            const hiddenLabel = document.createElement('span');
-            hiddenLabel.classList.add('hidden-label');
-            hiddenLabel.textContent = 'hidden';
-            componentNameContainer.appendChild(hiddenLabel);
-          }
-
-          // Добавляем информацию о цвете, если это элемент с цветом
-          if (instance.color) {
-            // Проверяем, есть ли переменные без имен
-            const hasMissingVariables = 
-              (instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === '')) ||
-              (instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === ''));
-            
-            
-            
-            // Перемещаем название элемента наверх перед отображением цветов
-            groupItem.appendChild(componentNameContainer);
-            
-            // Отображаем информацию о fill
-            if (instance.fill) {
-              const fillContainer = document.createElement('div');
-              fillContainer.style.display = 'flex';
-              fillContainer.style.alignItems = 'center';
-              fillContainer.style.marginTop = '0px';
-              fillContainer.style.marginLeft = '0px';
-              fillContainer.style.marginBottom = '4px';
-              
-              // Создаем цветной квадратик для fill
-              const fillSwatch = document.createElement('div');
-              fillSwatch.style.width = '16px';
-              fillSwatch.style.height = '16px';
-              fillSwatch.style.backgroundColor = instance.fill;
-              
-              // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
-              if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
-                fillSwatch.style.borderRadius = '999px'; // круг
-              } else {
-                fillSwatch.style.borderRadius = '4px'; // квадрат со скругленными углами
-              }
-              
-              fillSwatch.style.marginRight = '4px';
-              fillSwatch.style.marginLeft = '00px';
-              fillSwatch.style.border = '1px solid #ddd';
-              
-              // Создаем контейнер для информации о цвете
-              const fillInfo = document.createElement('div');
-              fillInfo.style.display = 'flex';
-              fillInfo.style.flexDirection = 'row';
-              fillInfo.style.gap = '4px';
-              fillInfo.style.justifyContent = 'space-between';
-              fillInfo.style.width = '100%';
-
-              groupItem.appendChild(componentNameContainer);
-              
-              // Добавляем информацию о переменной, если она есть
-              const varInfo = document.createElement('span');
-              // Добавляем надпись Fill
-              const fillType = document.createElement('span');
-              fillType.textContent = 'Fill';
-              fillType.style.color = 'var(--text-light-color)';
-              fillType.style.fontWeight = '300';
-              fillType.style.marginLeft = 'auto';
-              fillType.style.fontSize = 'var(--font-small)';
-
-              // Создаем элемент для информации о коллекции
-              const collectionName = document.createElement('span');
-
-              if (instance.fill_variable_name) {
-                // Отображаем переменную
-                varInfo.textContent = instance.fill_variable_name;
-                varInfo.style.color = 'var(--text-light-color)';
-                varInfo.style.fontWeight = '400';
-                
-                // Добавляем коллекцию в скобках, если она есть
-                if (instance.fill_collection_name) {
-                  collectionName.textContent = ` from ${instance.fill_collection_name}`;
-                  collectionName.style.color = 'var(--text-light-color)';
-                  collectionName.style.fontWeight = '300';
-                  
-                }
-              } else {
-                // Отображаем hex-код цвета
-                varInfo.textContent = instance.fill;
-                varInfo.style.color = 'var(--text-light-color)';
-                varInfo.style.fontWeight = '400';
-              }
-
-              // Добавляем элементы в контейнер информации
-              
-              fillInfo.appendChild(varInfo);
-              fillInfo.appendChild(collectionName);
-              fillInfo.appendChild(fillType);
-              
-              
-              //fillContainer.appendChild(fillSwatch);
-              //fillContainer.appendChild(fillInfo);
-              
-              groupItem.appendChild(fillContainer);
-            }
-            
-            // Отображаем информацию о stroke
-            if (instance.stroke) {
-              const collectionName = document.createElement('span');
-              const strokeContainer = document.createElement('div');
-              strokeContainer.style.display = 'flex';
-              strokeContainer.style.alignItems = 'center';
-              strokeContainer.style.marginTop = '0px';
-              strokeContainer.style.marginLeft = '0px';
-              strokeContainer.style.marginBottom = '4px';
-             
-              
-              // Создаем цветной квадратик для stroke
-              const strokeSwatch = document.createElement('div');
-              strokeSwatch.style.width = '16px';
-              strokeSwatch.style.height = '16px';
-              strokeSwatch.style.backgroundColor = instance.stroke;
-              
-              // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
-              if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
-                strokeSwatch.style.borderRadius = '999px'; // круг
-              } else {
-                strokeSwatch.style.borderRadius = '3px'; // квадрат со скругленными углами
-              }
-              
-              strokeSwatch.style.marginRight = '8px';
-              strokeSwatch.style.border = '1px solid #ddd';
-              
-              // Создаем контейнер для информации о цвете
-              const strokeInfo = document.createElement('div');
-              strokeInfo.style.display = 'flex';
-              strokeInfo.style.flexDirection = 'row';
-              strokeInfo.style.gap = '4px';
-              strokeInfo.style.justifyContent = 'space-between';
-              strokeInfo.style.width = '100%';
-              
-              // Добавляем информацию о переменной, если она есть
-              const varInfo = document.createElement('span');
-              if (instance.stroke_variable_name) {
-                // Отображаем переменную
-                varInfo.textContent = instance.stroke_variable_name;
-                varInfo.style.color = 'var(--text-light-color)';
-                varInfo.style.fontWeight = '400';
-                
-                
-                // Добавляем коллекцию в скобках, если она есть
-                if (instance.stroke_collection_name) {
-                  collectionName.textContent = ` from ${instance.stroke_collection_name}`;
-                  collectionName.style.color = 'var(--text-light-color)';
-                  collectionName.style.fontWeight = '300';
-                }
-              } else {
-                // Отображаем hex-код цвета
-                varInfo.textContent = instance.stroke;
-                varInfo.style.color = 'var(--text-light-color)';
-                varInfo.style.fontWeight = '400';
-              }
-              
-              
-              
-              // Добавляем надпись Stroke и вес обводки
-              const strokeType = document.createElement('span');
-              strokeType.textContent = 'Stroke';
-              strokeType.style.color = 'var(--text-light-color)';
-              strokeType.style.fontWeight = '300';
-              strokeType.style.marginLeft = 'auto';
-              strokeType.style.fontSize = 'var(--font-small)';
-              
-              
-              strokeInfo.appendChild(varInfo);
-              strokeInfo.appendChild(collectionName);
-              strokeInfo.appendChild(strokeType);
-
-              groupItem.appendChild(strokeContainer);
-            }
-          } else {
-            groupItem.appendChild(componentNameContainer);
-          }
-
-          
-            
-          const versionGroup = document.createElement('div');
-          versionGroup.classList.add('version-group');
-
-          
-
-          if (instance.isOutdated) {
-            const infoSpan = document.createElement('span');
-            infoSpan.classList.add('version-tag-updated');
-            infoSpan.textContent = instance.libraryComponentVersion || 'NEW';
-            infoSpan.title = 'Доступна новая версия';
-            infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
-            versionGroup.appendChild(infoSpan);
-          }
-
-
-          if (instance.nodeVersion || instance.description) {
-            infoSpan = document.createElement('div');
-            infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
-            
-            if (instance.nodeVersion) {
-              infoSpan.classList.add('version-tag');
-              infoSpan.textContent = `${instance.nodeVersion}`;
-            } 
-            else if (instance.description && targetList.id !=='iconResultsList') {
-              infoSpan.classList.add('description-tag');
-              const fullDescription = typeof instance.description === 'string' 
-                ? instance.description 
-                : (instance.description?.description || '');
-            const truncatedDescription =
-              fullDescription.length > 10
-                ? `${fullDescription.substring(0, 10)}...`
-                : fullDescription;
-              infoSpan.textContent = truncatedDescription;
-             infoSpan.title = fullDescription;
-            }
-            versionGroup.appendChild(infoSpan);  
-          }
-          componentNameContainer.appendChild(versionGroup);
-          groupItems.appendChild(groupItem);
-        });
-        targetList.appendChild(groupItems);
-        // Добавляем обработчик клика для заголовка группы
-        groupHeader.addEventListener('click', () => {
-          groupItems.classList.toggle('expanded');
-        });
-      }
-    };
 
     // Добавляем обработчик для нового toggle "Show hidden"
     const showHiddenToggle = document.getElementById('showHiddenToggle');
@@ -2047,7 +1375,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       }
 
       if (msg.type === 'update-statistics') {
-        updateStatistics(msg.data);
+        UIModules.updateStatistics(msg.data);
         return;
       }
 
@@ -2272,7 +1600,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (resultsList) {
           resultsList.innerHTML = '';
           
-          if (msg.instances && msg.instances.length > 0) {displayGroups(msg.instances, resultsList, msg.counts);
+          if (msg.instances && msg.instances.length > 0) {UIModules.displayGroups(msg.instances, resultsList, msg.counts);
           } else {resultsList.innerHTML = '<p>Цвета не найдены</p>';}} 
           else {
           //console.error('Не найден элемент colorResultsList');
@@ -2493,8 +1821,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
         // Сортируем группы по mainComponentName перед отображением
         // ... existing code ...
 
-        displayGroups(groupedInstances, resultsList);
-        displayGroups(groupedIcons, iconResultsList);
+        UIModules.displayGroups(groupedInstances, resultsList);
+        UIModules.displayGroups(groupedIcons, iconResultsList);
     }
 
     function processAndDisplayOutdatedComponents(componentsData) {
@@ -2538,7 +1866,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
         // Используем функцию сортировки групп из UIModules
         // ... existing code ...
-        displayGroups(groupedOutdatedInstances, outdatedResultsList);
+        UIModules.displayGroups(groupedOutdatedInstances, outdatedResultsList);
     }
 
     function processAndDisplayColors(colorsData, colorsStrokeData) {
@@ -2596,7 +1924,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
                 sortedGroupedFillColors[key] = groupedFillColors[key];
             });
             if (fillFilteredCount > 0) {
-                displayGroups(sortedGroupedFillColors, colorResultsList);
+                UIModules.displayGroups(sortedGroupedFillColors, colorResultsList);
             } else {
                 colorResultsList.innerHTML = '';
                 if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
@@ -2651,7 +1979,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
                 sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
             });
 
-            if (strokeFilteredCount > 0) {displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+            if (strokeFilteredCount > 0) {UIModules.displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
             } else {
                 colorStrokeResultsList.innerHTML = '';
                 if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
@@ -2971,41 +2299,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
     
     // All message handling is now done in window.onmessage
 
-    // Function to update statistics display
-    function updateStatistics(data) {
-      const { overallStats } = data;
-      
-      // Update overall statistics
-      const overallList = document.getElementById('overallStatsList');
-      overallList.innerHTML = '';
-      
-      // Sort node types by count (descending)
-      const sortedTypes = Object.entries(overallStats.nodeTypeCounts)
-        .sort(([,a], [,b]) => b - a);
-      
-      
-      
-      // Add total count
-      const totalLi = document.createElement('li');
-      totalLi.innerHTML = `
-        <strong class="type-name">TOTAL NODES</strong>
-        <strong class="type-count">${overallStats.totalNodes}</strong>
-      `;
-      overallList.appendChild(totalLi);
 
-      for (const [type, count] of sortedTypes) {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <span class="type-name">${type}</span>
-          <span class="type-count">${count}</span>
-        `;
-        overallList.appendChild(li);
-      }
-      
-      // Update the Total tab counter
-      const totalTab = document.querySelector('[data-tab="total"]');
-      if (totalTab) totalTab.textContent = `Total (${overallStats.totalNodes})`
-    }
     
 
     // Define displayComponentData in the global scope
@@ -3074,30 +2368,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
     
 </script>
 <script>"use strict";
-var UIModules = (() => {
-  var __defProp = Object.defineProperty;
-  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-  var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
-  var __copyProps = (to, from, except, desc) => {
-    if (from && typeof from === "object" || typeof from === "function") {
-      for (let key of __getOwnPropNames(from))
-        if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-    }
-    return to;
-  };
-  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
+(() => {
   // src/ui/createIcon.ts
-  var createIcon_exports = {};
-  __export(createIcon_exports, {
-    createIcon: () => createIcon
-  });
   var createIcon = (type) => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     let iconClass = "info-icon";
@@ -3130,34 +2402,11 @@ var UIModules = (() => {
     svg.appendChild(use);
     return svg;
   };
-  return __toCommonJS(createIcon_exports);
 })();
 
 "use strict";
-var UIModules = (() => {
-  var __defProp = Object.defineProperty;
-  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-  var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
-  var __copyProps = (to, from, except, desc) => {
-    if (from && typeof from === "object" || typeof from === "function") {
-      for (let key of __getOwnPropNames(from))
-        if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-    }
-    return to;
-  };
-  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
+(() => {
   // src/ui/showPopover.ts
-  var showPopover_exports = {};
-  __export(showPopover_exports, {
-    showPopover: () => showPopover
-  });
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
@@ -3214,34 +2463,11 @@ var UIModules = (() => {
       }, "*");
     });
   };
-  return __toCommonJS(showPopover_exports);
 })();
 
 "use strict";
-var UIModules = (() => {
-  var __defProp = Object.defineProperty;
-  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-  var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
-  var __copyProps = (to, from, except, desc) => {
-    if (from && typeof from === "object" || typeof from === "function") {
-      for (let key of __getOwnPropNames(from))
-        if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-    }
-    return to;
-  };
-  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
+(() => {
   // src/ui/sortGroups.ts
-  var sortGroups_exports = {};
-  __export(sortGroups_exports, {
-    sortGroups: () => sortGroups
-  });
   function sortGroups(groups) {
     return Object.fromEntries(
       Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
@@ -3257,7 +2483,2420 @@ var UIModules = (() => {
       })
     );
   }
-  return __toCommonJS(sortGroups_exports);
+})();
+
+"use strict";
+(() => {
+  // src/ui/updateStatistics.ts
+  function updateStatistics(data) {
+    console.log("updateStatistics called with data:", data);
+    const { overallStats } = data;
+    console.log("overallStats:", overallStats);
+    if (!overallStats || !overallStats.nodeTypeCounts) {
+      console.log("No nodeTypeCounts found");
+      return;
+    }
+    const totalTab = document.querySelector('[data-tab="total"]');
+    if (totalTab) {
+      totalTab.textContent = `Total (${overallStats.totalNodes})`;
+      console.log("Updated total tab with count:", overallStats.totalNodes);
+    }
+    const overallStatsList = document.getElementById("overallStatsList");
+    if (overallStatsList) {
+      overallStatsList.innerHTML = "";
+      const totalLi = document.createElement("li");
+      totalLi.className = "stats-item";
+      totalLi.innerHTML = `<span class="stats-type"><strong>TOTAL NODES</strong></span><span class="stats-count"><strong>${overallStats.totalNodes}</strong></span>`;
+      overallStatsList.appendChild(totalLi);
+      for (const [type, count] of Object.entries(overallStats.nodeTypeCounts)) {
+        if (count > 0) {
+          const li = document.createElement("li");
+          li.className = "stats-item";
+          li.innerHTML = `<span class="stats-type">${type}</span><span class="stats-count">${count}</span>`;
+          overallStatsList.appendChild(li);
+        }
+      }
+      console.log("Updated statistics list");
+    }
+  }
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.updateStatistics = updateStatistics;
+  }
+})();
+
+"use strict";
+(() => {
+  // src/ui/createIcon.ts
+  var createIcon = (type) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    let iconClass = "info-icon";
+    let iconId = "info-icon";
+    switch (type) {
+      case "INSTANCE":
+        iconClass = "instance-icon";
+        iconId = "instance-icon";
+        break;
+      case "TEXT":
+        iconClass = "text-icon";
+        iconId = "text-icon";
+        break;
+      case "FRAME":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+      case "RECTANGLE":
+        iconClass = "rectangle-icon";
+        iconId = "rectangle-icon";
+        break;
+      case "VECTOR":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+    }
+    svg.classList.add(iconClass);
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  // src/ui/showPopover.ts
+  var showPopover = (icon, instance) => {
+    const popover = document.createElement("div");
+    popover.classList.add("popover");
+    popover.style.maxWidth = "500px";
+    popover.style.position = "fixed";
+    popover.style.zIndex = "10000";
+    const content = Object.entries(instance).map(([key, value]) => {
+      const boldKey = `<strong>${key}:</strong>`;
+      if (typeof value === "object" && value !== null) {
+        return `${boldKey} ${JSON.stringify(value)}`;
+      }
+      return `${boldKey} ${value}`;
+    }).join("<br>");
+    popover.innerHTML = content;
+    document.body.appendChild(popover);
+    const rect = icon.getBoundingClientRect();
+    popover.style.visibility = "hidden";
+    popover.style.display = "block";
+    const popoverRect = popover.getBoundingClientRect();
+    popover.style.display = "none";
+    popover.style.visibility = "visible";
+    let top = rect.bottom + 5;
+    let left = rect.left;
+    if (left + popoverRect.width > window.innerWidth - 10) {
+      left = window.innerWidth - popoverRect.width - 10;
+    }
+    if (left < 10) {
+      left = 10;
+    }
+    if (top + popoverRect.height > window.innerHeight - 10) {
+      top = rect.top - popoverRect.height - 5;
+    }
+    if (top < 10) {
+      top = 10;
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.display = "block";
+    parent.postMessage({
+      pluginMessage: {
+        type: "resize-plugin-window",
+        width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
+        // Ensure enough width for popover + padding
+        height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
+        // Ensure enough height for popover + padding
+      }
+    }, "*");
+    icon.addEventListener("mouseleave", () => {
+      popover.remove();
+      parent.postMessage({
+        pluginMessage: {
+          type: "reset-plugin-window-size"
+        }
+      }, "*");
+    });
+  };
+
+  // src/ui/displayGroups.ts
+  var displayGroups = (groupedData, targetList) => {
+    var _a;
+    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+    targetList.innerHTML = "";
+    let headerText = "";
+    if (!targetList || !targetList.id) {
+      console.error("Target list or its ID is undefined.");
+      return;
+    }
+    if (targetList.id === "colorResultsList") headerText = "Fill";
+    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
+    if (headerText) {
+      const prevHeader = targetList.previousElementSibling;
+      if (prevHeader && prevHeader.classList.contains("section-header")) {
+        prevHeader.remove();
+      }
+      const header = document.createElement("div");
+      header.className = "section-header";
+      header.textContent = headerText;
+      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
+    }
+    const nameCount = {};
+    for (const key in groupedData) {
+      const group = groupedData[key];
+      if (group.length === 0) continue;
+      const firstInstance = group[0];
+      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
+      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+        const instance = group[0];
+        const groupItem = document.createElement("ul");
+        groupItem.classList.add("group-header");
+        const componentNameContainer = document.createElement("span");
+        componentNameContainer.classList.add("component-name-container");
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName || "";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        const versionGroup2 = document.createElement("span");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const outdatedBadge = document.createElement("span");
+          outdatedBadge.classList.add("version-tag-updated");
+          outdatedBadge.textContent = instance.libraryComponentVersion || "";
+          versionGroup2.appendChild(outdatedBadge);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = instance.description || "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription || "";
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItem.appendChild(componentNameContainer);
+        targetList.appendChild(groupItem);
+        continue;
+      }
+      const groupHeader = document.createElement("ul");
+      groupHeader.classList.add("group-header");
+      const groupName = document.createElement("div");
+      groupName.classList.add("group-name");
+      if (targetList.id === "colorResultsList") {
+        const fillSwatch = document.createElement("div");
+        fillSwatch.classList.add("group-color-icon");
+        fillSwatch.style.backgroundColor = firstInstance.fill || "";
+        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
+          fillSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(fillSwatch);
+      } else if (targetList.id === "colorStrokeResultsList") {
+        const strokeSwatch = document.createElement("div");
+        strokeSwatch.classList.add("group-color-icon");
+        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
+        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
+          strokeSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(strokeSwatch);
+      } else {
+        const groupicon = document.createElement("div");
+        groupicon.classList.add("instance-icon");
+        const icon = createIcon(firstInstance.type);
+        groupicon.appendChild(icon);
+        groupHeader.appendChild(groupicon);
+      }
+      let groupNameHtml = "";
+      if (targetList.id === "colorResultsList") {
+        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
+        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
+      } else if (targetList.id === "colorStrokeResultsList") {
+        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
+        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
+      } else {
+        groupNameHtml += name;
+      }
+      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+      groupName.innerHTML = groupNameHtml;
+      const selectAllContainer = document.createElement("span");
+      selectAllContainer.classList.add("select-all-container");
+      const selectAllLink = document.createElement("a");
+      selectAllLink.href = "#";
+      selectAllLink.classList.add("select-all-link");
+      selectAllLink.title = "Select all";
+      const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgIcon.setAttribute("width", "20");
+      svgIcon.setAttribute("height", "20");
+      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+      selectAllLink.appendChild(svgIcon);
+      selectAllLink.style.visibility = "hidden";
+      selectAllLink.style.marginLeft = "auto";
+      selectAllLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nodeIds = group.map((item) => item.nodeId);
+        parent.postMessage({
+          pluginMessage: {
+            type: "select-nodes",
+            nodeIds
+          }
+        }, "*");
+      });
+      selectAllContainer.appendChild(selectAllLink);
+      groupName.appendChild(selectAllContainer);
+      groupHeader.appendChild(groupName);
+      groupHeader.addEventListener("mouseenter", () => {
+        selectAllLink.style.visibility = "visible";
+      });
+      groupHeader.addEventListener("mouseleave", () => {
+        selectAllLink.style.visibility = "hidden";
+      });
+      const versionGroup = document.createElement("span");
+      versionGroup.classList.add("version-group");
+      const hasOutdatedItems = group.some((item) => item.isOutdated);
+      if (hasOutdatedItems) {
+        if (group.length === 1) {
+          const item = group[0];
+          if (item.nodeVersion) {
+            const currentVersionBadge = document.createElement("span");
+            currentVersionBadge.classList.add("version-tag");
+            currentVersionBadge.textContent = item.nodeVersion;
+            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            versionGroup.appendChild(currentVersionBadge);
+          }
+          if (item.libraryComponentVersion) {
+            const libraryVersionBadge = document.createElement("span");
+            libraryVersionBadge.classList.add("version-tag-updated");
+            libraryVersionBadge.textContent = item.libraryComponentVersion;
+            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            groupHeader.appendChild(libraryVersionBadge);
+          }
+        } else {
+          const versionBadge = document.createElement("span");
+          versionBadge.classList.add("version-tag-updated");
+          versionBadge.textContent = "NEW";
+          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
+          versionGroup.appendChild(versionBadge);
+        }
+      }
+      const versionsInGroup = group.map((item) => item.nodeVersion);
+      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
+      if (uniqueVersions.length > 0) {
+        const infoSpan = document.createElement("div");
+        infoSpan.classList.add("version-tag");
+        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
+          infoSpan.textContent = uniqueVersions[0];
+        } else {
+          infoSpan.textContent = "...";
+        }
+        versionGroup.appendChild(infoSpan);
+      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
+        const firstDescription = firstInstance.description;
+        if (group.every((item) => item.description === firstDescription)) {
+          const infoSpan = document.createElement("div");
+          infoSpan.classList.add("description-tag");
+          const fullDescription = firstInstance.description || "";
+          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+          infoSpan.textContent = truncatedDescription;
+          infoSpan.title = fullDescription || "";
+          versionGroup.appendChild(infoSpan);
+        }
+      }
+      groupHeader.appendChild(versionGroup);
+      targetList.appendChild(groupHeader);
+      const groupItems = document.createElement("ul");
+      groupItems.classList.add("group-items");
+      group.forEach((instance) => {
+        const groupItem = document.createElement("li");
+        const componentNameContainer = document.createElement("div");
+        componentNameContainer.classList.add("component-name-container");
+        componentNameContainer.style.display = "flex";
+        componentNameContainer.style.alignItems = "right";
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+                // Передаем nodeId инстанса
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        if (instance.color) {
+          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
+          groupItem.appendChild(componentNameContainer);
+          if (instance.fill) {
+            const fillContainer = document.createElement("div");
+            fillContainer.style.display = "flex";
+            fillContainer.style.alignItems = "center";
+            fillContainer.style.marginTop = "0px";
+            fillContainer.style.marginLeft = "0px";
+            fillContainer.style.marginBottom = "4px";
+            const fillSwatch = document.createElement("div");
+            fillSwatch.style.width = "16px";
+            fillSwatch.style.height = "16px";
+            fillSwatch.style.backgroundColor = instance.fill;
+            if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
+              fillSwatch.style.borderRadius = "999px";
+            } else {
+              fillSwatch.style.borderRadius = "4px";
+            }
+            fillSwatch.style.marginRight = "4px";
+            fillSwatch.style.marginLeft = "00px";
+            fillSwatch.style.border = "1px solid #ddd";
+            const fillInfo = document.createElement("div");
+            fillInfo.style.display = "flex";
+            fillInfo.style.flexDirection = "row";
+            fillInfo.style.gap = "4px";
+            fillInfo.style.justifyContent = "space-between";
+            fillInfo.style.width = "100%";
+            groupItem.appendChild(componentNameContainer);
+            const varInfo = document.createElement("span");
+            const fillType = document.createElement("span");
+            fillType.textContent = "Fill";
+            fillType.style.color = "var(--text-light-color)";
+            fillType.style.fontWeight = "300";
+            fillType.style.marginLeft = "auto";
+            fillType.style.fontSize = "var(--font-small)";
+            const collectionName = document.createElement("span");
+            if (instance.fill_variable_name) {
+              varInfo.textContent = instance.fill_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.fill_collection_name) {
+                collectionName.textContent = ` from ${instance.fill_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.fill;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            fillInfo.appendChild(varInfo);
+            fillInfo.appendChild(collectionName);
+            fillInfo.appendChild(fillType);
+            groupItem.appendChild(fillContainer);
+          }
+          if (instance.stroke) {
+            const collectionName = document.createElement("span");
+            const strokeContainer = document.createElement("div");
+            strokeContainer.style.display = "flex";
+            strokeContainer.style.alignItems = "center";
+            strokeContainer.style.marginTop = "0px";
+            strokeContainer.style.marginLeft = "0px";
+            strokeContainer.style.marginBottom = "4px";
+            const strokeSwatch = document.createElement("div");
+            strokeSwatch.style.width = "16px";
+            strokeSwatch.style.height = "16px";
+            strokeSwatch.style.backgroundColor = instance.stroke;
+            if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
+              strokeSwatch.style.borderRadius = "999px";
+            } else {
+              strokeSwatch.style.borderRadius = "3px";
+            }
+            strokeSwatch.style.marginRight = "8px";
+            strokeSwatch.style.border = "1px solid #ddd";
+            const strokeInfo = document.createElement("div");
+            strokeInfo.style.display = "flex";
+            strokeInfo.style.flexDirection = "row";
+            strokeInfo.style.gap = "4px";
+            strokeInfo.style.justifyContent = "space-between";
+            strokeInfo.style.width = "100%";
+            const varInfo = document.createElement("span");
+            if (instance.stroke_variable_name) {
+              varInfo.textContent = instance.stroke_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.stroke_collection_name) {
+                collectionName.textContent = ` from ${instance.stroke_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.stroke;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            const strokeType = document.createElement("span");
+            strokeType.textContent = "Stroke";
+            strokeType.style.color = "var(--text-light-color)";
+            strokeType.style.fontWeight = "300";
+            strokeType.style.marginLeft = "auto";
+            strokeType.style.fontSize = "var(--font-small)";
+            strokeInfo.appendChild(varInfo);
+            strokeInfo.appendChild(collectionName);
+            strokeInfo.appendChild(strokeType);
+            groupItem.appendChild(strokeContainer);
+          }
+        } else {
+          groupItem.appendChild(componentNameContainer);
+        }
+        const versionGroup2 = document.createElement("div");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const infoSpan = document.createElement("span");
+          infoSpan.classList.add("version-tag-updated");
+          infoSpan.textContent = instance.libraryComponentVersion || "";
+          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+          infoSpan.style.marginLeft = "auto";
+          versionGroup2.appendChild(infoSpan);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          infoSpan.style.marginLeft = "auto";
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription;
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItems.appendChild(groupItem);
+      });
+      targetList.appendChild(groupItems);
+      groupHeader.addEventListener("click", () => {
+        groupItems.classList.toggle("expanded");
+      });
+    }
+  };
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.displayGroups = displayGroups;
+  }
+})();
+
+"use strict";
+(() => {
+  // src/ui/createIcon.ts
+  var createIcon = (type) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    let iconClass = "info-icon";
+    let iconId = "info-icon";
+    switch (type) {
+      case "INSTANCE":
+        iconClass = "instance-icon";
+        iconId = "instance-icon";
+        break;
+      case "TEXT":
+        iconClass = "text-icon";
+        iconId = "text-icon";
+        break;
+      case "FRAME":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+      case "RECTANGLE":
+        iconClass = "rectangle-icon";
+        iconId = "rectangle-icon";
+        break;
+      case "VECTOR":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+    }
+    svg.classList.add(iconClass);
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  // src/ui/showPopover.ts
+  var showPopover = (icon, instance) => {
+    const popover = document.createElement("div");
+    popover.classList.add("popover");
+    popover.style.maxWidth = "500px";
+    popover.style.position = "fixed";
+    popover.style.zIndex = "10000";
+    const content = Object.entries(instance).map(([key, value]) => {
+      const boldKey = `<strong>${key}:</strong>`;
+      if (typeof value === "object" && value !== null) {
+        return `${boldKey} ${JSON.stringify(value)}`;
+      }
+      return `${boldKey} ${value}`;
+    }).join("<br>");
+    popover.innerHTML = content;
+    document.body.appendChild(popover);
+    const rect = icon.getBoundingClientRect();
+    popover.style.visibility = "hidden";
+    popover.style.display = "block";
+    const popoverRect = popover.getBoundingClientRect();
+    popover.style.display = "none";
+    popover.style.visibility = "visible";
+    let top = rect.bottom + 5;
+    let left = rect.left;
+    if (left + popoverRect.width > window.innerWidth - 10) {
+      left = window.innerWidth - popoverRect.width - 10;
+    }
+    if (left < 10) {
+      left = 10;
+    }
+    if (top + popoverRect.height > window.innerHeight - 10) {
+      top = rect.top - popoverRect.height - 5;
+    }
+    if (top < 10) {
+      top = 10;
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.display = "block";
+    parent.postMessage({
+      pluginMessage: {
+        type: "resize-plugin-window",
+        width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
+        // Ensure enough width for popover + padding
+        height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
+        // Ensure enough height for popover + padding
+      }
+    }, "*");
+    icon.addEventListener("mouseleave", () => {
+      popover.remove();
+      parent.postMessage({
+        pluginMessage: {
+          type: "reset-plugin-window-size"
+        }
+      }, "*");
+    });
+  };
+
+  // src/ui/displayGroups.ts
+  var displayGroups = (groupedData, targetList) => {
+    var _a;
+    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+    targetList.innerHTML = "";
+    let headerText = "";
+    if (!targetList || !targetList.id) {
+      console.error("Target list or its ID is undefined.");
+      return;
+    }
+    if (targetList.id === "colorResultsList") headerText = "Fill";
+    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
+    if (headerText) {
+      const prevHeader = targetList.previousElementSibling;
+      if (prevHeader && prevHeader.classList.contains("section-header")) {
+        prevHeader.remove();
+      }
+      const header = document.createElement("div");
+      header.className = "section-header";
+      header.textContent = headerText;
+      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
+    }
+    const nameCount = {};
+    for (const key in groupedData) {
+      const group = groupedData[key];
+      if (group.length === 0) continue;
+      const firstInstance = group[0];
+      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
+      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+        const instance = group[0];
+        const groupItem = document.createElement("ul");
+        groupItem.classList.add("group-header");
+        const componentNameContainer = document.createElement("span");
+        componentNameContainer.classList.add("component-name-container");
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName || "";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        const versionGroup2 = document.createElement("span");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const outdatedBadge = document.createElement("span");
+          outdatedBadge.classList.add("version-tag-updated");
+          outdatedBadge.textContent = instance.libraryComponentVersion || "";
+          versionGroup2.appendChild(outdatedBadge);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = instance.description || "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription || "";
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItem.appendChild(componentNameContainer);
+        targetList.appendChild(groupItem);
+        continue;
+      }
+      const groupHeader = document.createElement("ul");
+      groupHeader.classList.add("group-header");
+      const groupName = document.createElement("div");
+      groupName.classList.add("group-name");
+      if (targetList.id === "colorResultsList") {
+        const fillSwatch = document.createElement("div");
+        fillSwatch.classList.add("group-color-icon");
+        fillSwatch.style.backgroundColor = firstInstance.fill || "";
+        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
+          fillSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(fillSwatch);
+      } else if (targetList.id === "colorStrokeResultsList") {
+        const strokeSwatch = document.createElement("div");
+        strokeSwatch.classList.add("group-color-icon");
+        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
+        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
+          strokeSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(strokeSwatch);
+      } else {
+        const groupicon = document.createElement("div");
+        groupicon.classList.add("instance-icon");
+        const icon = createIcon(firstInstance.type);
+        groupicon.appendChild(icon);
+        groupHeader.appendChild(groupicon);
+      }
+      let groupNameHtml = "";
+      if (targetList.id === "colorResultsList") {
+        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
+        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
+      } else if (targetList.id === "colorStrokeResultsList") {
+        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
+        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
+      } else {
+        groupNameHtml += name;
+      }
+      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+      groupName.innerHTML = groupNameHtml;
+      const selectAllContainer = document.createElement("span");
+      selectAllContainer.classList.add("select-all-container");
+      const selectAllLink = document.createElement("a");
+      selectAllLink.href = "#";
+      selectAllLink.classList.add("select-all-link");
+      selectAllLink.title = "Select all";
+      const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgIcon.setAttribute("width", "20");
+      svgIcon.setAttribute("height", "20");
+      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+      selectAllLink.appendChild(svgIcon);
+      selectAllLink.style.visibility = "hidden";
+      selectAllLink.style.marginLeft = "auto";
+      selectAllLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nodeIds = group.map((item) => item.nodeId);
+        parent.postMessage({
+          pluginMessage: {
+            type: "select-nodes",
+            nodeIds
+          }
+        }, "*");
+      });
+      selectAllContainer.appendChild(selectAllLink);
+      groupName.appendChild(selectAllContainer);
+      groupHeader.appendChild(groupName);
+      groupHeader.addEventListener("mouseenter", () => {
+        selectAllLink.style.visibility = "visible";
+      });
+      groupHeader.addEventListener("mouseleave", () => {
+        selectAllLink.style.visibility = "hidden";
+      });
+      const versionGroup = document.createElement("span");
+      versionGroup.classList.add("version-group");
+      const hasOutdatedItems = group.some((item) => item.isOutdated);
+      if (hasOutdatedItems) {
+        if (group.length === 1) {
+          const item = group[0];
+          if (item.nodeVersion) {
+            const currentVersionBadge = document.createElement("span");
+            currentVersionBadge.classList.add("version-tag");
+            currentVersionBadge.textContent = item.nodeVersion;
+            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            versionGroup.appendChild(currentVersionBadge);
+          }
+          if (item.libraryComponentVersion) {
+            const libraryVersionBadge = document.createElement("span");
+            libraryVersionBadge.classList.add("version-tag-updated");
+            libraryVersionBadge.textContent = item.libraryComponentVersion;
+            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            groupHeader.appendChild(libraryVersionBadge);
+          }
+        } else {
+          const versionBadge = document.createElement("span");
+          versionBadge.classList.add("version-tag-updated");
+          versionBadge.textContent = "NEW";
+          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
+          versionGroup.appendChild(versionBadge);
+        }
+      }
+      const versionsInGroup = group.map((item) => item.nodeVersion);
+      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
+      if (uniqueVersions.length > 0) {
+        const infoSpan = document.createElement("div");
+        infoSpan.classList.add("version-tag");
+        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
+          infoSpan.textContent = uniqueVersions[0];
+        } else {
+          infoSpan.textContent = "...";
+        }
+        versionGroup.appendChild(infoSpan);
+      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
+        const firstDescription = firstInstance.description;
+        if (group.every((item) => item.description === firstDescription)) {
+          const infoSpan = document.createElement("div");
+          infoSpan.classList.add("description-tag");
+          const fullDescription = firstInstance.description || "";
+          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+          infoSpan.textContent = truncatedDescription;
+          infoSpan.title = fullDescription || "";
+          versionGroup.appendChild(infoSpan);
+        }
+      }
+      groupHeader.appendChild(versionGroup);
+      targetList.appendChild(groupHeader);
+      const groupItems = document.createElement("ul");
+      groupItems.classList.add("group-items");
+      group.forEach((instance) => {
+        const groupItem = document.createElement("li");
+        const componentNameContainer = document.createElement("div");
+        componentNameContainer.classList.add("component-name-container");
+        componentNameContainer.style.display = "flex";
+        componentNameContainer.style.alignItems = "right";
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+                // Передаем nodeId инстанса
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        if (instance.color) {
+          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
+          groupItem.appendChild(componentNameContainer);
+          if (instance.fill) {
+            const fillContainer = document.createElement("div");
+            fillContainer.style.display = "flex";
+            fillContainer.style.alignItems = "center";
+            fillContainer.style.marginTop = "0px";
+            fillContainer.style.marginLeft = "0px";
+            fillContainer.style.marginBottom = "4px";
+            const fillSwatch = document.createElement("div");
+            fillSwatch.style.width = "16px";
+            fillSwatch.style.height = "16px";
+            fillSwatch.style.backgroundColor = instance.fill;
+            if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
+              fillSwatch.style.borderRadius = "999px";
+            } else {
+              fillSwatch.style.borderRadius = "4px";
+            }
+            fillSwatch.style.marginRight = "4px";
+            fillSwatch.style.marginLeft = "00px";
+            fillSwatch.style.border = "1px solid #ddd";
+            const fillInfo = document.createElement("div");
+            fillInfo.style.display = "flex";
+            fillInfo.style.flexDirection = "row";
+            fillInfo.style.gap = "4px";
+            fillInfo.style.justifyContent = "space-between";
+            fillInfo.style.width = "100%";
+            groupItem.appendChild(componentNameContainer);
+            const varInfo = document.createElement("span");
+            const fillType = document.createElement("span");
+            fillType.textContent = "Fill";
+            fillType.style.color = "var(--text-light-color)";
+            fillType.style.fontWeight = "300";
+            fillType.style.marginLeft = "auto";
+            fillType.style.fontSize = "var(--font-small)";
+            const collectionName = document.createElement("span");
+            if (instance.fill_variable_name) {
+              varInfo.textContent = instance.fill_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.fill_collection_name) {
+                collectionName.textContent = ` from ${instance.fill_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.fill;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            fillInfo.appendChild(varInfo);
+            fillInfo.appendChild(collectionName);
+            fillInfo.appendChild(fillType);
+            groupItem.appendChild(fillContainer);
+          }
+          if (instance.stroke) {
+            const collectionName = document.createElement("span");
+            const strokeContainer = document.createElement("div");
+            strokeContainer.style.display = "flex";
+            strokeContainer.style.alignItems = "center";
+            strokeContainer.style.marginTop = "0px";
+            strokeContainer.style.marginLeft = "0px";
+            strokeContainer.style.marginBottom = "4px";
+            const strokeSwatch = document.createElement("div");
+            strokeSwatch.style.width = "16px";
+            strokeSwatch.style.height = "16px";
+            strokeSwatch.style.backgroundColor = instance.stroke;
+            if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
+              strokeSwatch.style.borderRadius = "999px";
+            } else {
+              strokeSwatch.style.borderRadius = "3px";
+            }
+            strokeSwatch.style.marginRight = "8px";
+            strokeSwatch.style.border = "1px solid #ddd";
+            const strokeInfo = document.createElement("div");
+            strokeInfo.style.display = "flex";
+            strokeInfo.style.flexDirection = "row";
+            strokeInfo.style.gap = "4px";
+            strokeInfo.style.justifyContent = "space-between";
+            strokeInfo.style.width = "100%";
+            const varInfo = document.createElement("span");
+            if (instance.stroke_variable_name) {
+              varInfo.textContent = instance.stroke_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.stroke_collection_name) {
+                collectionName.textContent = ` from ${instance.stroke_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.stroke;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            const strokeType = document.createElement("span");
+            strokeType.textContent = "Stroke";
+            strokeType.style.color = "var(--text-light-color)";
+            strokeType.style.fontWeight = "300";
+            strokeType.style.marginLeft = "auto";
+            strokeType.style.fontSize = "var(--font-small)";
+            strokeInfo.appendChild(varInfo);
+            strokeInfo.appendChild(collectionName);
+            strokeInfo.appendChild(strokeType);
+            groupItem.appendChild(strokeContainer);
+          }
+        } else {
+          groupItem.appendChild(componentNameContainer);
+        }
+        const versionGroup2 = document.createElement("div");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const infoSpan = document.createElement("span");
+          infoSpan.classList.add("version-tag-updated");
+          infoSpan.textContent = instance.libraryComponentVersion || "";
+          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+          infoSpan.style.marginLeft = "auto";
+          versionGroup2.appendChild(infoSpan);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          infoSpan.style.marginLeft = "auto";
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription;
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItems.appendChild(groupItem);
+      });
+      targetList.appendChild(groupItems);
+      groupHeader.addEventListener("click", () => {
+        groupItems.classList.toggle("expanded");
+      });
+    }
+  };
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.displayGroups = displayGroups;
+  }
+
+  // src/ui/sortGroups.ts
+  function sortGroups(groups) {
+    return Object.fromEntries(
+      Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
+        const firstItemA = groupAItems[0];
+        const firstItemB = groupBItems[0];
+        const aName = (firstItemA.mainComponentSetName || firstItemA.mainComponentName || firstItemA.name || "").replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim().replace(/^[^a-zA-Z0-9\/]+/, "");
+        const bName = (firstItemB.mainComponentSetName || firstItemB.mainComponentName || firstItemB.name || "").replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim().replace(/^[^a-zA-Z0-9\/]+/, "");
+        const aSpecial = /^[._]/.test(aName);
+        const bSpecial = /^[._]/.test(bName);
+        if (aSpecial && !bSpecial) return 1;
+        if (!aSpecial && bSpecial) return -1;
+        return aName.localeCompare(bName, void 0, { numeric: true, sensitivity: "accent" });
+      })
+    );
+  }
+
+  // src/ui/processAndDisplayComponents.ts
+  function processAndDisplayComponents(componentsData, allInstances, resultsList, iconResultsList) {
+    allInstances = componentsData.instances;
+    const groupedInstances = {};
+    const groupedIcons = {};
+    const showHiddenToggle = document.getElementById("showHiddenToggle");
+    const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
+    let nonIconCount = 0;
+    let iconCount = 0;
+    let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === "number" ? componentsData.counts.outdated : componentsData.outdated ? componentsData.outdated.length : 0;
+    componentsData.instances.forEach((instance) => {
+      if (!showHidden && instance.hidden) {
+        return;
+      }
+      const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+      if (instance.isIcon === true) {
+        if (!groupedIcons[groupKey]) {
+          groupedIcons[groupKey] = [];
+        }
+        groupedIcons[groupKey].push(instance);
+        iconCount++;
+      } else {
+        if (!groupedInstances[groupKey]) {
+          groupedInstances[groupKey] = [];
+        }
+        groupedInstances[groupKey].push(instance);
+        nonIconCount++;
+      }
+    });
+    for (const key in groupedInstances) {
+      groupedInstances[key].sort((a, b) => {
+        const aName = a.name || "";
+        const bName = b.name || "";
+        return aName.localeCompare(bName);
+      });
+    }
+    for (const key in groupedIcons) {
+      groupedIcons[key].sort((a, b) => {
+        const aName = a.name || "";
+        const bName = b.name || "";
+        return aName.localeCompare(bName);
+      });
+    }
+    const componentsTab = document.querySelector('[data-tab="instances"]');
+    const iconsTab = document.querySelector('[data-tab="icons"]');
+    const outdatedTab = document.querySelector('[data-tab="outdated"]');
+    if (componentsTab) componentsTab.textContent = `All instances (${nonIconCount})`;
+    if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
+    if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+    displayGroups(sortGroups(groupedInstances), resultsList);
+    displayGroups(sortGroups(groupedIcons), iconResultsList);
+  }
+})();
+
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __propIsEnum = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues = (a, b) => {
+    for (var prop in b || (b = {}))
+      if (__hasOwnProp.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    if (__getOwnPropSymbols)
+      for (var prop of __getOwnPropSymbols(b)) {
+        if (__propIsEnum.call(b, prop))
+          __defNormalProp(a, prop, b[prop]);
+      }
+    return a;
+  };
+
+  // src/ui/createIcon.ts
+  var createIcon = (type) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    let iconClass = "info-icon";
+    let iconId = "info-icon";
+    switch (type) {
+      case "INSTANCE":
+        iconClass = "instance-icon";
+        iconId = "instance-icon";
+        break;
+      case "TEXT":
+        iconClass = "text-icon";
+        iconId = "text-icon";
+        break;
+      case "FRAME":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+      case "RECTANGLE":
+        iconClass = "rectangle-icon";
+        iconId = "rectangle-icon";
+        break;
+      case "VECTOR":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+    }
+    svg.classList.add(iconClass);
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  // src/ui/showPopover.ts
+  var showPopover = (icon, instance) => {
+    const popover = document.createElement("div");
+    popover.classList.add("popover");
+    popover.style.maxWidth = "500px";
+    popover.style.position = "fixed";
+    popover.style.zIndex = "10000";
+    const content = Object.entries(instance).map(([key, value]) => {
+      const boldKey = `<strong>${key}:</strong>`;
+      if (typeof value === "object" && value !== null) {
+        return `${boldKey} ${JSON.stringify(value)}`;
+      }
+      return `${boldKey} ${value}`;
+    }).join("<br>");
+    popover.innerHTML = content;
+    document.body.appendChild(popover);
+    const rect = icon.getBoundingClientRect();
+    popover.style.visibility = "hidden";
+    popover.style.display = "block";
+    const popoverRect = popover.getBoundingClientRect();
+    popover.style.display = "none";
+    popover.style.visibility = "visible";
+    let top = rect.bottom + 5;
+    let left = rect.left;
+    if (left + popoverRect.width > window.innerWidth - 10) {
+      left = window.innerWidth - popoverRect.width - 10;
+    }
+    if (left < 10) {
+      left = 10;
+    }
+    if (top + popoverRect.height > window.innerHeight - 10) {
+      top = rect.top - popoverRect.height - 5;
+    }
+    if (top < 10) {
+      top = 10;
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.display = "block";
+    parent.postMessage({
+      pluginMessage: {
+        type: "resize-plugin-window",
+        width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
+        // Ensure enough width for popover + padding
+        height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
+        // Ensure enough height for popover + padding
+      }
+    }, "*");
+    icon.addEventListener("mouseleave", () => {
+      popover.remove();
+      parent.postMessage({
+        pluginMessage: {
+          type: "reset-plugin-window-size"
+        }
+      }, "*");
+    });
+  };
+
+  // src/ui/displayGroups.ts
+  var displayGroups = (groupedData, targetList) => {
+    var _a;
+    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+    targetList.innerHTML = "";
+    let headerText = "";
+    if (!targetList || !targetList.id) {
+      console.error("Target list or its ID is undefined.");
+      return;
+    }
+    if (targetList.id === "colorResultsList") headerText = "Fill";
+    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
+    if (headerText) {
+      const prevHeader = targetList.previousElementSibling;
+      if (prevHeader && prevHeader.classList.contains("section-header")) {
+        prevHeader.remove();
+      }
+      const header = document.createElement("div");
+      header.className = "section-header";
+      header.textContent = headerText;
+      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
+    }
+    const nameCount = {};
+    for (const key in groupedData) {
+      const group = groupedData[key];
+      if (group.length === 0) continue;
+      const firstInstance = group[0];
+      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
+      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+        const instance = group[0];
+        const groupItem = document.createElement("ul");
+        groupItem.classList.add("group-header");
+        const componentNameContainer = document.createElement("span");
+        componentNameContainer.classList.add("component-name-container");
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName || "";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        const versionGroup2 = document.createElement("span");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const outdatedBadge = document.createElement("span");
+          outdatedBadge.classList.add("version-tag-updated");
+          outdatedBadge.textContent = instance.libraryComponentVersion || "";
+          versionGroup2.appendChild(outdatedBadge);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = instance.description || "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription || "";
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItem.appendChild(componentNameContainer);
+        targetList.appendChild(groupItem);
+        continue;
+      }
+      const groupHeader = document.createElement("ul");
+      groupHeader.classList.add("group-header");
+      const groupName = document.createElement("div");
+      groupName.classList.add("group-name");
+      if (targetList.id === "colorResultsList") {
+        const fillSwatch = document.createElement("div");
+        fillSwatch.classList.add("group-color-icon");
+        fillSwatch.style.backgroundColor = firstInstance.fill || "";
+        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
+          fillSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(fillSwatch);
+      } else if (targetList.id === "colorStrokeResultsList") {
+        const strokeSwatch = document.createElement("div");
+        strokeSwatch.classList.add("group-color-icon");
+        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
+        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
+          strokeSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(strokeSwatch);
+      } else {
+        const groupicon = document.createElement("div");
+        groupicon.classList.add("instance-icon");
+        const icon = createIcon(firstInstance.type);
+        groupicon.appendChild(icon);
+        groupHeader.appendChild(groupicon);
+      }
+      let groupNameHtml = "";
+      if (targetList.id === "colorResultsList") {
+        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
+        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
+      } else if (targetList.id === "colorStrokeResultsList") {
+        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
+        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
+      } else {
+        groupNameHtml += name;
+      }
+      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+      groupName.innerHTML = groupNameHtml;
+      const selectAllContainer = document.createElement("span");
+      selectAllContainer.classList.add("select-all-container");
+      const selectAllLink = document.createElement("a");
+      selectAllLink.href = "#";
+      selectAllLink.classList.add("select-all-link");
+      selectAllLink.title = "Select all";
+      const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgIcon.setAttribute("width", "20");
+      svgIcon.setAttribute("height", "20");
+      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+      selectAllLink.appendChild(svgIcon);
+      selectAllLink.style.visibility = "hidden";
+      selectAllLink.style.marginLeft = "auto";
+      selectAllLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nodeIds = group.map((item) => item.nodeId);
+        parent.postMessage({
+          pluginMessage: {
+            type: "select-nodes",
+            nodeIds
+          }
+        }, "*");
+      });
+      selectAllContainer.appendChild(selectAllLink);
+      groupName.appendChild(selectAllContainer);
+      groupHeader.appendChild(groupName);
+      groupHeader.addEventListener("mouseenter", () => {
+        selectAllLink.style.visibility = "visible";
+      });
+      groupHeader.addEventListener("mouseleave", () => {
+        selectAllLink.style.visibility = "hidden";
+      });
+      const versionGroup = document.createElement("span");
+      versionGroup.classList.add("version-group");
+      const hasOutdatedItems = group.some((item) => item.isOutdated);
+      if (hasOutdatedItems) {
+        if (group.length === 1) {
+          const item = group[0];
+          if (item.nodeVersion) {
+            const currentVersionBadge = document.createElement("span");
+            currentVersionBadge.classList.add("version-tag");
+            currentVersionBadge.textContent = item.nodeVersion;
+            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            versionGroup.appendChild(currentVersionBadge);
+          }
+          if (item.libraryComponentVersion) {
+            const libraryVersionBadge = document.createElement("span");
+            libraryVersionBadge.classList.add("version-tag-updated");
+            libraryVersionBadge.textContent = item.libraryComponentVersion;
+            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            groupHeader.appendChild(libraryVersionBadge);
+          }
+        } else {
+          const versionBadge = document.createElement("span");
+          versionBadge.classList.add("version-tag-updated");
+          versionBadge.textContent = "NEW";
+          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
+          versionGroup.appendChild(versionBadge);
+        }
+      }
+      const versionsInGroup = group.map((item) => item.nodeVersion);
+      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
+      if (uniqueVersions.length > 0) {
+        const infoSpan = document.createElement("div");
+        infoSpan.classList.add("version-tag");
+        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
+          infoSpan.textContent = uniqueVersions[0];
+        } else {
+          infoSpan.textContent = "...";
+        }
+        versionGroup.appendChild(infoSpan);
+      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
+        const firstDescription = firstInstance.description;
+        if (group.every((item) => item.description === firstDescription)) {
+          const infoSpan = document.createElement("div");
+          infoSpan.classList.add("description-tag");
+          const fullDescription = firstInstance.description || "";
+          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+          infoSpan.textContent = truncatedDescription;
+          infoSpan.title = fullDescription || "";
+          versionGroup.appendChild(infoSpan);
+        }
+      }
+      groupHeader.appendChild(versionGroup);
+      targetList.appendChild(groupHeader);
+      const groupItems = document.createElement("ul");
+      groupItems.classList.add("group-items");
+      group.forEach((instance) => {
+        const groupItem = document.createElement("li");
+        const componentNameContainer = document.createElement("div");
+        componentNameContainer.classList.add("component-name-container");
+        componentNameContainer.style.display = "flex";
+        componentNameContainer.style.alignItems = "right";
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+                // Передаем nodeId инстанса
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        if (instance.color) {
+          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
+          groupItem.appendChild(componentNameContainer);
+          if (instance.fill) {
+            const fillContainer = document.createElement("div");
+            fillContainer.style.display = "flex";
+            fillContainer.style.alignItems = "center";
+            fillContainer.style.marginTop = "0px";
+            fillContainer.style.marginLeft = "0px";
+            fillContainer.style.marginBottom = "4px";
+            const fillSwatch = document.createElement("div");
+            fillSwatch.style.width = "16px";
+            fillSwatch.style.height = "16px";
+            fillSwatch.style.backgroundColor = instance.fill;
+            if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
+              fillSwatch.style.borderRadius = "999px";
+            } else {
+              fillSwatch.style.borderRadius = "4px";
+            }
+            fillSwatch.style.marginRight = "4px";
+            fillSwatch.style.marginLeft = "00px";
+            fillSwatch.style.border = "1px solid #ddd";
+            const fillInfo = document.createElement("div");
+            fillInfo.style.display = "flex";
+            fillInfo.style.flexDirection = "row";
+            fillInfo.style.gap = "4px";
+            fillInfo.style.justifyContent = "space-between";
+            fillInfo.style.width = "100%";
+            groupItem.appendChild(componentNameContainer);
+            const varInfo = document.createElement("span");
+            const fillType = document.createElement("span");
+            fillType.textContent = "Fill";
+            fillType.style.color = "var(--text-light-color)";
+            fillType.style.fontWeight = "300";
+            fillType.style.marginLeft = "auto";
+            fillType.style.fontSize = "var(--font-small)";
+            const collectionName = document.createElement("span");
+            if (instance.fill_variable_name) {
+              varInfo.textContent = instance.fill_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.fill_collection_name) {
+                collectionName.textContent = ` from ${instance.fill_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.fill;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            fillInfo.appendChild(varInfo);
+            fillInfo.appendChild(collectionName);
+            fillInfo.appendChild(fillType);
+            groupItem.appendChild(fillContainer);
+          }
+          if (instance.stroke) {
+            const collectionName = document.createElement("span");
+            const strokeContainer = document.createElement("div");
+            strokeContainer.style.display = "flex";
+            strokeContainer.style.alignItems = "center";
+            strokeContainer.style.marginTop = "0px";
+            strokeContainer.style.marginLeft = "0px";
+            strokeContainer.style.marginBottom = "4px";
+            const strokeSwatch = document.createElement("div");
+            strokeSwatch.style.width = "16px";
+            strokeSwatch.style.height = "16px";
+            strokeSwatch.style.backgroundColor = instance.stroke;
+            if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
+              strokeSwatch.style.borderRadius = "999px";
+            } else {
+              strokeSwatch.style.borderRadius = "3px";
+            }
+            strokeSwatch.style.marginRight = "8px";
+            strokeSwatch.style.border = "1px solid #ddd";
+            const strokeInfo = document.createElement("div");
+            strokeInfo.style.display = "flex";
+            strokeInfo.style.flexDirection = "row";
+            strokeInfo.style.gap = "4px";
+            strokeInfo.style.justifyContent = "space-between";
+            strokeInfo.style.width = "100%";
+            const varInfo = document.createElement("span");
+            if (instance.stroke_variable_name) {
+              varInfo.textContent = instance.stroke_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.stroke_collection_name) {
+                collectionName.textContent = ` from ${instance.stroke_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.stroke;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            const strokeType = document.createElement("span");
+            strokeType.textContent = "Stroke";
+            strokeType.style.color = "var(--text-light-color)";
+            strokeType.style.fontWeight = "300";
+            strokeType.style.marginLeft = "auto";
+            strokeType.style.fontSize = "var(--font-small)";
+            strokeInfo.appendChild(varInfo);
+            strokeInfo.appendChild(collectionName);
+            strokeInfo.appendChild(strokeType);
+            groupItem.appendChild(strokeContainer);
+          }
+        } else {
+          groupItem.appendChild(componentNameContainer);
+        }
+        const versionGroup2 = document.createElement("div");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const infoSpan = document.createElement("span");
+          infoSpan.classList.add("version-tag-updated");
+          infoSpan.textContent = instance.libraryComponentVersion || "";
+          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+          infoSpan.style.marginLeft = "auto";
+          versionGroup2.appendChild(infoSpan);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          infoSpan.style.marginLeft = "auto";
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription;
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItems.appendChild(groupItem);
+      });
+      targetList.appendChild(groupItems);
+      groupHeader.addEventListener("click", () => {
+        groupItems.classList.toggle("expanded");
+      });
+    }
+  };
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.displayGroups = displayGroups;
+  }
+
+  // src/ui/processAndDisplayColors.ts
+  function processAndDisplayColors(colorsData, colorsStrokeData) {
+    const showHiddenToggle = document.getElementById("showHiddenToggle");
+    const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
+    let fillFilteredCount = 0;
+    let strokeFilteredCount = 0;
+    const colorResultsList = document.getElementById("colorResultsList");
+    const colorStrokeResultsList = document.getElementById("colorStrokeResultsList");
+    const fillHeader = colorResultsList.previousElementSibling;
+    const strokeHeader = colorStrokeResultsList.previousElementSibling;
+    colorResultsList.innerHTML = "";
+    colorStrokeResultsList.innerHTML = "";
+    if (colorsData && colorsData.instances) {
+      const groupedFillColors = {};
+      let rawFillInstances = colorsData.instances;
+      if (!showHidden) {
+        rawFillInstances = rawFillInstances.filter((instance) => !instance.hidden);
+      }
+      rawFillInstances.forEach((instance) => {
+        const hasFill = instance.fill && instance.fill !== "#MIXED";
+        if (!hasFill) return;
+        const wrongFill = instance.fill_collection_name !== "Component tokens" && instance.fill_collection_name !== "Service tokens" && instance.fill_collection_name !== "product colors";
+        if (!wrongFill) return;
+        fillFilteredCount++;
+        const cleanInstance = __spreadValues({}, instance);
+        delete cleanInstance.stroke;
+        delete cleanInstance.stroke_variable_name;
+        delete cleanInstance.stroke_collection_name;
+        delete cleanInstance.stroke_collection_id;
+        const colorIdentifier = cleanInstance.fill_variable_name ? cleanInstance.fill_variable_name : cleanInstance.fill;
+        const collectionName = cleanInstance.fill_collection_name || "no_collection";
+        const groupKey = `${colorIdentifier}-${collectionName}-${cleanInstance.type}`;
+        if (!groupedFillColors[groupKey]) {
+          groupedFillColors[groupKey] = [];
+        }
+        groupedFillColors[groupKey].push(cleanInstance);
+      });
+      const sortedFillGroupKeys = Object.keys(groupedFillColors).sort((a, b) => a.localeCompare(b));
+      const sortedGroupedFillColors = {};
+      sortedFillGroupKeys.forEach((key) => {
+        sortedGroupedFillColors[key] = groupedFillColors[key];
+      });
+      if (fillFilteredCount > 0) {
+        displayGroups(sortedGroupedFillColors, colorResultsList);
+      } else {
+        colorResultsList.innerHTML = "";
+        if (fillHeader && fillHeader.classList.contains("section-header") && fillHeader.textContent === "Fill") {
+          fillHeader.remove();
+        }
+      }
+    } else {
+      colorResultsList.innerHTML = "";
+      if (fillHeader && fillHeader.classList.contains("section-header") && fillHeader.textContent === "Fill") {
+        fillHeader.remove();
+      }
+    }
+    if (colorsStrokeData && colorsStrokeData.instances) {
+      const groupedStrokeColors = {};
+      let rawStrokeInstances = colorsStrokeData.instances;
+      if (!showHidden) {
+        rawStrokeInstances = rawStrokeInstances.filter((instance) => !instance.hidden);
+      }
+      rawStrokeInstances.forEach((instance) => {
+        const hasStroke = instance.stroke && instance.stroke !== "#MIXED";
+        if (!hasStroke) return;
+        const wrongStroke = instance.stroke_collection_name !== "Component tokens" && instance.stroke_collection_name !== "Service tokens" && instance.stroke_collection_name !== "product colors";
+        if (!wrongStroke) return;
+        strokeFilteredCount++;
+        const cleanInstance = __spreadValues({}, instance);
+        delete cleanInstance.fill;
+        delete cleanInstance.fill_variable_name;
+        delete cleanInstance.fill_collection_name;
+        delete cleanInstance.fill_collection_id;
+        const colorIdentifier = cleanInstance.stroke_variable_name ? cleanInstance.stroke_variable_name : cleanInstance.stroke;
+        const collectionName = cleanInstance.stroke_collection_name || "no_collection";
+        const groupKey = `${colorIdentifier}-${collectionName}-${cleanInstance.type}`;
+        if (!groupedStrokeColors[groupKey]) {
+          groupedStrokeColors[groupKey] = [];
+        }
+        groupedStrokeColors[groupKey].push(cleanInstance);
+      });
+      const sortedStrokeGroupKeys = Object.keys(groupedStrokeColors).sort((a, b) => a.localeCompare(b));
+      const sortedGroupedStrokeColors = {};
+      sortedStrokeGroupKeys.forEach((key) => {
+        sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
+      });
+      if (strokeFilteredCount > 0) {
+        displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+      } else {
+        colorStrokeResultsList.innerHTML = "";
+        if (strokeHeader && strokeHeader.classList.contains("section-header") && strokeHeader.textContent === "Stroke") {
+          strokeHeader.remove();
+        }
+      }
+    } else {
+      colorStrokeResultsList.innerHTML = "";
+      if (strokeHeader && strokeHeader.classList.contains("section-header") && strokeHeader.textContent === "Stroke") {
+        strokeHeader.remove();
+      }
+    }
+    const colorsTab = document.querySelector('[data-tab="colors"]');
+    const totalColorIssues = fillFilteredCount + strokeFilteredCount;
+    if (colorsTab) {
+      if (totalColorIssues === 0) {
+        colorsTab.classList.remove("tab");
+        colorsTab.classList.add("tab_success");
+        colorsTab.textContent = `Colors (OK)`;
+      } else {
+        colorsTab.classList.remove("tab_success");
+        colorsTab.classList.add("tab");
+        colorsTab.textContent = `Colors (${totalColorIssues})`;
+      }
+    }
+  }
+})();
+
+"use strict";
+(() => {
+  // src/ui/createIcon.ts
+  var createIcon = (type) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    let iconClass = "info-icon";
+    let iconId = "info-icon";
+    switch (type) {
+      case "INSTANCE":
+        iconClass = "instance-icon";
+        iconId = "instance-icon";
+        break;
+      case "TEXT":
+        iconClass = "text-icon";
+        iconId = "text-icon";
+        break;
+      case "FRAME":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+      case "RECTANGLE":
+        iconClass = "rectangle-icon";
+        iconId = "rectangle-icon";
+        break;
+      case "VECTOR":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+    }
+    svg.classList.add(iconClass);
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  // src/ui/showPopover.ts
+  var showPopover = (icon, instance) => {
+    const popover = document.createElement("div");
+    popover.classList.add("popover");
+    popover.style.maxWidth = "500px";
+    popover.style.position = "fixed";
+    popover.style.zIndex = "10000";
+    const content = Object.entries(instance).map(([key, value]) => {
+      const boldKey = `<strong>${key}:</strong>`;
+      if (typeof value === "object" && value !== null) {
+        return `${boldKey} ${JSON.stringify(value)}`;
+      }
+      return `${boldKey} ${value}`;
+    }).join("<br>");
+    popover.innerHTML = content;
+    document.body.appendChild(popover);
+    const rect = icon.getBoundingClientRect();
+    popover.style.visibility = "hidden";
+    popover.style.display = "block";
+    const popoverRect = popover.getBoundingClientRect();
+    popover.style.display = "none";
+    popover.style.visibility = "visible";
+    let top = rect.bottom + 5;
+    let left = rect.left;
+    if (left + popoverRect.width > window.innerWidth - 10) {
+      left = window.innerWidth - popoverRect.width - 10;
+    }
+    if (left < 10) {
+      left = 10;
+    }
+    if (top + popoverRect.height > window.innerHeight - 10) {
+      top = rect.top - popoverRect.height - 5;
+    }
+    if (top < 10) {
+      top = 10;
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.display = "block";
+    parent.postMessage({
+      pluginMessage: {
+        type: "resize-plugin-window",
+        width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
+        // Ensure enough width for popover + padding
+        height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
+        // Ensure enough height for popover + padding
+      }
+    }, "*");
+    icon.addEventListener("mouseleave", () => {
+      popover.remove();
+      parent.postMessage({
+        pluginMessage: {
+          type: "reset-plugin-window-size"
+        }
+      }, "*");
+    });
+  };
+
+  // src/ui/displayGroups.ts
+  var displayGroups = (groupedData, targetList) => {
+    var _a;
+    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+    targetList.innerHTML = "";
+    let headerText = "";
+    if (!targetList || !targetList.id) {
+      console.error("Target list or its ID is undefined.");
+      return;
+    }
+    if (targetList.id === "colorResultsList") headerText = "Fill";
+    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
+    if (headerText) {
+      const prevHeader = targetList.previousElementSibling;
+      if (prevHeader && prevHeader.classList.contains("section-header")) {
+        prevHeader.remove();
+      }
+      const header = document.createElement("div");
+      header.className = "section-header";
+      header.textContent = headerText;
+      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
+    }
+    const nameCount = {};
+    for (const key in groupedData) {
+      const group = groupedData[key];
+      if (group.length === 0) continue;
+      const firstInstance = group[0];
+      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
+      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+        const instance = group[0];
+        const groupItem = document.createElement("ul");
+        groupItem.classList.add("group-header");
+        const componentNameContainer = document.createElement("span");
+        componentNameContainer.classList.add("component-name-container");
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName || "";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        const versionGroup2 = document.createElement("span");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const outdatedBadge = document.createElement("span");
+          outdatedBadge.classList.add("version-tag-updated");
+          outdatedBadge.textContent = instance.libraryComponentVersion || "";
+          versionGroup2.appendChild(outdatedBadge);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = instance.description || "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription || "";
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItem.appendChild(componentNameContainer);
+        targetList.appendChild(groupItem);
+        continue;
+      }
+      const groupHeader = document.createElement("ul");
+      groupHeader.classList.add("group-header");
+      const groupName = document.createElement("div");
+      groupName.classList.add("group-name");
+      if (targetList.id === "colorResultsList") {
+        const fillSwatch = document.createElement("div");
+        fillSwatch.classList.add("group-color-icon");
+        fillSwatch.style.backgroundColor = firstInstance.fill || "";
+        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
+          fillSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(fillSwatch);
+      } else if (targetList.id === "colorStrokeResultsList") {
+        const strokeSwatch = document.createElement("div");
+        strokeSwatch.classList.add("group-color-icon");
+        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
+        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
+          strokeSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(strokeSwatch);
+      } else {
+        const groupicon = document.createElement("div");
+        groupicon.classList.add("instance-icon");
+        const icon = createIcon(firstInstance.type);
+        groupicon.appendChild(icon);
+        groupHeader.appendChild(groupicon);
+      }
+      let groupNameHtml = "";
+      if (targetList.id === "colorResultsList") {
+        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
+        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
+      } else if (targetList.id === "colorStrokeResultsList") {
+        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
+        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
+      } else {
+        groupNameHtml += name;
+      }
+      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+      groupName.innerHTML = groupNameHtml;
+      const selectAllContainer = document.createElement("span");
+      selectAllContainer.classList.add("select-all-container");
+      const selectAllLink = document.createElement("a");
+      selectAllLink.href = "#";
+      selectAllLink.classList.add("select-all-link");
+      selectAllLink.title = "Select all";
+      const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgIcon.setAttribute("width", "20");
+      svgIcon.setAttribute("height", "20");
+      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+      selectAllLink.appendChild(svgIcon);
+      selectAllLink.style.visibility = "hidden";
+      selectAllLink.style.marginLeft = "auto";
+      selectAllLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nodeIds = group.map((item) => item.nodeId);
+        parent.postMessage({
+          pluginMessage: {
+            type: "select-nodes",
+            nodeIds
+          }
+        }, "*");
+      });
+      selectAllContainer.appendChild(selectAllLink);
+      groupName.appendChild(selectAllContainer);
+      groupHeader.appendChild(groupName);
+      groupHeader.addEventListener("mouseenter", () => {
+        selectAllLink.style.visibility = "visible";
+      });
+      groupHeader.addEventListener("mouseleave", () => {
+        selectAllLink.style.visibility = "hidden";
+      });
+      const versionGroup = document.createElement("span");
+      versionGroup.classList.add("version-group");
+      const hasOutdatedItems = group.some((item) => item.isOutdated);
+      if (hasOutdatedItems) {
+        if (group.length === 1) {
+          const item = group[0];
+          if (item.nodeVersion) {
+            const currentVersionBadge = document.createElement("span");
+            currentVersionBadge.classList.add("version-tag");
+            currentVersionBadge.textContent = item.nodeVersion;
+            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            versionGroup.appendChild(currentVersionBadge);
+          }
+          if (item.libraryComponentVersion) {
+            const libraryVersionBadge = document.createElement("span");
+            libraryVersionBadge.classList.add("version-tag-updated");
+            libraryVersionBadge.textContent = item.libraryComponentVersion;
+            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+            groupHeader.appendChild(libraryVersionBadge);
+          }
+        } else {
+          const versionBadge = document.createElement("span");
+          versionBadge.classList.add("version-tag-updated");
+          versionBadge.textContent = "NEW";
+          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
+          versionGroup.appendChild(versionBadge);
+        }
+      }
+      const versionsInGroup = group.map((item) => item.nodeVersion);
+      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
+      if (uniqueVersions.length > 0) {
+        const infoSpan = document.createElement("div");
+        infoSpan.classList.add("version-tag");
+        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
+          infoSpan.textContent = uniqueVersions[0];
+        } else {
+          infoSpan.textContent = "...";
+        }
+        versionGroup.appendChild(infoSpan);
+      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
+        const firstDescription = firstInstance.description;
+        if (group.every((item) => item.description === firstDescription)) {
+          const infoSpan = document.createElement("div");
+          infoSpan.classList.add("description-tag");
+          const fullDescription = firstInstance.description || "";
+          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+          infoSpan.textContent = truncatedDescription;
+          infoSpan.title = fullDescription || "";
+          versionGroup.appendChild(infoSpan);
+        }
+      }
+      groupHeader.appendChild(versionGroup);
+      targetList.appendChild(groupHeader);
+      const groupItems = document.createElement("ul");
+      groupItems.classList.add("group-items");
+      group.forEach((instance) => {
+        const groupItem = document.createElement("li");
+        const componentNameContainer = document.createElement("div");
+        componentNameContainer.classList.add("component-name-container");
+        componentNameContainer.style.display = "flex";
+        componentNameContainer.style.alignItems = "right";
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+                // Передаем nodeId инстанса
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        if (instance.color) {
+          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
+          groupItem.appendChild(componentNameContainer);
+          if (instance.fill) {
+            const fillContainer = document.createElement("div");
+            fillContainer.style.display = "flex";
+            fillContainer.style.alignItems = "center";
+            fillContainer.style.marginTop = "0px";
+            fillContainer.style.marginLeft = "0px";
+            fillContainer.style.marginBottom = "4px";
+            const fillSwatch = document.createElement("div");
+            fillSwatch.style.width = "16px";
+            fillSwatch.style.height = "16px";
+            fillSwatch.style.backgroundColor = instance.fill;
+            if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
+              fillSwatch.style.borderRadius = "999px";
+            } else {
+              fillSwatch.style.borderRadius = "4px";
+            }
+            fillSwatch.style.marginRight = "4px";
+            fillSwatch.style.marginLeft = "00px";
+            fillSwatch.style.border = "1px solid #ddd";
+            const fillInfo = document.createElement("div");
+            fillInfo.style.display = "flex";
+            fillInfo.style.flexDirection = "row";
+            fillInfo.style.gap = "4px";
+            fillInfo.style.justifyContent = "space-between";
+            fillInfo.style.width = "100%";
+            groupItem.appendChild(componentNameContainer);
+            const varInfo = document.createElement("span");
+            const fillType = document.createElement("span");
+            fillType.textContent = "Fill";
+            fillType.style.color = "var(--text-light-color)";
+            fillType.style.fontWeight = "300";
+            fillType.style.marginLeft = "auto";
+            fillType.style.fontSize = "var(--font-small)";
+            const collectionName = document.createElement("span");
+            if (instance.fill_variable_name) {
+              varInfo.textContent = instance.fill_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.fill_collection_name) {
+                collectionName.textContent = ` from ${instance.fill_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.fill;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            fillInfo.appendChild(varInfo);
+            fillInfo.appendChild(collectionName);
+            fillInfo.appendChild(fillType);
+            groupItem.appendChild(fillContainer);
+          }
+          if (instance.stroke) {
+            const collectionName = document.createElement("span");
+            const strokeContainer = document.createElement("div");
+            strokeContainer.style.display = "flex";
+            strokeContainer.style.alignItems = "center";
+            strokeContainer.style.marginTop = "0px";
+            strokeContainer.style.marginLeft = "0px";
+            strokeContainer.style.marginBottom = "4px";
+            const strokeSwatch = document.createElement("div");
+            strokeSwatch.style.width = "16px";
+            strokeSwatch.style.height = "16px";
+            strokeSwatch.style.backgroundColor = instance.stroke;
+            if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
+              strokeSwatch.style.borderRadius = "999px";
+            } else {
+              strokeSwatch.style.borderRadius = "3px";
+            }
+            strokeSwatch.style.marginRight = "8px";
+            strokeSwatch.style.border = "1px solid #ddd";
+            const strokeInfo = document.createElement("div");
+            strokeInfo.style.display = "flex";
+            strokeInfo.style.flexDirection = "row";
+            strokeInfo.style.gap = "4px";
+            strokeInfo.style.justifyContent = "space-between";
+            strokeInfo.style.width = "100%";
+            const varInfo = document.createElement("span");
+            if (instance.stroke_variable_name) {
+              varInfo.textContent = instance.stroke_variable_name;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+              if (instance.stroke_collection_name) {
+                collectionName.textContent = ` from ${instance.stroke_collection_name}`;
+                collectionName.style.color = "var(--text-light-color)";
+                collectionName.style.fontWeight = "300";
+              }
+            } else {
+              varInfo.textContent = instance.stroke;
+              varInfo.style.color = "var(--text-light-color)";
+              varInfo.style.fontWeight = "400";
+            }
+            const strokeType = document.createElement("span");
+            strokeType.textContent = "Stroke";
+            strokeType.style.color = "var(--text-light-color)";
+            strokeType.style.fontWeight = "300";
+            strokeType.style.marginLeft = "auto";
+            strokeType.style.fontSize = "var(--font-small)";
+            strokeInfo.appendChild(varInfo);
+            strokeInfo.appendChild(collectionName);
+            strokeInfo.appendChild(strokeType);
+            groupItem.appendChild(strokeContainer);
+          }
+        } else {
+          groupItem.appendChild(componentNameContainer);
+        }
+        const versionGroup2 = document.createElement("div");
+        versionGroup2.classList.add("version-group");
+        if (instance.isOutdated) {
+          const infoSpan = document.createElement("span");
+          infoSpan.classList.add("version-tag-updated");
+          infoSpan.textContent = instance.libraryComponentVersion || "";
+          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
+          infoSpan.style.marginLeft = "auto";
+          versionGroup2.appendChild(infoSpan);
+        }
+        if (instance.nodeVersion || instance.description) {
+          const infoSpan = document.createElement("div");
+          infoSpan.style.marginLeft = "auto";
+          if (instance.nodeVersion) {
+            infoSpan.classList.add("version-tag");
+            infoSpan.textContent = `${instance.nodeVersion}`;
+          } else if (instance.description && targetList.id !== "iconResultsList") {
+            infoSpan.classList.add("description-tag");
+            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
+            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
+            infoSpan.textContent = truncatedDescription;
+            infoSpan.title = fullDescription;
+          }
+          versionGroup2.appendChild(infoSpan);
+        }
+        componentNameContainer.appendChild(versionGroup2);
+        groupItems.appendChild(groupItem);
+      });
+      targetList.appendChild(groupItems);
+      groupHeader.addEventListener("click", () => {
+        groupItems.classList.toggle("expanded");
+      });
+    }
+  };
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.displayGroups = displayGroups;
+  }
+
+  // src/ui/sortGroups.ts
+  function sortGroups(groups) {
+    return Object.fromEntries(
+      Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
+        const firstItemA = groupAItems[0];
+        const firstItemB = groupBItems[0];
+        const aName = (firstItemA.mainComponentSetName || firstItemA.mainComponentName || firstItemA.name || "").replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim().replace(/^[^a-zA-Z0-9\/]+/, "");
+        const bName = (firstItemB.mainComponentSetName || firstItemB.mainComponentName || firstItemB.name || "").replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim().replace(/^[^a-zA-Z0-9\/]+/, "");
+        const aSpecial = /^[._]/.test(aName);
+        const bSpecial = /^[._]/.test(bName);
+        if (aSpecial && !bSpecial) return 1;
+        if (!aSpecial && bSpecial) return -1;
+        return aName.localeCompare(bName, void 0, { numeric: true, sensitivity: "accent" });
+      })
+    );
+  }
+
+  // src/ui/processAndDisplayOutdatedComponents.ts
+  function processAndDisplayOutdatedComponents(componentsData, outdatedResultsList) {
+    const outdatedInstancesArray = componentsData.outdated || [];
+    const groupedOutdatedInstances = {};
+    const showHiddenToggle = document.getElementById("showHiddenToggle");
+    const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
+    let outdatedCount = 0;
+    const filteredOutdatedInstances = showHidden ? outdatedInstancesArray : outdatedInstancesArray.filter((instance) => !instance.hidden);
+    filteredOutdatedInstances.forEach((instance) => {
+      if (!showHidden && instance.hidden) {
+        return;
+      }
+      const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+      if (!groupedOutdatedInstances[groupKey]) {
+        groupedOutdatedInstances[groupKey] = [];
+      }
+      groupedOutdatedInstances[groupKey].push(instance);
+    });
+    outdatedCount = filteredOutdatedInstances.length;
+    for (const key in groupedOutdatedInstances) {
+      groupedOutdatedInstances[key].sort((a, b) => {
+        const aName = a.name || "";
+        const bName = b.name || "";
+        return aName.localeCompare(bName);
+      });
+    }
+    const outdatedTab = document.querySelector('[data-tab="outdated"]');
+    if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+    displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
+  }
 })();
 </script></body>
 </html>

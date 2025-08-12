@@ -12,7 +12,7 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      globalName: 'UIModules',
+      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
@@ -22,7 +22,7 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      globalName: 'UIModules',
+      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
@@ -32,21 +32,78 @@ async function build() {
       write: false,
       target: 'es2017',
       format: 'iife',
-      globalName: 'UIModules',
+      // globalName: 'UIModules',  // <- убрать эту строку
       loader: { '.ts': 'ts' },
     });
     
+    // Для всех модулей уберите эту строку:
+    // globalName: 'UIModules',  // <- удалите эту строку
+    
+    // Пример для updateStatistics:
     const updateStatisticsResult = await esbuild.build({
       entryPoints: ['src/ui/updateStatistics.ts'],
       bundle: true,
       write: false,
       target: 'es2017',
       format: 'iife',
-      globalName: 'UIModules',
+      // globalName: 'UIModules',  // <- удалите эту строку
       loader: { '.ts': 'ts' },
     });
     
-    const uiModulesCode = createIconResult.outputFiles[0].text + '\n' + showPopoverResult.outputFiles[0].text + '\n' + sortGroupsResult.outputFiles[0].text + '\n' + updateStatisticsResult.outputFiles[0].text;
+    // Добавляем displayGroups
+    const displayGroupsResult = await esbuild.build({
+      entryPoints: ['src/ui/displayGroups.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      // globalName: 'UIModules',  // <- убрать эту строку
+      loader: { '.ts': 'ts' },
+    });
+    
+    // Удаляем первое объявление uiModulesCode на строке 61-64
+    // и оставляем только одно объявление после всех build результатов
+    
+    const processAndDisplayComponentsResult = await esbuild.build({
+      entryPoints: ['src/ui/processAndDisplayComponents.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      // globalName: 'UIModules',  // <- убрать эту строку
+      loader: { '.ts': 'ts' },
+    });
+    
+    const processAndDisplayColorsResult = await esbuild.build({
+      entryPoints: ['src/ui/processAndDisplayColors.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      // globalName: 'UIModules',  // <- убрать эту строку
+      loader: { '.ts': 'ts' },
+    });
+    
+    const processAndDisplayOutdatedComponentsResult = await esbuild.build({
+      entryPoints: ['src/ui/processAndDisplayOutdatedComponents.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      // globalName: 'UIModules',  // <- убрать эту строку
+      loader: { '.ts': 'ts' },
+    });
+    
+
+    
+    const uiModulesCode = createIconResult.outputFiles[0].text + '\n' + 
+                       showPopoverResult.outputFiles[0].text + '\n' + 
+                       sortGroupsResult.outputFiles[0].text + '\n' + 
+                       updateStatisticsResult.outputFiles[0].text + '\n' +
+                       displayGroupsResult.outputFiles[0].text + '\n' +
+                       processAndDisplayComponentsResult.outputFiles[0].text + '\n' +
+                       processAndDisplayColorsResult.outputFiles[0].text + '\n' +
+                       processAndDisplayOutdatedComponentsResult.outputFiles[0].text;
 
     // 2. Собираем основной код плагина (backend)
     await esbuild.build({
