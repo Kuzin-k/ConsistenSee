@@ -25,13 +25,15 @@ function delay(ms) {
 }
 
 // src/js/utils/updateProgress.ts
-var updateProgress = async (phase, processed, total, message) => {
+var updateProgress = async (phase, processed, total, message, currentComponentName) => {
   figma.ui.postMessage({
     type: "progress-update",
     phase,
     processed,
     total,
-    message
+    message,
+    currentComponentName
+    // Передаем название компонента в UI
   });
   await delay(1);
 };
@@ -729,7 +731,7 @@ var checkComponentUpdates = async (componentsResult2) => {
       updatedInstances.push(__spreadProps(__spreadValues({}, instance), { updateStatus: "checked" }));
     }
     if (i % 5 === 0) {
-      await updateProgress("check-updates", i + 1, totalComponentsToCheck, `\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430: ${instance.name}`);
+      await updateProgress("check-updates", i + 1, totalComponentsToCheck, `\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430: ${instance.name}`, instance.name);
     }
   }
   componentsResult2.instances = updatedInstances;
@@ -943,7 +945,7 @@ figma.ui.onmessage = async (msg) => {
         await processNodeSafely(nodesToProcess[i], i);
         if (i % 5 === 0) {
           await new Promise((resolve) => setTimeout(resolve, 0));
-          await updateProgress("processing", i + 1, nodesToProcess.length, "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432");
+          await updateProgress("processing", i + 1, nodesToProcess.length, "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432", nodesToProcess[i].name);
         }
       }
       componentsResult.instances.sort((a, b) => {
@@ -977,7 +979,7 @@ figma.ui.onmessage = async (msg) => {
       console.log(`\u0412\u0440\u0435\u043C\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0440\u043E\u0441\u0430 check-all: ${executionTime}ms`);
       const totalStats = processNodeStatistics(selection, "Total");
       figma.ui.postMessage({
-        type: "update-statistics",
+        type: "display-total",
         data: {
           overallStats: totalStats,
           totalCount: totalStats.totalNodes
