@@ -1235,7 +1235,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       }
 
       if (msg.type === 'update-statistics') {
-        updateStatistics(msg.data);
+        UIModules.updateStatistics(msg.data);
         return;
       }
 
@@ -2159,41 +2159,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
     
     // All message handling is now done in window.onmessage
 
-    // Function to update statistics display
-    function updateStatistics(data) {
-      const { overallStats } = data;
-      
-      // Update overall statistics
-      const overallList = document.getElementById('overallStatsList');
-      overallList.innerHTML = '';
-      
-      // Sort node types by count (descending)
-      const sortedTypes = Object.entries(overallStats.nodeTypeCounts)
-        .sort(([,a], [,b]) => b - a);
-      
-      
-      
-      // Add total count
-      const totalLi = document.createElement('li');
-      totalLi.innerHTML = `
-        <strong class="type-name">TOTAL NODES</strong>
-        <strong class="type-count">${overallStats.totalNodes}</strong>
-      `;
-      overallList.appendChild(totalLi);
 
-      for (const [type, count] of sortedTypes) {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <span class="type-name">${type}</span>
-          <span class="type-count">${count}</span>
-        `;
-        overallList.appendChild(li);
-      }
-      
-      // Update the Total tab counter
-      const totalTab = document.querySelector('[data-tab="total"]');
-      if (totalTab) totalTab.textContent = `Total (${overallStats.totalNodes})`
-    }
     
 
     // Define displayComponentData in the global scope
