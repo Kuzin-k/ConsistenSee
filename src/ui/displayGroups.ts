@@ -721,3 +721,9 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
     });
   }
 };
+
+// Добавляем функцию к глобальному объекту UIModules
+if (typeof window !== 'undefined') {
+  (window as any).UIModules = (window as any).UIModules || {};
+  (window as any).UIModules.displayGroups = displayGroups;
+}

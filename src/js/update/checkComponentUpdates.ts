@@ -43,7 +43,7 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
       updatedInstances.push({ ...instance, updateStatus: 'checked' }); // Помечаем как проверенный даже при ошибке
     }
     if (i % 5 === 0) {
-      await updateProgress('check-updates', i + 1, totalComponentsToCheck, `Проверка: ${instance.name}`);
+      await updateProgress('check-updates', i + 1, totalComponentsToCheck, `Проверка: ${instance.name}`, instance.name);
     }
   }
 

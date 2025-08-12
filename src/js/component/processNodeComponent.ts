@@ -25,9 +25,7 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
         try {
           //console.log(`[processNodeComponent] Получаем mainComponent для инстанса:`, node.name);
           mainComponent = await node.getMainComponentAsync(); // Асинхронно получаем главный компонент
-          //console.log(`[processNodeComponent] Получен mainComponent:`, mainComponent ? `${mainComponent.name} (${mainComponent.remote})` : 'null');
         } catch (error: unknown) {
-          // Обработка ошибок при обработке цвета заливки
           // Обработка ошибок при получении главного компонента
           console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name}:`, error);
           figma.ui.postMessage({

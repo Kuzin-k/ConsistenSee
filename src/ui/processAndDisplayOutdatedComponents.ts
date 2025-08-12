@@ -53,4 +53,10 @@ export function processAndDisplayOutdatedComponents(
 
     // Используем функцию сортировки групп из отдельного модуля
     displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
-} 
+}
+
+// В конце файла добавить:
+if (typeof window !== 'undefined') {
+  (window as any).UIModules = (window as any).UIModules || {};
+  (window as any).UIModules.processAndDisplayOutdatedComponents = processAndDisplayOutdatedComponents;
+}

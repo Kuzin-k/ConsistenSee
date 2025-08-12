@@ -123,9 +123,8 @@ export type PluginMessage =
   | { type: 'user-info'; user: { name: string; id: string } }
   | { type: 'splash-data'; data: SplashScreenData }
   | { type: 'progress-update'; phase: string; processed: number; total: number; message: string }
-  | { type: 'update-statistics'; data: { overallStats: NodeStatistics; totalCount: number } }
-  | {
-      type: 'all-results';
+  | { type: 'display-total'; data: { overallStats: NodeStatistics; totalCount: number } }
+  | { type: 'all-results';
       components: ComponentsResult;
       colors: ColorsResult;
       colorsStroke: ColorsResult;

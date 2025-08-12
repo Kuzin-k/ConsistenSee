@@ -78,4 +78,10 @@ export function processAndDisplayComponents(
     // Используем функцию сортировки из отдельного модуля
     displayGroups(sortGroups(groupedInstances), resultsList);
     displayGroups(sortGroups(groupedIcons), iconResultsList);
-} 
+}
+
+// Добавляем функцию к глобальному объекту UIModules
+if (typeof window !== 'undefined') {
+  (window as any).UIModules = (window as any).UIModules || {};
+  (window as any).UIModules.processAndDisplayComponents = processAndDisplayComponents;
+}
