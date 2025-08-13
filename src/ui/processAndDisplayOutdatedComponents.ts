@@ -1,5 +1,6 @@
 import { displayGroups } from './displayGroups';
 import { sortGroups } from './sortGroups.js';
+import { displayVersionTag } from './displayVersionTag';
 
 /**
  * Обрабатывает и отображает устаревшие компоненты
@@ -25,9 +26,7 @@ export function processAndDisplayOutdatedComponents(
         : outdatedInstancesArray.filter((instance: any) => !instance.hidden);
 
     filteredOutdatedInstances.forEach((instance: any) => {
-        if (!showHidden && instance.hidden) {
-            return; 
-        }
+        if (!showHidden && instance.hidden) {return; }
         // Для устаревших не будем делить на иконки и не иконки, просто группируем все
         const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
         if (!groupedOutdatedInstances[groupKey]) {
@@ -52,7 +51,7 @@ export function processAndDisplayOutdatedComponents(
     if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
 
     // Используем функцию сортировки групп из отдельного модуля
-    displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
+    displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList, true);
 }
 
 // В конце файла добавить:
