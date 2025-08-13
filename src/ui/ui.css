@@ -1,10 +1,11 @@
-    :root {
+:root {
       --figma-color-bg: #ffffff;
       --figma-color-bg-brand: #0d99ff;
       --figma-color-bg-brand-hover: #007be5;
       --figma-color-bg-brand-pressed: #007be5;
       --figma-color-bg-brand-secondary: #0768cf;
       --figma-color-bg-brand-tertiary: #e5f4ff;
+      --figma-color-bg-danger-tertiary: #ffe2e0;
       --figma-color-bg-disabled: #d9d9d9;
       --figma-color-bg-hover: #f5f5f5;
       --figma-color-bg-secondary: #f5f5f5;
@@ -351,6 +352,7 @@ h3 {
 }
 
 .version-tag {
+  white-space: nowrap;
   background-color: var(--figma-color-bg-brand-tertiary);
   color: var(--figma-color-text);
   font-size: var(--font-size-small);
@@ -370,6 +372,16 @@ h3 {
   border-radius: 2px;
   font-family: monospace;
   line-height: 12px;
+}
+
+.version-tag-outdated {
+  background-color: var(--figma-color-bg-danger-tertiary);
+  color: var(--figma-color-text-danger);
+}
+
+.version-tag-latest {
+  background-color: var(--figma-color-bg-positive);
+  color: var(--figma-color-text-success);
 }
 
 .version-group {

@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Figma Plugin UI</title>
   
-</head><style>    :root {
+</head><style>:root {
       --figma-color-bg: #ffffff;
       --figma-color-bg-brand: #0d99ff;
       --figma-color-bg-brand-hover: #007be5;
       --figma-color-bg-brand-pressed: #007be5;
       --figma-color-bg-brand-secondary: #0768cf;
       --figma-color-bg-brand-tertiary: #e5f4ff;
+      --figma-color-bg-danger-tertiary: #ffe2e0;
       --figma-color-bg-disabled: #d9d9d9;
       --figma-color-bg-hover: #f5f5f5;
       --figma-color-bg-secondary: #f5f5f5;
@@ -358,6 +359,7 @@ h3 {
 }
 
 .version-tag {
+  white-space: nowrap;
   background-color: var(--figma-color-bg-brand-tertiary);
   color: var(--figma-color-text);
   font-size: var(--font-size-small);
@@ -377,6 +379,16 @@ h3 {
   border-radius: 2px;
   font-family: monospace;
   line-height: 12px;
+}
+
+.version-tag-outdated {
+  background-color: var(--figma-color-bg-danger-tertiary);
+  color: var(--figma-color-text-danger);
+}
+
+.version-tag-latest {
+  background-color: var(--figma-color-bg-positive);
+  color: var(--figma-color-text-success);
 }
 
 .version-group {
@@ -2089,8 +2101,63 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
   };
 
+  // src/ui/displayVersionTag.ts
+  function displayVersionTag(options) {
+    const {
+      instanceVersion = "none",
+      libraryVersion = "none",
+      isOutdated = false,
+      isGroupHeader = false,
+      uniqueVersions = []
+    } = options;
+    const versionGroup = document.createElement("span");
+    versionGroup.classList.add("version-group");
+    const versionBadge = document.createElement("span");
+    versionBadge.classList.add("version-tag");
+    if (isGroupHeader) {
+      const hasVersions = uniqueVersions.some((version) => version && version !== "none");
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasVersions && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      let versionText = "";
+      if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
+        versionText = uniqueVersions[0];
+      } else if (hasVersions) {
+        versionText = "_._._";
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (versionText) {
+        versionBadge.textContent = versionText;
+      } else {
+        return versionGroup;
+      }
+    } else {
+      const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasInstanceVersion && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${instanceVersion || "none"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (hasInstanceVersion) {
+        versionBadge.textContent = instanceVersion;
+        versionBadge.classList.add("version-tag-latest");
+      } else {
+        return versionGroup;
+      }
+    }
+    if (versionBadge.textContent) {
+      versionGroup.appendChild(versionBadge);
+    }
+    return versionGroup;
+  }
+
   // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList) => {
+  var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
     var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
@@ -2169,29 +2236,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
           hiddenLabel.textContent = "hidden";
           componentNameContainer.appendChild(hiddenLabel);
         }
-        const versionGroup2 = document.createElement("span");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const outdatedBadge = document.createElement("span");
-          outdatedBadge.classList.add("version-tag-updated");
-          outdatedBadge.textContent = instance.libraryComponentVersion || "";
-          versionGroup2.appendChild(outdatedBadge);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = instance.description || "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription || "";
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItem.appendChild(componentNameContainer);
         targetList.appendChild(groupItem);
         continue;
@@ -2268,58 +2320,18 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.addEventListener("mouseleave", () => {
         selectAllLink.style.visibility = "hidden";
       });
-      const versionGroup = document.createElement("span");
-      versionGroup.classList.add("version-group");
+      const versionsInGroup = group.map((item) => item.nodeVersion || "none");
+      const libraryVersionsInGroup = group.map((item) => item.libraryComponentVersion || "none");
+      const uniqueVersions = [...new Set(versionsInGroup)];
+      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
       const hasOutdatedItems = group.some((item) => item.isOutdated);
-      if (hasOutdatedItems) {
-        if (group.length === 1) {
-          const item = group[0];
-          if (item.nodeVersion) {
-            const currentVersionBadge = document.createElement("span");
-            currentVersionBadge.classList.add("version-tag");
-            currentVersionBadge.textContent = item.nodeVersion;
-            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            versionGroup.appendChild(currentVersionBadge);
-          }
-          if (item.libraryComponentVersion) {
-            const libraryVersionBadge = document.createElement("span");
-            libraryVersionBadge.classList.add("version-tag-updated");
-            libraryVersionBadge.textContent = item.libraryComponentVersion;
-            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            groupHeader.appendChild(libraryVersionBadge);
-          }
-        } else {
-          const versionBadge = document.createElement("span");
-          versionBadge.classList.add("version-tag-updated");
-          versionBadge.textContent = "NEW";
-          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
-          versionGroup.appendChild(versionBadge);
-        }
-      }
-      const versionsInGroup = group.map((item) => item.nodeVersion);
-      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
-      if (uniqueVersions.length > 0) {
-        const infoSpan = document.createElement("div");
-        infoSpan.classList.add("version-tag");
-        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
-          infoSpan.textContent = uniqueVersions[0];
-        } else {
-          infoSpan.textContent = "...";
-        }
-        versionGroup.appendChild(infoSpan);
-      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
-        const firstDescription = firstInstance.description;
-        if (group.every((item) => item.description === firstDescription)) {
-          const infoSpan = document.createElement("div");
-          infoSpan.classList.add("description-tag");
-          const fullDescription = firstInstance.description || "";
-          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-          infoSpan.textContent = truncatedDescription;
-          infoSpan.title = fullDescription || "";
-          versionGroup.appendChild(infoSpan);
-        }
-      }
-      groupHeader.appendChild(versionGroup);
+      const versionGroupHeader = displayVersionTag({
+        uniqueVersions,
+        libraryVersion: uniqueLibraryVersions[0],
+        isGroupHeader: true,
+        isOutdated: hasOutdatedItems
+      });
+      groupHeader.appendChild(versionGroupHeader);
       targetList.appendChild(groupHeader);
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
@@ -2486,32 +2498,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
         } else {
           groupItem.appendChild(componentNameContainer);
         }
-        const versionGroup2 = document.createElement("div");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const infoSpan = document.createElement("span");
-          infoSpan.classList.add("version-tag-updated");
-          infoSpan.textContent = instance.libraryComponentVersion || "";
-          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-          infoSpan.style.marginLeft = "auto";
-          versionGroup2.appendChild(infoSpan);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          infoSpan.style.marginLeft = "auto";
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription;
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItems.appendChild(groupItem);
       });
       targetList.appendChild(groupItems);
@@ -2620,8 +2614,63 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
   };
 
+  // src/ui/displayVersionTag.ts
+  function displayVersionTag(options) {
+    const {
+      instanceVersion = "none",
+      libraryVersion = "none",
+      isOutdated = false,
+      isGroupHeader = false,
+      uniqueVersions = []
+    } = options;
+    const versionGroup = document.createElement("span");
+    versionGroup.classList.add("version-group");
+    const versionBadge = document.createElement("span");
+    versionBadge.classList.add("version-tag");
+    if (isGroupHeader) {
+      const hasVersions = uniqueVersions.some((version) => version && version !== "none");
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasVersions && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      let versionText = "";
+      if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
+        versionText = uniqueVersions[0];
+      } else if (hasVersions) {
+        versionText = "_._._";
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (versionText) {
+        versionBadge.textContent = versionText;
+      } else {
+        return versionGroup;
+      }
+    } else {
+      const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasInstanceVersion && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${instanceVersion || "none"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (hasInstanceVersion) {
+        versionBadge.textContent = instanceVersion;
+        versionBadge.classList.add("version-tag-latest");
+      } else {
+        return versionGroup;
+      }
+    }
+    if (versionBadge.textContent) {
+      versionGroup.appendChild(versionBadge);
+    }
+    return versionGroup;
+  }
+
   // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList) => {
+  var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
     var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
@@ -2700,29 +2749,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
           hiddenLabel.textContent = "hidden";
           componentNameContainer.appendChild(hiddenLabel);
         }
-        const versionGroup2 = document.createElement("span");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const outdatedBadge = document.createElement("span");
-          outdatedBadge.classList.add("version-tag-updated");
-          outdatedBadge.textContent = instance.libraryComponentVersion || "";
-          versionGroup2.appendChild(outdatedBadge);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = instance.description || "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription || "";
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItem.appendChild(componentNameContainer);
         targetList.appendChild(groupItem);
         continue;
@@ -2799,58 +2833,18 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.addEventListener("mouseleave", () => {
         selectAllLink.style.visibility = "hidden";
       });
-      const versionGroup = document.createElement("span");
-      versionGroup.classList.add("version-group");
+      const versionsInGroup = group.map((item) => item.nodeVersion || "none");
+      const libraryVersionsInGroup = group.map((item) => item.libraryComponentVersion || "none");
+      const uniqueVersions = [...new Set(versionsInGroup)];
+      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
       const hasOutdatedItems = group.some((item) => item.isOutdated);
-      if (hasOutdatedItems) {
-        if (group.length === 1) {
-          const item = group[0];
-          if (item.nodeVersion) {
-            const currentVersionBadge = document.createElement("span");
-            currentVersionBadge.classList.add("version-tag");
-            currentVersionBadge.textContent = item.nodeVersion;
-            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            versionGroup.appendChild(currentVersionBadge);
-          }
-          if (item.libraryComponentVersion) {
-            const libraryVersionBadge = document.createElement("span");
-            libraryVersionBadge.classList.add("version-tag-updated");
-            libraryVersionBadge.textContent = item.libraryComponentVersion;
-            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            groupHeader.appendChild(libraryVersionBadge);
-          }
-        } else {
-          const versionBadge = document.createElement("span");
-          versionBadge.classList.add("version-tag-updated");
-          versionBadge.textContent = "NEW";
-          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
-          versionGroup.appendChild(versionBadge);
-        }
-      }
-      const versionsInGroup = group.map((item) => item.nodeVersion);
-      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
-      if (uniqueVersions.length > 0) {
-        const infoSpan = document.createElement("div");
-        infoSpan.classList.add("version-tag");
-        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
-          infoSpan.textContent = uniqueVersions[0];
-        } else {
-          infoSpan.textContent = "...";
-        }
-        versionGroup.appendChild(infoSpan);
-      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
-        const firstDescription = firstInstance.description;
-        if (group.every((item) => item.description === firstDescription)) {
-          const infoSpan = document.createElement("div");
-          infoSpan.classList.add("description-tag");
-          const fullDescription = firstInstance.description || "";
-          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-          infoSpan.textContent = truncatedDescription;
-          infoSpan.title = fullDescription || "";
-          versionGroup.appendChild(infoSpan);
-        }
-      }
-      groupHeader.appendChild(versionGroup);
+      const versionGroupHeader = displayVersionTag({
+        uniqueVersions,
+        libraryVersion: uniqueLibraryVersions[0],
+        isGroupHeader: true,
+        isOutdated: hasOutdatedItems
+      });
+      groupHeader.appendChild(versionGroupHeader);
       targetList.appendChild(groupHeader);
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
@@ -3017,32 +3011,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
         } else {
           groupItem.appendChild(componentNameContainer);
         }
-        const versionGroup2 = document.createElement("div");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const infoSpan = document.createElement("span");
-          infoSpan.classList.add("version-tag-updated");
-          infoSpan.textContent = instance.libraryComponentVersion || "";
-          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-          infoSpan.style.marginLeft = "auto";
-          versionGroup2.appendChild(infoSpan);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          infoSpan.style.marginLeft = "auto";
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription;
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItems.appendChild(groupItem);
       });
       targetList.appendChild(groupItems);
@@ -3242,8 +3218,63 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
   };
 
+  // src/ui/displayVersionTag.ts
+  function displayVersionTag(options) {
+    const {
+      instanceVersion = "none",
+      libraryVersion = "none",
+      isOutdated = false,
+      isGroupHeader = false,
+      uniqueVersions = []
+    } = options;
+    const versionGroup = document.createElement("span");
+    versionGroup.classList.add("version-group");
+    const versionBadge = document.createElement("span");
+    versionBadge.classList.add("version-tag");
+    if (isGroupHeader) {
+      const hasVersions = uniqueVersions.some((version) => version && version !== "none");
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasVersions && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      let versionText = "";
+      if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
+        versionText = uniqueVersions[0];
+      } else if (hasVersions) {
+        versionText = "_._._";
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (versionText) {
+        versionBadge.textContent = versionText;
+      } else {
+        return versionGroup;
+      }
+    } else {
+      const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasInstanceVersion && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${instanceVersion || "none"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (hasInstanceVersion) {
+        versionBadge.textContent = instanceVersion;
+        versionBadge.classList.add("version-tag-latest");
+      } else {
+        return versionGroup;
+      }
+    }
+    if (versionBadge.textContent) {
+      versionGroup.appendChild(versionBadge);
+    }
+    return versionGroup;
+  }
+
   // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList) => {
+  var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
     var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
@@ -3322,29 +3353,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
           hiddenLabel.textContent = "hidden";
           componentNameContainer.appendChild(hiddenLabel);
         }
-        const versionGroup2 = document.createElement("span");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const outdatedBadge = document.createElement("span");
-          outdatedBadge.classList.add("version-tag-updated");
-          outdatedBadge.textContent = instance.libraryComponentVersion || "";
-          versionGroup2.appendChild(outdatedBadge);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = instance.description || "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription || "";
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItem.appendChild(componentNameContainer);
         targetList.appendChild(groupItem);
         continue;
@@ -3421,58 +3437,18 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.addEventListener("mouseleave", () => {
         selectAllLink.style.visibility = "hidden";
       });
-      const versionGroup = document.createElement("span");
-      versionGroup.classList.add("version-group");
+      const versionsInGroup = group.map((item) => item.nodeVersion || "none");
+      const libraryVersionsInGroup = group.map((item) => item.libraryComponentVersion || "none");
+      const uniqueVersions = [...new Set(versionsInGroup)];
+      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
       const hasOutdatedItems = group.some((item) => item.isOutdated);
-      if (hasOutdatedItems) {
-        if (group.length === 1) {
-          const item = group[0];
-          if (item.nodeVersion) {
-            const currentVersionBadge = document.createElement("span");
-            currentVersionBadge.classList.add("version-tag");
-            currentVersionBadge.textContent = item.nodeVersion;
-            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            versionGroup.appendChild(currentVersionBadge);
-          }
-          if (item.libraryComponentVersion) {
-            const libraryVersionBadge = document.createElement("span");
-            libraryVersionBadge.classList.add("version-tag-updated");
-            libraryVersionBadge.textContent = item.libraryComponentVersion;
-            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            groupHeader.appendChild(libraryVersionBadge);
-          }
-        } else {
-          const versionBadge = document.createElement("span");
-          versionBadge.classList.add("version-tag-updated");
-          versionBadge.textContent = "NEW";
-          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
-          versionGroup.appendChild(versionBadge);
-        }
-      }
-      const versionsInGroup = group.map((item) => item.nodeVersion);
-      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
-      if (uniqueVersions.length > 0) {
-        const infoSpan = document.createElement("div");
-        infoSpan.classList.add("version-tag");
-        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
-          infoSpan.textContent = uniqueVersions[0];
-        } else {
-          infoSpan.textContent = "...";
-        }
-        versionGroup.appendChild(infoSpan);
-      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
-        const firstDescription = firstInstance.description;
-        if (group.every((item) => item.description === firstDescription)) {
-          const infoSpan = document.createElement("div");
-          infoSpan.classList.add("description-tag");
-          const fullDescription = firstInstance.description || "";
-          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-          infoSpan.textContent = truncatedDescription;
-          infoSpan.title = fullDescription || "";
-          versionGroup.appendChild(infoSpan);
-        }
-      }
-      groupHeader.appendChild(versionGroup);
+      const versionGroupHeader = displayVersionTag({
+        uniqueVersions,
+        libraryVersion: uniqueLibraryVersions[0],
+        isGroupHeader: true,
+        isOutdated: hasOutdatedItems
+      });
+      groupHeader.appendChild(versionGroupHeader);
       targetList.appendChild(groupHeader);
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
@@ -3639,32 +3615,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
         } else {
           groupItem.appendChild(componentNameContainer);
         }
-        const versionGroup2 = document.createElement("div");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const infoSpan = document.createElement("span");
-          infoSpan.classList.add("version-tag-updated");
-          infoSpan.textContent = instance.libraryComponentVersion || "";
-          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-          infoSpan.style.marginLeft = "auto";
-          versionGroup2.appendChild(infoSpan);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          infoSpan.style.marginLeft = "auto";
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription;
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItems.appendChild(groupItem);
       });
       targetList.appendChild(groupItems);
@@ -3892,8 +3850,63 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
   };
 
+  // src/ui/displayVersionTag.ts
+  function displayVersionTag(options) {
+    const {
+      instanceVersion = "none",
+      libraryVersion = "none",
+      isOutdated = false,
+      isGroupHeader = false,
+      uniqueVersions = []
+    } = options;
+    const versionGroup = document.createElement("span");
+    versionGroup.classList.add("version-group");
+    const versionBadge = document.createElement("span");
+    versionBadge.classList.add("version-tag");
+    if (isGroupHeader) {
+      const hasVersions = uniqueVersions.some((version) => version && version !== "none");
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasVersions && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      let versionText = "";
+      if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
+        versionText = uniqueVersions[0];
+      } else if (hasVersions) {
+        versionText = "_._._";
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (versionText) {
+        versionBadge.textContent = versionText;
+      } else {
+        return versionGroup;
+      }
+    } else {
+      const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
+      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+      if (!hasInstanceVersion && !hasLibraryVersion) {
+        return versionGroup;
+      }
+      if (hasLibraryVersion && isOutdated) {
+        versionBadge.textContent = `${instanceVersion || "none"} \u2192 ${libraryVersion}`;
+        versionBadge.classList.add("version-tag-outdated");
+      } else if (hasInstanceVersion) {
+        versionBadge.textContent = instanceVersion;
+        versionBadge.classList.add("version-tag-latest");
+      } else {
+        return versionGroup;
+      }
+    }
+    if (versionBadge.textContent) {
+      versionGroup.appendChild(versionBadge);
+    }
+    return versionGroup;
+  }
+
   // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList) => {
+  var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
     var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
@@ -3972,29 +3985,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
           hiddenLabel.textContent = "hidden";
           componentNameContainer.appendChild(hiddenLabel);
         }
-        const versionGroup2 = document.createElement("span");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const outdatedBadge = document.createElement("span");
-          outdatedBadge.classList.add("version-tag-updated");
-          outdatedBadge.textContent = instance.libraryComponentVersion || "";
-          versionGroup2.appendChild(outdatedBadge);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = instance.description || "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription || "";
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItem.appendChild(componentNameContainer);
         targetList.appendChild(groupItem);
         continue;
@@ -4071,58 +4069,18 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.addEventListener("mouseleave", () => {
         selectAllLink.style.visibility = "hidden";
       });
-      const versionGroup = document.createElement("span");
-      versionGroup.classList.add("version-group");
+      const versionsInGroup = group.map((item) => item.nodeVersion || "none");
+      const libraryVersionsInGroup = group.map((item) => item.libraryComponentVersion || "none");
+      const uniqueVersions = [...new Set(versionsInGroup)];
+      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
       const hasOutdatedItems = group.some((item) => item.isOutdated);
-      if (hasOutdatedItems) {
-        if (group.length === 1) {
-          const item = group[0];
-          if (item.nodeVersion) {
-            const currentVersionBadge = document.createElement("span");
-            currentVersionBadge.classList.add("version-tag");
-            currentVersionBadge.textContent = item.nodeVersion;
-            currentVersionBadge.title = "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            versionGroup.appendChild(currentVersionBadge);
-          }
-          if (item.libraryComponentVersion) {
-            const libraryVersionBadge = document.createElement("span");
-            libraryVersionBadge.classList.add("version-tag-updated");
-            libraryVersionBadge.textContent = item.libraryComponentVersion;
-            libraryVersionBadge.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-            groupHeader.appendChild(libraryVersionBadge);
-          }
-        } else {
-          const versionBadge = document.createElement("span");
-          versionBadge.classList.add("version-tag-updated");
-          versionBadge.textContent = "NEW";
-          versionBadge.title = "\u0412 \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u0435\u0441\u0442\u044C \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B";
-          versionGroup.appendChild(versionBadge);
-        }
-      }
-      const versionsInGroup = group.map((item) => item.nodeVersion);
-      const uniqueVersions = [...new Set(versionsInGroup.filter((v) => v))];
-      if (uniqueVersions.length > 0) {
-        const infoSpan = document.createElement("div");
-        infoSpan.classList.add("version-tag");
-        if (uniqueVersions.length === 1 && versionsInGroup.every((v) => v)) {
-          infoSpan.textContent = uniqueVersions[0];
-        } else {
-          infoSpan.textContent = "...";
-        }
-        versionGroup.appendChild(infoSpan);
-      } else if (firstInstance.description && targetList.id !== "iconResultsList") {
-        const firstDescription = firstInstance.description;
-        if (group.every((item) => item.description === firstDescription)) {
-          const infoSpan = document.createElement("div");
-          infoSpan.classList.add("description-tag");
-          const fullDescription = firstInstance.description || "";
-          const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-          infoSpan.textContent = truncatedDescription;
-          infoSpan.title = fullDescription || "";
-          versionGroup.appendChild(infoSpan);
-        }
-      }
-      groupHeader.appendChild(versionGroup);
+      const versionGroupHeader = displayVersionTag({
+        uniqueVersions,
+        libraryVersion: uniqueLibraryVersions[0],
+        isGroupHeader: true,
+        isOutdated: hasOutdatedItems
+      });
+      groupHeader.appendChild(versionGroupHeader);
       targetList.appendChild(groupHeader);
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
@@ -4289,32 +4247,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
         } else {
           groupItem.appendChild(componentNameContainer);
         }
-        const versionGroup2 = document.createElement("div");
-        versionGroup2.classList.add("version-group");
-        if (instance.isOutdated) {
-          const infoSpan = document.createElement("span");
-          infoSpan.classList.add("version-tag-updated");
-          infoSpan.textContent = instance.libraryComponentVersion || "";
-          infoSpan.title = "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u043D\u043E\u0432\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F";
-          infoSpan.style.marginLeft = "auto";
-          versionGroup2.appendChild(infoSpan);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
         }
-        if (instance.nodeVersion || instance.description) {
-          const infoSpan = document.createElement("div");
-          infoSpan.style.marginLeft = "auto";
-          if (instance.nodeVersion) {
-            infoSpan.classList.add("version-tag");
-            infoSpan.textContent = `${instance.nodeVersion}`;
-          } else if (instance.description && targetList.id !== "iconResultsList") {
-            infoSpan.classList.add("description-tag");
-            const fullDescription = typeof instance.description === "string" ? instance.description : typeof instance.description === "object" && instance.description ? instance.description.description || "" : "";
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription;
-          }
-          versionGroup2.appendChild(infoSpan);
-        }
-        componentNameContainer.appendChild(versionGroup2);
         groupItems.appendChild(groupItem);
       });
       targetList.appendChild(groupItems);
@@ -4373,7 +4313,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
     }
     const outdatedTab = document.querySelector('[data-tab="outdated"]');
     if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
-    displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList);
+    displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList, true);
   }
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
