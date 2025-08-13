@@ -206,16 +206,44 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
       const versionGroup = document.createElement('span');
       versionGroup.classList.add('version-group');
 
-                if (instance.isOutdated) {
-            const outdatedBadge = document.createElement('span');
-            outdatedBadge.classList.add('version-tag-updated');
-            outdatedBadge.textContent = instance.libraryComponentVersion || '';
-            versionGroup.appendChild(outdatedBadge);
+      // Для групп с устаревшими элементами
+      if (hasOutdatedItems) {
+        // Для каждого элемента в группе
+        group.forEach(item => {
+          const versionBadge = document.createElement('span');
+          versionBadge.classList.add('version-tag');
+          
+          // Текущая версия (если не определена, то X.X.X)
+          const currentVersion = item.nodeVersion || 'X.X.X';
+          
+          // Версия из библиотеки (если не определена, то X.X.X)
+          const libraryVersion = item.libraryComponentVersion || 'X.X.X';
+          
+          versionBadge.textContent = `${currentVersion} → ${libraryVersion}`;
+          
+          // Добавляем класс для устаревших элементов
+          if (item.isOutdated) {
+            versionBadge.classList.add('version-tag-outdated');
           }
+          
+          versionGroup.appendChild(versionBadge);
+        });
+      }
+      
 
-      // Добавляем версию или описание
+      if (instance.isOutdated) {
+        const infoSpan = document.createElement('span');
+        infoSpan.classList.add('version-tag-updated');
+        infoSpan.textContent = instance.libraryComponentVersion || '';
+        infoSpan.title = 'Доступна новая версия';
+        infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
+        versionGroup.appendChild(infoSpan);
+      }
+
+
       if (instance.nodeVersion || instance.description) {
         const infoSpan = document.createElement('div');
+        infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
         
         if (instance.nodeVersion) {
           infoSpan.classList.add('version-tag');
@@ -351,47 +379,6 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
     
       // Проверяем, есть ли в группе устаревшие элементы
     
-    const versionGroup = document.createElement('span');
-    versionGroup.classList.add('version-group');
-
-    const hasOutdatedItems = group.some(item => item.isOutdated);
-    if (hasOutdatedItems) {
-      if (group.length === 1) {
-        // Для группы с одним элементом показываем оба бейджа
-        const item = group[0];
-
-        // Бейдж текущей версии
-        if (item.nodeVersion) {
-          const currentVersionBadge = document.createElement('span');
-          currentVersionBadge.classList.add('version-tag');
-          currentVersionBadge.textContent = item.nodeVersion;
-          currentVersionBadge.title = 'Текущая версия';
-          versionGroup.appendChild(currentVersionBadge);
-        }
-        
-        // Бейдж актуальной версии
-        
-        if (item.libraryComponentVersion) {
-          const libraryVersionBadge = document.createElement('span');
-          libraryVersionBadge.classList.add('version-tag-updated');
-          libraryVersionBadge.textContent = item.libraryComponentVersion;
-          libraryVersionBadge.title = 'Доступна новая версия';
-          groupHeader.appendChild(libraryVersionBadge);
-        }
-    } else {
-        // Для групп с несколькими элементами показываем общую метку "NEW"
-        const versionBadge = document.createElement('span');
-        versionBadge.classList.add('version-tag-updated');
-        versionBadge.textContent = 'NEW';
-        versionBadge.title = 'В этой группе есть устаревшие компоненты';
-        versionGroup.appendChild(versionBadge);
-        
-      }
-        
-    }
-
-
-
     const versionsInGroup = group.map(item => item.nodeVersion);
     const uniqueVersions = [...new Set(versionsInGroup.filter(v => v))]; // Уникальные непустые версии
 
