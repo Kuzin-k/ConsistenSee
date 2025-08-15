@@ -577,17 +577,24 @@ h3 {
   fill: var(--figma-color-border-component-strong);
 }
 
-/* Стили для popover */
+/* Стили для popover — все визуальные параметры вынесены в CSS */
 .popover {
-  position: absolute;
+  /* Позиционирование: фиксированное относительно окна плагина, координаты задаёт JS */
+  position: fixed;
+  /* Внешний вид */
   background-color: white;
   border: 1px solid #ccc;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: none;
-  z-index: 1000;
   font-size: 12px;
-  max-width: 200px;
+  /* Максимальная ширина popover-а */
+  max-width: 500px;
+  /* По умолчанию скрыт — видимость контролируется через display в JS */
+  display: none;
+  /* Высокий z-index, чтобы перекрывать другие элементы интерфейса */
+  z-index: 10000;
+  /* Обеспечить перенос текста и читаемость */
+  word-break: break-word;
 }
 
 /* Splash Screen Styles */

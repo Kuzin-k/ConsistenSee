@@ -555,12 +555,12 @@ var compareVersions = (v1, v2) => {
   return 0;
 };
 
-// src/js/update/checkUpdate.ts
+// src/js/update/updateAvailabilityCheck.ts
 var componentUpdateCache = /* @__PURE__ */ new Map();
-var checkUpdate = async (mainComponent) => {
+var updateAvailabilityCheck = async (mainComponent) => {
   var _a2, _b;
   if (!mainComponent) {
-    console.error("checkUpdate: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
+    console.error("updateAvailabilityCheck: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
     return {
       isOutdated: false,
       importedId: null,
@@ -720,8 +720,8 @@ var checkComponentUpdates = async (componentsResult2) => {
         updatedInstances.push(instance);
         continue;
       }
-      const updateInfo = await checkUpdate(mainComponent);
-      console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 checkUpdate \u0434\u043B\u044F", instance.name, {
+      const updateInfo = await updateAvailabilityCheck(mainComponent);
+      console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 updateAvailabilityCheck \u0434\u043B\u044F", instance.name, {
         isOutdated: updateInfo.isOutdated,
         version: updateInfo.version,
         libraryComponentVersion: updateInfo.libraryComponentVersion,

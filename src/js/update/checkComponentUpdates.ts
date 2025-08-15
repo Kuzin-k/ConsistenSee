@@ -1,6 +1,6 @@
 import { ComponentData, ComponentsResult, ComponentNode } from '../../shared/types';
 import { updateProgress } from '../utils/updateProgress';
-import { checkUpdate } from '../update/checkUpdate';
+import { updateAvailabilityCheck } from './updateAvailabilityCheck';
 
 /**
  * Асинхронно проверяет обновления для списка компонентов.
@@ -29,9 +29,9 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         continue;
       }
 
-      const updateInfo = await checkUpdate(mainComponent);
+      const updateInfo = await updateAvailabilityCheck(mainComponent);
 
-      console.log('DEBUG: Результат checkUpdate для', instance.name, {
+      console.log('DEBUG: Результат updateAvailabilityCheck для', instance.name, {
         isOutdated: updateInfo.isOutdated,
         version: updateInfo.version,
         libraryComponentVersion: updateInfo.libraryComponentVersion,

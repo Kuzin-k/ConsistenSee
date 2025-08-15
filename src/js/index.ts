@@ -23,7 +23,7 @@ import { processNodeComponent }   from './component/processNodeComponent';
 import { processNodeStatistics }  from './component/processNodeStatistics';
 
 import { checkComponentUpdates }  from './update/checkComponentUpdates';
-import { clearUpdateCache }       from './update/checkUpdate';
+import { clearUpdateCache }       from './update/updateAvailabilityCheck';
 
 
 // Глобальный обработчик ошибок для wasm/memory/out of bounds

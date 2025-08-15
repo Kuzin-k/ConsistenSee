@@ -1,7 +1,7 @@
 import { getDescription } from '../component/getDescription';
 import { ComponentNode, ComponentSetNode } from '../../shared/types';
 import { getComponentCacheKey } from '../component/getComponentCacheKey';
-import { compareVersions } from '../update/compareVersions';
+import { compareVersions } from './compareVersions';
 
 /**
  * Содержит подробную информацию об актуальности компонента.
@@ -38,13 +38,13 @@ const componentUpdateCache = new Map<string, UpdateInfo>();
  * @returns {Promise<UpdateInfo>} Promise, который разрешается объектом `UpdateInfo` с информацией об обновлении.
  */
 
-export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateInfo> => {
+export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Promise<UpdateInfo> => {
   //console.log('Update check for component:', mainComponent.name);
 
   // --- 1. Проверка входных данных ---
   // Если на вход подан невалидный компонент, прекращаем выполнение и возвращаем пустой результат.
   if (!mainComponent) {
-    console.error('checkUpdate: получен пустой компонент');
+    console.error('updateAvailabilityCheck: получен пустой компонент');
     return {
       isOutdated: false,
       importedId: null,
@@ -62,7 +62,7 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
     const cacheKey = getComponentCacheKey(mainComponent);
     // Если результат для этого компонента уже есть в кэше, возвращаем его, избегая повторных вычислений.
     // if (componentUpdateCache.has(cacheKey)) {
-    //   console.log(`[Cache HIT] для checkUpdate: ${cacheKey}`);
+    //   console.log(`[Cache HIT] для updateAvailabilityCheck: ${cacheKey}`);
     //   return componentUpdateCache.get(cacheKey)!;
     // }
 

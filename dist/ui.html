@@ -584,17 +584,24 @@ h3 {
   fill: var(--figma-color-border-component-strong);
 }
 
-/* Стили для popover */
+/* Стили для popover — все визуальные параметры вынесены в CSS */
 .popover {
-  position: absolute;
+  /* Позиционирование: фиксированное относительно окна плагина, координаты задаёт JS */
+  position: fixed;
+  /* Внешний вид */
   background-color: white;
   border: 1px solid #ccc;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: none;
-  z-index: 1000;
   font-size: 12px;
-  max-width: 200px;
+  /* Максимальная ширина popover-а */
+  max-width: 500px;
+  /* По умолчанию скрыт — видимость контролируется через display в JS */
+  display: none;
+  /* Высокий z-index, чтобы перекрывать другие элементы интерфейса */
+  z-index: 10000;
+  /* Обеспечить перенос текста и читаемость */
+  word-break: break-word;
 }
 
 /* Splash Screen Styles */
@@ -1894,13 +1901,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
-    popover.style.maxWidth = "500px";
-    popover.style.position = "fixed";
-    popover.style.zIndex = "10000";
     const content = Object.entries(instance).map(([key, value]) => {
       const boldKey = `<strong>${key}:</strong>`;
       if (typeof value === "object" && value !== null) {
-        return `${boldKey} ${JSON.stringify(value)}`;
+        try {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        } catch (e) {
+          return `${boldKey} [object]`;
+        }
       }
       return `${boldKey} ${value}`;
     }).join("<br>");
@@ -1932,20 +1940,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
     parent.postMessage({
       pluginMessage: {
         type: "resize-plugin-window",
+        // Подбираем ширину/высоту с небольшим запасом (padding)
         width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        // Ensure enough width for popover + padding
         height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-        // Ensure enough height for popover + padding
       }
     }, "*");
-    icon.addEventListener("mouseleave", () => {
+    const onLeave = () => {
       popover.remove();
       parent.postMessage({
         pluginMessage: {
           type: "reset-plugin-window-size"
         }
       }, "*");
-    });
+      try {
+        icon.removeEventListener("mouseleave", onLeave);
+      } catch (e) {
+      }
+    };
+    icon.addEventListener("mouseleave", onLeave);
   };
 })();
 
@@ -2048,13 +2060,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
-    popover.style.maxWidth = "500px";
-    popover.style.position = "fixed";
-    popover.style.zIndex = "10000";
     const content = Object.entries(instance).map(([key, value]) => {
       const boldKey = `<strong>${key}:</strong>`;
       if (typeof value === "object" && value !== null) {
-        return `${boldKey} ${JSON.stringify(value)}`;
+        try {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        } catch (e) {
+          return `${boldKey} [object]`;
+        }
       }
       return `${boldKey} ${value}`;
     }).join("<br>");
@@ -2086,20 +2099,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
     parent.postMessage({
       pluginMessage: {
         type: "resize-plugin-window",
+        // Подбираем ширину/высоту с небольшим запасом (padding)
         width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        // Ensure enough width for popover + padding
         height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-        // Ensure enough height for popover + padding
       }
     }, "*");
-    icon.addEventListener("mouseleave", () => {
+    const onLeave = () => {
       popover.remove();
       parent.postMessage({
         pluginMessage: {
           type: "reset-plugin-window-size"
         }
       }, "*");
-    });
+      try {
+        icon.removeEventListener("mouseleave", onLeave);
+      } catch (e) {
+      }
+    };
+    icon.addEventListener("mouseleave", onLeave);
   };
 
   // src/ui/displayVersionTag.ts
@@ -2417,13 +2434,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
-    popover.style.maxWidth = "500px";
-    popover.style.position = "fixed";
-    popover.style.zIndex = "10000";
     const content = Object.entries(instance).map(([key, value]) => {
       const boldKey = `<strong>${key}:</strong>`;
       if (typeof value === "object" && value !== null) {
-        return `${boldKey} ${JSON.stringify(value)}`;
+        try {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        } catch (e) {
+          return `${boldKey} [object]`;
+        }
       }
       return `${boldKey} ${value}`;
     }).join("<br>");
@@ -2455,20 +2473,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
     parent.postMessage({
       pluginMessage: {
         type: "resize-plugin-window",
+        // Подбираем ширину/высоту с небольшим запасом (padding)
         width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        // Ensure enough width for popover + padding
         height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-        // Ensure enough height for popover + padding
       }
     }, "*");
-    icon.addEventListener("mouseleave", () => {
+    const onLeave = () => {
       popover.remove();
       parent.postMessage({
         pluginMessage: {
           type: "reset-plugin-window-size"
         }
       }, "*");
-    });
+      try {
+        icon.removeEventListener("mouseleave", onLeave);
+      } catch (e) {
+      }
+    };
+    icon.addEventListener("mouseleave", onLeave);
   };
 
   // src/ui/displayColorsTab.ts
@@ -2781,13 +2803,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
-    popover.style.maxWidth = "500px";
-    popover.style.position = "fixed";
-    popover.style.zIndex = "10000";
     const content = Object.entries(instance).map(([key, value]) => {
       const boldKey = `<strong>${key}:</strong>`;
       if (typeof value === "object" && value !== null) {
-        return `${boldKey} ${JSON.stringify(value)}`;
+        try {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        } catch (e) {
+          return `${boldKey} [object]`;
+        }
       }
       return `${boldKey} ${value}`;
     }).join("<br>");
@@ -2819,20 +2842,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
     parent.postMessage({
       pluginMessage: {
         type: "resize-plugin-window",
+        // Подбираем ширину/высоту с небольшим запасом (padding)
         width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        // Ensure enough width for popover + padding
         height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-        // Ensure enough height for popover + padding
       }
     }, "*");
-    icon.addEventListener("mouseleave", () => {
+    const onLeave = () => {
       popover.remove();
       parent.postMessage({
         pluginMessage: {
           type: "reset-plugin-window-size"
         }
       }, "*");
-    });
+      try {
+        icon.removeEventListener("mouseleave", onLeave);
+      } catch (e) {
+      }
+    };
+    icon.addEventListener("mouseleave", onLeave);
   };
 
   // src/ui/displayVersionTag.ts
@@ -3241,13 +3268,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
-    popover.style.maxWidth = "500px";
-    popover.style.position = "fixed";
-    popover.style.zIndex = "10000";
     const content = Object.entries(instance).map(([key, value]) => {
       const boldKey = `<strong>${key}:</strong>`;
       if (typeof value === "object" && value !== null) {
-        return `${boldKey} ${JSON.stringify(value)}`;
+        try {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        } catch (e) {
+          return `${boldKey} [object]`;
+        }
       }
       return `${boldKey} ${value}`;
     }).join("<br>");
@@ -3279,20 +3307,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
     parent.postMessage({
       pluginMessage: {
         type: "resize-plugin-window",
+        // Подбираем ширину/высоту с небольшим запасом (padding)
         width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        // Ensure enough width for popover + padding
         height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-        // Ensure enough height for popover + padding
       }
     }, "*");
-    icon.addEventListener("mouseleave", () => {
+    const onLeave = () => {
       popover.remove();
       parent.postMessage({
         pluginMessage: {
           type: "reset-plugin-window-size"
         }
       }, "*");
-    });
+      try {
+        icon.removeEventListener("mouseleave", onLeave);
+      } catch (e) {
+      }
+    };
+    icon.addEventListener("mouseleave", onLeave);
   };
 
   // src/ui/displayColorsTab.ts
@@ -3724,13 +3756,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
   var showPopover = (icon, instance) => {
     const popover = document.createElement("div");
     popover.classList.add("popover");
-    popover.style.maxWidth = "500px";
-    popover.style.position = "fixed";
-    popover.style.zIndex = "10000";
     const content = Object.entries(instance).map(([key, value]) => {
       const boldKey = `<strong>${key}:</strong>`;
       if (typeof value === "object" && value !== null) {
-        return `${boldKey} ${JSON.stringify(value)}`;
+        try {
+          return `${boldKey} ${JSON.stringify(value)}`;
+        } catch (e) {
+          return `${boldKey} [object]`;
+        }
       }
       return `${boldKey} ${value}`;
     }).join("<br>");
@@ -3762,20 +3795,24 @@ document.getElementById('setComponentData').addEventListener('click', function()
     parent.postMessage({
       pluginMessage: {
         type: "resize-plugin-window",
+        // Подбираем ширину/высоту с небольшим запасом (padding)
         width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        // Ensure enough width for popover + padding
         height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-        // Ensure enough height for popover + padding
       }
     }, "*");
-    icon.addEventListener("mouseleave", () => {
+    const onLeave = () => {
       popover.remove();
       parent.postMessage({
         pluginMessage: {
           type: "reset-plugin-window-size"
         }
       }, "*");
-    });
+      try {
+        icon.removeEventListener("mouseleave", onLeave);
+      } catch (e) {
+      }
+    };
+    icon.addEventListener("mouseleave", onLeave);
   };
 
   // src/ui/displayVersionTag.ts
