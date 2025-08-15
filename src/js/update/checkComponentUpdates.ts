@@ -31,11 +31,18 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
 
       const updateInfo = await checkUpdate(mainComponent);
 
+      console.log('DEBUG: Результат checkUpdate для', instance.name, {
+        isOutdated: updateInfo.isOutdated,
+        version: updateInfo.version,
+        libraryComponentVersion: updateInfo.libraryComponentVersion,
+        isLost: updateInfo.isLost
+      });
+
       updatedInstances.push({
         ...instance,
         isOutdated: updateInfo.isOutdated,
         libraryComponentId: updateInfo.libraryComponentId,
-        libraryComponentVersion: updateInfo.isOutdated && !updateInfo.libraryComponentVersion ? 'NEW' : updateInfo.libraryComponentVersion,
+        libraryComponentVersion: updateInfo.libraryComponentVersion,
         updateStatus: 'checked',
       });
     } catch (componentError) {

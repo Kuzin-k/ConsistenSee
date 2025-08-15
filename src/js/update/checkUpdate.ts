@@ -39,7 +39,7 @@ const componentUpdateCache = new Map<string, UpdateInfo>();
  */
 
 export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateInfo> => {
-  console.log('Update check for component:', mainComponent.name);
+  //console.log('Update check for component:', mainComponent.name);
 
   // --- 1. Проверка входных данных ---
   // Если на вход подан невалидный компонент, прекращаем выполнение и возвращаем пустой результат.
@@ -61,10 +61,10 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
     // Формируем уникальный ключ для кэширования на основе ID и имени компонента.
     const cacheKey = getComponentCacheKey(mainComponent);
     // Если результат для этого компонента уже есть в кэше, возвращаем его, избегая повторных вычислений.
-    if (componentUpdateCache.has(cacheKey)) {
-      console.log(`[Cache HIT] для checkUpdate: ${cacheKey}`);
-      return componentUpdateCache.get(cacheKey)!;
-    }
+    // if (componentUpdateCache.has(cacheKey)) {
+    //   console.log(`[Cache HIT] для checkUpdate: ${cacheKey}`);
+    //   return componentUpdateCache.get(cacheKey)!;
+    // }
 
     // --- 4. Получение данных локального компонента ---
     // Асинхронно извлекаем версию и описание из данных локального компонента.
@@ -114,7 +114,7 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
             if (!importedComponentInSet.id) {
               // Это аномальная ситуация, компонент должен иметь ID.
               console.error(`Ошибка: Импортированный компонент "${importedComponentInSet.name}" в наборе "${importedSet.name}" не имеет ID.`);
-              result.isOutdated = true; // Считаем устаревшим из-за ошибки.
+              result.isOutdated = false; // Считаем устаревшим из-за ошибки.
               result.isLost = true; // Считаем потерянным.
               result.description = (result.description || '') + ' [Error: Imported component in set has no ID]';
             } else {
@@ -133,7 +133,7 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
       } catch (setError) {
         // Обрабатываем ошибки, которые могут возникнуть при импорте набора (например, удален или нет доступа).
         console.error(`Ошибка при импорте набора компонентов для "${mainComponent.name}":`, setError);
-        result.isOutdated = true; // Считаем компонент устаревшим, так как не можем проверить его актуальность.
+        result.isOutdated = false; // Считаем компонент устаревшим, так как не можем проверить его актуальность.
         result.isLost = true;
         result.description = (result.description || '') + ' [Error: Failed to import component set]';
       }
@@ -146,7 +146,7 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
           // Проверяем наличие ID у импортированного компонента.
           if (!importedComponent.id) {
             console.error(`Ошибка: Импортированный одиночный компонент "${importedComponent.name}" не имеет ID.`);
-            result.isOutdated = true;
+            result.isOutdated = false;
             result.isLost = true;
             result.description = (result.description || '') + ' [Error: Imported component has no ID]';
           } else {
@@ -160,7 +160,7 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
       } catch (componentError) {
         // Обрабатываем ошибки при импорте одиночного компонента.
         console.error(`Ошибка при импорте одиночного компонента "${mainComponent.name}":`, componentError);
-        result.isOutdated = true;
+        result.isOutdated = false;
         result.isLost = true;
         result.description = (result.description || '') + ' [Error: Failed to import component]';
       }
@@ -182,12 +182,16 @@ export const checkUpdate = async (mainComponent: ComponentNode): Promise<UpdateI
       // --- 8a. Сравнение по строкам версий ---
       // Если и у локального, и у библиотечного компонента есть версии, сравниваем их.
       if (mainComponentVersion && libraryVersion) {
-        // `compareVersions` вернет < 0, если локальная версия "меньше" библиотечной.
+        console.log('Сравнение версий:', {
+          componentName: mainComponent.name,
+          mainComponentVersion,
+          libraryVersion,
+          compareResult: compareVersions(mainComponentVersion, libraryVersion)
+        });
         result.isOutdated = compareVersions(mainComponentVersion, libraryVersion) < 0;
       } else if (importedComponentIdForComparison) {
-        // --- 8b. Сравнение по ID (запасной вариант) ---
-        // Если версии отсутствуют, сравниваем ID. Несовпадение ID означает, что локальный компонент не является последней версией.
-        result.isOutdated = importedComponentIdForComparison !== mainComponent.id;
+        // Если версии отсутствуют, сравниваем ID
+        result.isOutdated = false; // Эта строка закомментирована выше
       }
     }
 

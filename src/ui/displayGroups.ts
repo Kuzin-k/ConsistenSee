@@ -54,6 +54,7 @@ interface GroupedData {
 
 import { createIcon } from './createIcon';
 import { showPopover } from './showPopover';
+import { displayVersionTag } from './displayVersionTag';
 
 // Основная функция отображения групп
 /**
@@ -91,7 +92,7 @@ import { showPopover } from './showPopover';
  *       - **Для цветов:** Дополнительно рендерится детальная информация о цвете (HEX-код, имя переменной, коллекция).
  * 6.  **Фильтрация:** Учитывает состояние переключателя "Show hidden" для отображения или скрытия невидимых элементов.
  */
-export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement): void => {
+export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement, isOutdatedTab: boolean = false): void => {
   const showHidden = document.getElementById('showHiddenToggle') ? 
     (document.getElementById('showHiddenToggle') as HTMLInputElement).checked : true;
   
@@ -203,37 +204,15 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
           componentNameContainer.appendChild(hiddenLabel);
         }
 
-      const versionGroup = document.createElement('span');
-      versionGroup.classList.add('version-group');
-
-                if (instance.isOutdated) {
-            const outdatedBadge = document.createElement('span');
-            outdatedBadge.classList.add('version-tag-updated');
-            outdatedBadge.textContent = instance.libraryComponentVersion || '';
-            versionGroup.appendChild(outdatedBadge);
-          }
-
-      // Добавляем версию или описание
-      if (instance.nodeVersion || instance.description) {
-        const infoSpan = document.createElement('div');
-        
-        if (instance.nodeVersion) {
-          infoSpan.classList.add('version-tag');
-          infoSpan.textContent = `${instance.nodeVersion}`;
-        } 
-        else if (instance.description && targetList.id !=='iconResultsList') {
-          infoSpan.classList.add('description-tag');
-                      const fullDescription = instance.description || '';
-            const truncatedDescription = fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription || '';
-        }
-
-        versionGroup.appendChild(infoSpan);
-      }
-
-      componentNameContainer.appendChild(versionGroup);
-
+      // тег версии для одиночного элемента на первом уровне
+      const versionGroup = displayVersionTag({
+        instanceVersion: instance.nodeVersion,
+        libraryVersion: instance.libraryComponentVersion,
+        isOutdated: instance.isOutdated
+      });
+      if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
+      
+      
       groupItem.appendChild(componentNameContainer);
       targetList.appendChild(groupItem);
       continue; // Переходим к следующей группе
@@ -349,80 +328,23 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
         selectAllLink.style.visibility = 'hidden';
       });
     
-      // Проверяем, есть ли в группе устаревшие элементы
-    
-    const versionGroup = document.createElement('span');
-    versionGroup.classList.add('version-group');
-
-    const hasOutdatedItems = group.some(item => item.isOutdated);
-    if (hasOutdatedItems) {
-      if (group.length === 1) {
-        // Для группы с одним элементом показываем оба бейджа
-        const item = group[0];
-
-        // Бейдж текущей версии
-        if (item.nodeVersion) {
-          const currentVersionBadge = document.createElement('span');
-          currentVersionBadge.classList.add('version-tag');
-          currentVersionBadge.textContent = item.nodeVersion;
-          currentVersionBadge.title = 'Текущая версия';
-          versionGroup.appendChild(currentVersionBadge);
-        }
-        
-        // Бейдж актуальной версии
-        
-        if (item.libraryComponentVersion) {
-          const libraryVersionBadge = document.createElement('span');
-          libraryVersionBadge.classList.add('version-tag-updated');
-          libraryVersionBadge.textContent = item.libraryComponentVersion;
-          libraryVersionBadge.title = 'Доступна новая версия';
-          groupHeader.appendChild(libraryVersionBadge);
-        }
-    } else {
-        // Для групп с несколькими элементами показываем общую метку "NEW"
-        const versionBadge = document.createElement('span');
-        versionBadge.classList.add('version-tag-updated');
-        versionBadge.textContent = 'NEW';
-        versionBadge.title = 'В этой группе есть устаревшие компоненты';
-        versionGroup.appendChild(versionBadge);
-        
-      }
-        
-    }
-
-
-
-    const versionsInGroup = group.map(item => item.nodeVersion);
-    const uniqueVersions = [...new Set(versionsInGroup.filter(v => v))]; // Уникальные непустые версии
-
-    if (uniqueVersions.length > 0) {
-      // В группе есть хотя бы один элемент с версией.
-      const infoSpan = document.createElement('div');
-      infoSpan.classList.add('version-tag');
-
-      // Если только одна уникальная версия И у всех элементов есть версия
-      if (uniqueVersions.length === 1 && versionsInGroup.every(v => v)) {
-        infoSpan.textContent = uniqueVersions[0];
-      } else {
-        // Либо несколько версий, либо у некоторых элементов нет версии
-        infoSpan.textContent = '...';
-      }
-      versionGroup.appendChild(infoSpan);
-    } else if (firstInstance.description && targetList.id !== 'iconResultsList') {
-      // Запасной вариант с описанием, если в группе нет версий
-      const firstDescription = firstInstance.description;
-      if (group.every(item => item.description === firstDescription)) {
-        const infoSpan = document.createElement('div');
-        infoSpan.classList.add('description-tag');
-                    const fullDescription = firstInstance.description || '';
-            const truncatedDescription =
-              fullDescription.length > 10 ? `${fullDescription.substring(0, 10)}...` : fullDescription;
-            infoSpan.textContent = truncatedDescription;
-            infoSpan.title = fullDescription || '';
-        versionGroup.appendChild(infoSpan);
-      }
-    }
-    groupHeader.appendChild(versionGroup);
+      // Бейдж версии заголовка группы
+      const versionsInGroup = group.map(item => item.nodeVersion || 'none');
+      const libraryVersionsInGroup = group.map(item => item.libraryComponentVersion || 'none');
+      const uniqueVersions = [...new Set(versionsInGroup)];
+      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
+      
+      // Проверяем, есть ли устаревшие элементы в группе
+      const hasOutdatedItems = group.some(item => item.isOutdated);
+      
+      const versionGroupHeader = displayVersionTag({
+        uniqueVersions: uniqueVersions,
+        libraryVersion: uniqueLibraryVersions[0],
+        isGroupHeader: true,
+        isOutdated: hasOutdatedItems
+      });
+      
+      groupHeader.appendChild(versionGroupHeader);
 
     targetList.appendChild(groupHeader);
 
@@ -672,46 +594,14 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement)
         groupItem.appendChild(componentNameContainer);
       }
 
-      
-        
-      const versionGroup = document.createElement('div');
-      versionGroup.classList.add('version-group');
+      // тег версии одиночного элемента внутри группы 
+      const versionGroup = displayVersionTag({
+        instanceVersion: instance.nodeVersion,
+        libraryVersion: instance.libraryComponentVersion,
+        isOutdated: instance.isOutdated
+      });
 
-      
-
-      if (instance.isOutdated) {
-        const infoSpan = document.createElement('span');
-        infoSpan.classList.add('version-tag-updated');
-        infoSpan.textContent = instance.libraryComponentVersion || '';
-        infoSpan.title = 'Доступна новая версия';
-        infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
-        versionGroup.appendChild(infoSpan);
-      }
-
-
-      if (instance.nodeVersion || instance.description) {
-        const infoSpan = document.createElement('div');
-        infoSpan.style.marginLeft = 'auto'; // Прижимаем к правому краю
-        
-        if (instance.nodeVersion) {
-          infoSpan.classList.add('version-tag');
-          infoSpan.textContent = `${instance.nodeVersion}`;
-        } 
-        else if (instance.description && targetList.id !=='iconResultsList') {
-          infoSpan.classList.add('description-tag');
-                      const fullDescription = typeof instance.description === 'string' 
-              ? instance.description 
-              : (typeof instance.description === 'object' && instance.description ? (instance.description as any).description || '' : '');
-        const truncatedDescription =
-          fullDescription.length > 10
-            ? `${fullDescription.substring(0, 10)}...`
-            : fullDescription;
-          infoSpan.textContent = truncatedDescription;
-         infoSpan.title = fullDescription;
-        }
-        versionGroup.appendChild(infoSpan);  
-      }
-      componentNameContainer.appendChild(versionGroup);
+      if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
       groupItems.appendChild(groupItem);
     });
     targetList.appendChild(groupItems);
