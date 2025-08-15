@@ -559,7 +559,6 @@ var compareVersions = (v1, v2) => {
 var componentUpdateCache = /* @__PURE__ */ new Map();
 var checkUpdate = async (mainComponent) => {
   var _a2, _b;
-  console.log("Update check for component:", mainComponent.name);
   if (!mainComponent) {
     console.error("checkUpdate: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
     return {
@@ -573,10 +572,6 @@ var checkUpdate = async (mainComponent) => {
   }
   try {
     const cacheKey = getComponentCacheKey(mainComponent);
-    if (componentUpdateCache.has(cacheKey)) {
-      console.log(`[Cache HIT] \u0434\u043B\u044F checkUpdate: ${cacheKey}`);
-      return componentUpdateCache.get(cacheKey);
-    }
     const mainComponentDescData = await getDescription(mainComponent);
     const mainComponentVersion = mainComponentDescData.nodeVersion;
     const result = {
@@ -610,7 +605,7 @@ var checkUpdate = async (mainComponent) => {
           if (importedComponentInSet) {
             if (!importedComponentInSet.id) {
               console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponentInSet.name}" \u0432 \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
-              result.isOutdated = true;
+              result.isOutdated = false;
               result.isLost = true;
               result.description = (result.description || "") + " [Error: Imported component in set has no ID]";
             } else {
@@ -625,7 +620,7 @@ var checkUpdate = async (mainComponent) => {
         }
       } catch (setError) {
         console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043D\u0430\u0431\u043E\u0440\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}":`, setError);
-        result.isOutdated = true;
+        result.isOutdated = false;
         result.isLost = true;
         result.description = (result.description || "") + " [Error: Failed to import component set]";
       }
@@ -635,7 +630,7 @@ var checkUpdate = async (mainComponent) => {
         if (importedComponent) {
           if (!importedComponent.id) {
             console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponent.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
-            result.isOutdated = true;
+            result.isOutdated = false;
             result.isLost = true;
             result.description = (result.description || "") + " [Error: Imported component has no ID]";
           } else {
@@ -647,7 +642,7 @@ var checkUpdate = async (mainComponent) => {
         }
       } catch (componentError) {
         console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent.name}":`, componentError);
-        result.isOutdated = true;
+        result.isOutdated = false;
         result.isLost = true;
         result.description = (result.description || "") + " [Error: Failed to import component]";
       }
@@ -660,9 +655,15 @@ var checkUpdate = async (mainComponent) => {
         result.description = libraryDescData.description;
       }
       if (mainComponentVersion && libraryVersion) {
+        console.log("\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0432\u0435\u0440\u0441\u0438\u0439:", {
+          componentName: mainComponent.name,
+          mainComponentVersion,
+          libraryVersion,
+          compareResult: compareVersions(mainComponentVersion, libraryVersion)
+        });
         result.isOutdated = compareVersions(mainComponentVersion, libraryVersion) < 0;
       } else if (importedComponentIdForComparison) {
-        result.isOutdated = importedComponentIdForComparison !== mainComponent.id;
+        result.isOutdated = false;
       }
     }
     componentUpdateCache.set(cacheKey, result);
@@ -720,10 +721,16 @@ var checkComponentUpdates = async (componentsResult2) => {
         continue;
       }
       const updateInfo = await checkUpdate(mainComponent);
+      console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 checkUpdate \u0434\u043B\u044F", instance.name, {
+        isOutdated: updateInfo.isOutdated,
+        version: updateInfo.version,
+        libraryComponentVersion: updateInfo.libraryComponentVersion,
+        isLost: updateInfo.isLost
+      });
       updatedInstances.push(__spreadProps(__spreadValues({}, instance), {
         isOutdated: updateInfo.isOutdated,
         libraryComponentId: updateInfo.libraryComponentId,
-        libraryComponentVersion: updateInfo.isOutdated && !updateInfo.libraryComponentVersion ? "NEW" : updateInfo.libraryComponentVersion,
+        libraryComponentVersion: updateInfo.libraryComponentVersion,
         updateStatus: "checked"
       }));
     } catch (componentError) {
