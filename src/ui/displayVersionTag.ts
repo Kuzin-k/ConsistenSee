@@ -20,10 +20,12 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   const {
     instanceVersion = 'none',
     libraryVersion = 'none', 
-    isOutdated = false,
+    isOutdated = '',
     isGroupHeader = false,
     uniqueVersions = []
   } = options;
+
+  let versionText = '';
 
   // Создаем контейнер для версионного тега
   const versionGroup = document.createElement('span');
@@ -40,11 +42,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
     const hasLibraryVersion = libraryVersion && libraryVersion !== 'none';
     
     // Если у всех элементов группы нет версии и у библиотеки нет версии, тег не отображается
-    if (!hasVersions && !hasLibraryVersion) {
-      return versionGroup; // Возвращаем пустой контейнер
-    }
-    
-    let versionText = '';
+    if (!hasVersions && !hasLibraryVersion) {return versionGroup;} // Возвращаем пустой контейнер
     
     // Определяем текст версии
     if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== 'none') {
@@ -65,7 +63,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       return versionGroup; // Возвращаем пустой контейнер если нет текста
     }
   } else {
-    // Обрабатываем отдельные элементы (не заголовки групп) - единая логика для всех вкладок
+    // Обрабатываем отдельные элементы (не заголовки групп)
     const hasInstanceVersion = instanceVersion && instanceVersion !== 'none';
     const hasLibraryVersion = libraryVersion && libraryVersion !== 'none';
     
@@ -82,7 +80,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       // Показываем только версию элемента если она есть
       versionBadge.textContent = instanceVersion;
       // Если есть версия и она не просрочена помечаем зеленым
-      if (isOutdated===false) versionBadge.classList.add('version-tag-latest');
+      if (isOutdated === false) {versionBadge.classList.add('version-tag-latest');}
     } else {
       // Если нет версии элемента, но есть версия библиотеки (без isOutdated)
       return versionGroup; // Возвращаем пустой контейнер
@@ -90,9 +88,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   }
 
   // Добавляем тег в контейнер только если есть текст для отображения
-  if (versionBadge.textContent) {
-    versionGroup.appendChild(versionBadge);
-  }
+  if (versionBadge.textContent) {versionGroup.appendChild(versionBadge);}
 
   return versionGroup;
 }

@@ -125,17 +125,54 @@ if (selectedSplashData) {
   } as PluginMessage);
 }
 
-// Глобальные переменные с правильной типизацией
+/**
+ * @fileoverview This file contains the main logic for the ConsistenSee Figma plugin.
+ * It handles communication between the UI and the Figma API, processes nodes,
+ * and manages data caching.
+ */
+
+/**
+ * Global variable to store the results of the last color scan.
+ * @type {ColorsResult | null}
+ */
 let lastColorsData: ColorsResult | null = null; // To hold color data between checks
+
+/**
+ * Array to store statistics for all processed nodes.
+ * @type {NodeStatistics[]}
+ */
 let totalStatsList: NodeStatistics[] = [];
+
+/**
+ * Timestamp for the start of the analysis process.
+ * @type {number}
+ */
 let startTime: number = 0;
+
+/**
+ * The current selection of nodes in the Figma document.
+ * @type {readonly SceneNode[]}
+ */
 let selection: readonly SceneNode[] = [];
 
 // Кэши
+/**
+ * Cache for storing the update status of components.
+ * @type {Map<string, boolean>}
+ */
 const componentUpdateCache: Map<string, boolean> = new Map();
+
+/**
+ * Cache for storing the publish status of main components.
+ * @type {Map<string, PublishStatus>}
+ */
 const publishStatusCache: Map<string, PublishStatus> = new Map();
 
 // Результаты (инициализируются перед каждым запуском)
+/**
+ * Object to store the results of the component analysis.
+ * @type {ComponentsResult}
+ */
 let componentsResult: ComponentsResult = {
   instances: [],
   counts: {
@@ -157,8 +194,9 @@ let colorsResultStroke: ColorsResult = {
 };
 
 /**
- * Основной обработчик сообщений от UI плагина
- * Обрабатывает различные команды, поступающие из пользовательского интерфейса.
+ * Main message handler for messages from the plugin's UI.
+ * Handles various commands coming from the user interface.
+ * @param {UIMessage} msg The message object from the UI.
  */
 figma.ui.onmessage = async (msg: UIMessage) => {
   console.log('Получено сообщение от UI:', msg.type);
@@ -169,7 +207,10 @@ figma.ui.onmessage = async (msg: UIMessage) => {
   // Обработчики для работы с данными компонента (get-component-data, clear-component-data)
   // Логика этих обработчиков находится ниже в этом же блоке onmessage
 
-  // Обработка основного запроса на анализ всех элементов в выделенной области
+  /**
+   * Handles the 'check-all' command from the UI.
+   * This command initiates a full analysis of the selected nodes.
+   */
   if (msg.type === 'check-all') {
       // Очищаем все кэши перед новым поиском
       clearUpdateCache();

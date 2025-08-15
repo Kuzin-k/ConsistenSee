@@ -2106,10 +2106,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
     const {
       instanceVersion = "none",
       libraryVersion = "none",
-      isOutdated = false,
+      isOutdated = "",
       isGroupHeader = false,
       uniqueVersions = []
     } = options;
+    let versionText = "";
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -2120,7 +2121,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (!hasVersions && !hasLibraryVersion) {
         return versionGroup;
       }
-      let versionText = "";
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
@@ -2145,7 +2145,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
         versionBadge.classList.add("version-tag-outdated");
       } else if (hasInstanceVersion) {
         versionBadge.textContent = instanceVersion;
-        versionBadge.classList.add("version-tag-latest");
+        if (isOutdated === false) {
+          versionBadge.classList.add("version-tag-latest");
+        }
       } else {
         return versionGroup;
       }
@@ -2619,10 +2621,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
     const {
       instanceVersion = "none",
       libraryVersion = "none",
-      isOutdated = false,
+      isOutdated = "",
       isGroupHeader = false,
       uniqueVersions = []
     } = options;
+    let versionText = "";
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -2633,7 +2636,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (!hasVersions && !hasLibraryVersion) {
         return versionGroup;
       }
-      let versionText = "";
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
@@ -2658,7 +2660,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
         versionBadge.classList.add("version-tag-outdated");
       } else if (hasInstanceVersion) {
         versionBadge.textContent = instanceVersion;
-        versionBadge.classList.add("version-tag-latest");
+        if (isOutdated === false) {
+          versionBadge.classList.add("version-tag-latest");
+        }
       } else {
         return versionGroup;
       }
@@ -3223,10 +3227,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
     const {
       instanceVersion = "none",
       libraryVersion = "none",
-      isOutdated = false,
+      isOutdated = "",
       isGroupHeader = false,
       uniqueVersions = []
     } = options;
+    let versionText = "";
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -3237,7 +3242,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (!hasVersions && !hasLibraryVersion) {
         return versionGroup;
       }
-      let versionText = "";
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
@@ -3262,7 +3266,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
         versionBadge.classList.add("version-tag-outdated");
       } else if (hasInstanceVersion) {
         versionBadge.textContent = instanceVersion;
-        versionBadge.classList.add("version-tag-latest");
+        if (isOutdated === false) {
+          versionBadge.classList.add("version-tag-latest");
+        }
       } else {
         return versionGroup;
       }
@@ -3855,10 +3861,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
     const {
       instanceVersion = "none",
       libraryVersion = "none",
-      isOutdated = false,
+      isOutdated = "",
       isGroupHeader = false,
       uniqueVersions = []
     } = options;
+    let versionText = "";
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -3869,7 +3876,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (!hasVersions && !hasLibraryVersion) {
         return versionGroup;
       }
-      let versionText = "";
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
@@ -3894,7 +3900,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
         versionBadge.classList.add("version-tag-outdated");
       } else if (hasInstanceVersion) {
         versionBadge.textContent = instanceVersion;
-        versionBadge.classList.add("version-tag-latest");
+        if (isOutdated === false) {
+          versionBadge.classList.add("version-tag-latest");
+        }
       } else {
         return versionGroup;
       }
