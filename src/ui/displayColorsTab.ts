@@ -92,7 +92,7 @@ import { displayVersionTag } from './displayVersionTag';
  *       - **Для цветов:** Дополнительно рендерится детальная информация о цвете (HEX-код, имя переменной, коллекция).
  * 6.  **Фильтрация:** Учитывает состояние переключателя "Show hidden" для отображения или скрытия невидимых элементов.
  */
-export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement, isOutdatedTab: boolean = false): void => {
+export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLElement, isOutdatedTab: boolean = false): void => {
   const showHidden = document.getElementById('showHiddenToggle') ? 
     (document.getElementById('showHiddenToggle') as HTMLInputElement).checked : true;
   
@@ -105,7 +105,19 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
     console.error('Target list or its ID is undefined.');
     return;
   }
- 
+  if (targetList.id === 'colorResultsList') headerText = 'Fill';
+  if (targetList.id === 'colorStrokeResultsList') headerText = 'Stroke';
+  if (headerText) {
+    // Удаляем предыдущий заголовок, если он есть
+    const prevHeader = targetList.previousElementSibling;
+    if (prevHeader && prevHeader.classList.contains('section-header')) {
+      prevHeader.remove();
+    }
+    const header = document.createElement('div');
+    header.className = 'section-header';
+    header.textContent = headerText;
+    targetList.parentNode?.insertBefore(header, targetList);
+  }
   
   // Логика для подсчета имен
   const nameCount: { [key: string]: number } = {};
@@ -122,87 +134,6 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
     const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName 
       : firstInstance.mainComponentName ? firstInstance.mainComponentName 
       : firstInstance.name;
-    
-    // Если в группе только один элемент, показываем его без группировки
-    if (group.length === 1) {
-      const instance = group[0];
-      const groupItem = document.createElement('ul');
-      groupItem.classList.add('group-header');
-
-      const componentNameContainer = document.createElement('span');
-      componentNameContainer.classList.add('component-name-container');
-
-      // Добавляем иконку для элемента
-      const itemIcon = createIcon(instance.type);
-      componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
-
-      // Добавляем обработчик клика для иконки
-      itemIcon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        parent.postMessage(
-          {
-            pluginMessage: {
-              type: 'scroll-to-node',
-              nodeId: instance.nodeId,
-            },
-          },
-          '*'
-        );
-      });
-
-      // Добавляем popover при наведении на иконку
-      itemIcon.addEventListener('mouseenter', () => {showPopover(itemIcon, instance);});
-
-      // Создаем ссылку на название инстанса
-      const nameLink = document.createElement('a');
-      nameLink.href = '#';
-      nameLink.classList.add('component-link');
-      nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : (instance.mainComponentName || '');
-      
-      nameLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        parent.postMessage(
-          {
-            pluginMessage: {
-              type: 'scroll-to-node',
-              nodeId: instance.nodeId,
-            },
-          },
-          '*'
-        );
-      });
-
-      componentNameContainer.appendChild(nameLink);
-      
-      // Добавляем имя родительского компонента
-      if (instance.parentName) {
-        const parentName = document.createElement('span');
-        parentName.classList.add('parent-component-name');
-        parentName.textContent = 'in ' + instance.parentName;
-        componentNameContainer.appendChild(parentName);
-      }
-
-      // Добавляем метку hidden, если элемент скрыт
-      if (instance.hidden) {
-          const hiddenLabel = document.createElement('span');
-          hiddenLabel.classList.add('hidden-label');
-          hiddenLabel.textContent = 'hidden';
-          componentNameContainer.appendChild(hiddenLabel);
-        }
-
-      // тег версии для одиночного элемента на первом уровне
-      const versionGroup = displayVersionTag({
-        instanceVersion: instance.nodeVersion,
-        libraryVersion: instance.libraryComponentVersion,
-        isOutdated: instance.isOutdated
-      });
-      if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
-      
-      
-      groupItem.appendChild(componentNameContainer);
-      targetList.appendChild(groupItem);
-      continue; // Переходим к следующей группе
-    }
 
     // Для групп с более чем одним элементом оставляем существующую логику
     const groupHeader = document.createElement('ul');
@@ -211,18 +142,43 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
     const groupName = document.createElement('div');
     groupName.classList.add('group-name');
 
-    // иконка для инстансов и прочих элементов
-    const groupicon = document.createElement('div');
-    groupicon.classList.add('instance-icon');
-    const icon = createIcon(firstInstance.type);
-    groupicon.appendChild(icon);
-    groupHeader.appendChild(groupicon);
+    // Создаем цветной квадратик для fill
+    if (targetList.id === 'colorResultsList') {
+        const fillSwatch = document.createElement('div');
+        fillSwatch.classList.add('group-color-icon');
+        fillSwatch.style.backgroundColor = firstInstance.fill || '';
+        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
+          fillSwatch.style.borderRadius = '999px'; // круг
+        }
+        groupHeader.appendChild(fillSwatch);
+      }
+      else if (targetList.id === 'colorStrokeResultsList') {
+        // Создаем цветной квадратик для stroke
+        const strokeSwatch = document.createElement('div');
+        strokeSwatch.classList.add('group-color-icon');
+        strokeSwatch.style.backgroundColor = firstInstance.stroke || '';
+        // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
+          if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
+            strokeSwatch.style.borderRadius = '999px'; // круг
+          }
+          groupHeader.appendChild(strokeSwatch);
+      }
+
     
     //ТУТ заголовки групп
      // Формируем groupName через innerHTML для корректного применения форматирования
       let groupNameHtml = '';
-      groupNameHtml += name;
+      if (targetList.id === 'colorResultsList') 
+      {
+        groupNameHtml += (firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill);
+        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : '';
+      } else if (targetList.id === 'colorStrokeResultsList') 
+      {
+        groupNameHtml += (firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke);
+        groupNameHtml += firstInstance.stroke_collection_name? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : '';
+      } 
       groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+      
       groupName.innerHTML = groupNameHtml;
       
 
@@ -239,7 +195,6 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
       selectAllLink.href = '#';
       selectAllLink.classList.add('select-all-link');
       selectAllLink.title = 'Select all'; // Добавляем атрибут title для отображения tooltip
-      
       // Создаем SVG иконку вместо текста
       const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svgIcon.setAttribute('width', '20');
@@ -280,23 +235,6 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
         selectAllLink.style.visibility = 'hidden';
       });
     
-      // Бейдж версии заголовка группы
-      const versionsInGroup = group.map(item => item.nodeVersion || 'none');
-      const libraryVersionsInGroup = group.map(item => item.libraryComponentVersion || 'none');
-      const uniqueVersions = [...new Set(versionsInGroup)];
-      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
-      
-      // Проверяем, есть ли устаревшие элементы в группе
-      const hasOutdatedItems = group.some(item => item.isOutdated);
-      
-      const versionGroupHeader = displayVersionTag({
-        uniqueVersions: uniqueVersions,
-        libraryVersion: uniqueLibraryVersions[0],
-        isGroupHeader: true,
-        isOutdated: hasOutdatedItems
-      });
-      
-      groupHeader.appendChild(versionGroupHeader);
 
     targetList.appendChild(groupHeader);
 
@@ -375,19 +313,173 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
       }
 
       // Добавляем информацию о цвете, если это элемент с цветом
-      groupItem.appendChild(componentNameContainer);
+      if (instance.color) {
+        // Проверяем, есть ли переменные без имен
+        const hasMissingVariables = 
+          (instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === '')) ||
+          (instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === ''));
+        
+        // Перемещаем название элемента наверх перед отображением цветов
+        groupItem.appendChild(componentNameContainer);
+        
+        // Отображаем информацию о fill
+        if (instance.fill) {
+          const fillContainer = document.createElement('div');
+          fillContainer.style.display = 'flex';
+          fillContainer.style.alignItems = 'center';
+          fillContainer.style.marginTop = '0px';
+          fillContainer.style.marginLeft = '0px';
+          fillContainer.style.marginBottom = '4px';
+          
+          // Создаем цветной квадратик для fill
+          const fillSwatch = document.createElement('div');
+          fillSwatch.style.width = '16px';
+          fillSwatch.style.height = '16px';
+          fillSwatch.style.backgroundColor = instance.fill;
+          
+          // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
+          if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
+            fillSwatch.style.borderRadius = '999px'; // круг
+          } else {
+            fillSwatch.style.borderRadius = '4px'; // квадрат со скругленными углами
+          }
+          
+          fillSwatch.style.marginRight = '4px';
+          fillSwatch.style.marginLeft = '00px';
+          fillSwatch.style.border = '1px solid #ddd';
+          
+          // Создаем контейнер для информации о цвете
+          const fillInfo = document.createElement('div');
+          fillInfo.style.display = 'flex';
+          fillInfo.style.flexDirection = 'row';
+          fillInfo.style.gap = '4px';
+          fillInfo.style.justifyContent = 'space-between';
+          fillInfo.style.width = '100%';
 
-      // тег версии одиночного элемента внутри группы 
-      const versionGroup = displayVersionTag({
-        instanceVersion: instance.nodeVersion,
-        libraryVersion: instance.libraryComponentVersion,
-        isOutdated: instance.isOutdated
-      });
+          groupItem.appendChild(componentNameContainer);
+          
+          // Добавляем информацию о переменной, если она есть
+          const varInfo = document.createElement('span');
+          // Добавляем надпись Fill
+          const fillType = document.createElement('span');
+          fillType.textContent = 'Fill';
+          fillType.style.color = 'var(--text-light-color)';
+          fillType.style.fontWeight = '300';
+          fillType.style.marginLeft = 'auto';
+          fillType.style.fontSize = 'var(--font-small)';
 
-      if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
+          // Создаем элемент для информации о коллекции
+          const collectionName = document.createElement('span');
+
+          if (instance.fill_variable_name) {
+            // Отображаем переменную
+            varInfo.textContent = instance.fill_variable_name;
+            varInfo.style.color = 'var(--text-light-color)';
+            varInfo.style.fontWeight = '400';
+            
+            // Добавляем коллекцию в скобках, если она есть
+            if (instance.fill_collection_name) {
+              collectionName.textContent = ` from ${instance.fill_collection_name}`;
+              collectionName.style.color = 'var(--text-light-color)';
+              collectionName.style.fontWeight = '300';
+              
+            }
+          } else {
+            // Отображаем hex-код цвета
+            varInfo.textContent = instance.fill;
+            varInfo.style.color = 'var(--text-light-color)';
+            varInfo.style.fontWeight = '400';
+          }
+
+          // Добавляем элементы в контейнер информации
+          
+          fillInfo.appendChild(varInfo);
+          fillInfo.appendChild(collectionName);
+          fillInfo.appendChild(fillType);
+          
+          groupItem.appendChild(fillContainer);
+        }
+        
+        // Отображаем информацию о stroke
+        if (instance.stroke) {
+          const collectionName = document.createElement('span');
+          const strokeContainer = document.createElement('div');
+          strokeContainer.style.display = 'flex';
+          strokeContainer.style.alignItems = 'center';
+          strokeContainer.style.marginTop = '0px';
+          strokeContainer.style.marginLeft = '0px';
+          strokeContainer.style.marginBottom = '4px';
+         
+          
+          // Создаем цветной квадратик для stroke
+          const strokeSwatch = document.createElement('div');
+          strokeSwatch.style.width = '16px';
+          strokeSwatch.style.height = '16px';
+          strokeSwatch.style.backgroundColor = instance.stroke;
+          
+          // Проверяем, является ли библиотека name=2, и если да, делаем круг вместо квадрата
+          if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
+            strokeSwatch.style.borderRadius = '999px'; // круг
+          } else {
+            strokeSwatch.style.borderRadius = '3px'; // квадрат со скругленными углами
+          }
+          
+          strokeSwatch.style.marginRight = '8px';
+          strokeSwatch.style.border = '1px solid #ddd';
+          
+          // Создаем контейнер для информации о цвете
+          const strokeInfo = document.createElement('div');
+          strokeInfo.style.display = 'flex';
+          strokeInfo.style.flexDirection = 'row';
+          strokeInfo.style.gap = '4px';
+          strokeInfo.style.justifyContent = 'space-between';
+          strokeInfo.style.width = '100%';
+          
+          // Добавляем информацию о переменной, если она есть
+          const varInfo = document.createElement('span');
+          if (instance.stroke_variable_name) {
+            // Отображаем переменную
+            varInfo.textContent = instance.stroke_variable_name;
+            varInfo.style.color = 'var(--text-light-color)';
+            varInfo.style.fontWeight = '400';
+            
+            
+            // Добавляем коллекцию в скобках, если она есть
+            if (instance.stroke_collection_name) {
+              collectionName.textContent = ` from ${instance.stroke_collection_name}`;
+              collectionName.style.color = 'var(--text-light-color)';
+              collectionName.style.fontWeight = '300';
+            }
+          } else {
+            // Отображаем hex-код цвета
+            varInfo.textContent = instance.stroke;
+            varInfo.style.color = 'var(--text-light-color)';
+            varInfo.style.fontWeight = '400';
+          }
+          
+          
+          
+          // Добавляем надпись Stroke и вес обводки
+          const strokeType = document.createElement('span');
+          strokeType.textContent = 'Stroke';
+          strokeType.style.color = 'var(--text-light-color)';
+          strokeType.style.fontWeight = '300';
+          strokeType.style.marginLeft = 'auto';
+          strokeType.style.fontSize = 'var(--font-small)';
+          
+          
+          strokeInfo.appendChild(varInfo);
+          strokeInfo.appendChild(collectionName);
+          strokeInfo.appendChild(strokeType);
+
+          groupItem.appendChild(strokeContainer);
+        }
+      } 
       groupItems.appendChild(groupItem);
     });
+    
     targetList.appendChild(groupItems);
+    
     // Добавляем обработчик клика для заголовка группы
     groupHeader.addEventListener('click', () => {
       groupItems.classList.toggle('expanded');
@@ -398,5 +490,5 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== 'undefined') {
   (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.displayGroups = displayGroups;
+  (window as any).UIModules.displayColorsTab = displayColorsTab;
 }

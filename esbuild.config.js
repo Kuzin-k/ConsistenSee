@@ -70,6 +70,16 @@ async function build() {
       format: 'iife',
       loader: { '.ts': 'ts' },
     });
+
+     // Добавляем displayGroups
+    const displayColorsTabResult = await esbuild.build({
+      entryPoints: ['src/ui/displayColorsTab.ts'],
+      bundle: true,
+      write: false,
+      target: 'es2017',
+      format: 'iife',
+      loader: { '.ts': 'ts' },
+    });
     
     const processAndDisplayComponentsResult = await esbuild.build({
       entryPoints: ['src/ui/processAndDisplayComponents.ts'],
@@ -117,6 +127,7 @@ async function build() {
                    sortGroupsResult.outputFiles[0].text + '\n' + 
                    displayTotalResult.outputFiles[0].text + '\n' +
                    displayGroupsResult.outputFiles[0].text + '\n' +
+                   displayColorsTabResult.outputFiles[0].text + '\n' +
                    processAndDisplayComponentsResult.outputFiles[0].text + '\n' +
                    processAndDisplayColorsResult.outputFiles[0].text + '\n' +
                    processAndDisplayOutdatedComponentsResult.outputFiles[0].text + '\n' +

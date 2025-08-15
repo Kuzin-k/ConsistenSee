@@ -1,16 +1,33 @@
-import { ComponentInstance } from '../shared/types';
+/**
+ * Модуль управления всплывающими подсказками (поповерами)
+ * @module showPopover
+ */
+
+import { ComponentData } from '../shared/types';
 
 /**
+ * Создает и отображает всплывающее окно с детальной информацией о компоненте
+ * 
  * @function showPopover
- * @description Отображает всплывающее окно (popover) с подробной информацией об экземпляре.
- * Popover появляется при наведении курсора на иконку элемента в списке.
- * Функция также отправляет сообщение в бэкенд для изменения размера окна плагина,
- * чтобы popover полностью поместился.
- *
- * @param {Element} icon - DOM-элемент иконки, к которому привязывается popover.
- * @param {ComponentInstance} instance - Объект с данными экземпляра для отображения.
+ * @description 
+ * Функция создает интерактивный popover, который:
+ * - Отображается при наведении на иконку компонента
+ * - Содержит полную информацию о компоненте в структурированном виде
+ * - Автоматически позиционируется на экране
+ * - Адаптирует размер окна плагина для корректного отображения
+ * - Поддерживает форматирование сложных объектов
+ * 
+ * @param {Element} icon - DOM элемент иконки-триггера для поповера
+ * @param {ComponentInstance} instance - Объект с данными компонента, включающий:
+ *    - name: название компонента
+ *    - id: уникальный идентификатор
+ *    - версию
+ *    - связи с другими компонентами
+ *    - и другие метаданные
+ * 
+ * @throws {Error} Если невозможно создать или отобразить popover
  */
-export const showPopover = (icon: Element, instance: ComponentInstance): void => {
+export const showPopover = (icon: Element, instance: ComponentData): void => {
   const popover = document.createElement('div');
   popover.classList.add('popover');
   popover.style.maxWidth = '500px';

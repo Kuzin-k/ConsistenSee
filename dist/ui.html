@@ -379,6 +379,7 @@ h3 {
   border-radius: 2px;
   font-family: monospace;
   line-height: 12px;
+  min-width: 44px;
 }
 
 .version-tag-outdated {
@@ -2124,10 +2125,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
-        versionText = "_._._";
+        versionText = "* * *";
       }
       if (hasLibraryVersion && isOutdated) {
-        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.textContent = `${versionText || "* * *"} \u2192 ${libraryVersion}`;
         versionBadge.classList.add("version-tag-outdated");
       } else if (versionText) {
         versionBadge.textContent = versionText;
@@ -2160,7 +2161,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
-    var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -2168,25 +2168,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       console.error("Target list or its ID is undefined.");
       return;
     }
-    if (targetList.id === "colorResultsList") headerText = "Fill";
-    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
-    if (headerText) {
-      const prevHeader = targetList.previousElementSibling;
-      if (prevHeader && prevHeader.classList.contains("section-header")) {
-        prevHeader.remove();
-      }
-      const header = document.createElement("div");
-      header.className = "section-header";
-      header.textContent = headerText;
-      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
-    }
     const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
       const firstInstance = group[0];
       const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
-      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+      if (group.length === 1) {
         const instance = group[0];
         const groupItem = document.createElement("ul");
         groupItem.classList.add("group-header");
@@ -2254,39 +2242,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.classList.add("group-header");
       const groupName = document.createElement("div");
       groupName.classList.add("group-name");
-      if (targetList.id === "colorResultsList") {
-        const fillSwatch = document.createElement("div");
-        fillSwatch.classList.add("group-color-icon");
-        fillSwatch.style.backgroundColor = firstInstance.fill || "";
-        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
-          fillSwatch.style.borderRadius = "999px";
-        }
-        groupHeader.appendChild(fillSwatch);
-      } else if (targetList.id === "colorStrokeResultsList") {
-        const strokeSwatch = document.createElement("div");
-        strokeSwatch.classList.add("group-color-icon");
-        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
-        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
-          strokeSwatch.style.borderRadius = "999px";
-        }
-        groupHeader.appendChild(strokeSwatch);
-      } else {
-        const groupicon = document.createElement("div");
-        groupicon.classList.add("instance-icon");
-        const icon = createIcon(firstInstance.type);
-        groupicon.appendChild(icon);
-        groupHeader.appendChild(groupicon);
-      }
+      const groupicon = document.createElement("div");
+      groupicon.classList.add("instance-icon");
+      const icon = createIcon(firstInstance.type);
+      groupicon.appendChild(icon);
+      groupHeader.appendChild(groupicon);
       let groupNameHtml = "";
-      if (targetList.id === "colorResultsList") {
-        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
-        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
-      } else if (targetList.id === "colorStrokeResultsList") {
-        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
-        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
-      } else {
-        groupNameHtml += name;
-      }
+      groupNameHtml += name;
       groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
       groupName.innerHTML = groupNameHtml;
       const selectAllContainer = document.createElement("span");
@@ -2334,6 +2296,271 @@ document.getElementById('setComponentData').addEventListener('click', function()
         isOutdated: hasOutdatedItems
       });
       groupHeader.appendChild(versionGroupHeader);
+      targetList.appendChild(groupHeader);
+      const groupItems = document.createElement("ul");
+      groupItems.classList.add("group-items");
+      group.forEach((instance) => {
+        const groupItem = document.createElement("li");
+        const componentNameContainer = document.createElement("div");
+        componentNameContainer.classList.add("component-name-container");
+        componentNameContainer.style.display = "flex";
+        componentNameContainer.style.alignItems = "right";
+        const itemIcon = createIcon(instance.type);
+        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+        itemIcon.addEventListener("click", (e) => {
+          e.stopPropagation();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+              }
+            },
+            "*"
+          );
+        });
+        itemIcon.addEventListener("mouseenter", () => {
+          showPopover(itemIcon, instance);
+        });
+        const nameLink = document.createElement("a");
+        nameLink.href = "#";
+        nameLink.classList.add("component-link");
+        nameLink.textContent = instance.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F";
+        nameLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "scroll-to-node",
+                nodeId: instance.nodeId
+                // Передаем nodeId инстанса
+              }
+            },
+            "*"
+          );
+        });
+        componentNameContainer.appendChild(nameLink);
+        if (instance.parentName) {
+          const parentName = document.createElement("span");
+          parentName.classList.add("parent-component-name");
+          parentName.textContent = "in " + instance.parentName;
+          componentNameContainer.appendChild(parentName);
+        }
+        if (instance.hidden) {
+          const hiddenLabel = document.createElement("span");
+          hiddenLabel.classList.add("hidden-label");
+          hiddenLabel.textContent = "hidden";
+          componentNameContainer.appendChild(hiddenLabel);
+        }
+        groupItem.appendChild(componentNameContainer);
+        const versionGroup = displayVersionTag({
+          instanceVersion: instance.nodeVersion,
+          libraryVersion: instance.libraryComponentVersion,
+          isOutdated: instance.isOutdated
+        });
+        if (versionGroup) {
+          componentNameContainer.appendChild(versionGroup);
+        }
+        groupItems.appendChild(groupItem);
+      });
+      targetList.appendChild(groupItems);
+      groupHeader.addEventListener("click", () => {
+        groupItems.classList.toggle("expanded");
+      });
+    }
+  };
+  if (typeof window !== "undefined") {
+    window.UIModules = window.UIModules || {};
+    window.UIModules.displayGroups = displayGroups;
+  }
+})();
+
+"use strict";
+(() => {
+  // src/ui/createIcon.ts
+  var createIcon = (type) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    let iconClass = "info-icon";
+    let iconId = "info-icon";
+    switch (type) {
+      case "INSTANCE":
+        iconClass = "instance-icon";
+        iconId = "instance-icon";
+        break;
+      case "TEXT":
+        iconClass = "text-icon";
+        iconId = "text-icon";
+        break;
+      case "FRAME":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+      case "RECTANGLE":
+        iconClass = "rectangle-icon";
+        iconId = "rectangle-icon";
+        break;
+      case "VECTOR":
+        iconClass = "frame-icon";
+        iconId = "frame-icon";
+        break;
+    }
+    svg.classList.add(iconClass);
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  // src/ui/showPopover.ts
+  var showPopover = (icon, instance) => {
+    const popover = document.createElement("div");
+    popover.classList.add("popover");
+    popover.style.maxWidth = "500px";
+    popover.style.position = "fixed";
+    popover.style.zIndex = "10000";
+    const content = Object.entries(instance).map(([key, value]) => {
+      const boldKey = `<strong>${key}:</strong>`;
+      if (typeof value === "object" && value !== null) {
+        return `${boldKey} ${JSON.stringify(value)}`;
+      }
+      return `${boldKey} ${value}`;
+    }).join("<br>");
+    popover.innerHTML = content;
+    document.body.appendChild(popover);
+    const rect = icon.getBoundingClientRect();
+    popover.style.visibility = "hidden";
+    popover.style.display = "block";
+    const popoverRect = popover.getBoundingClientRect();
+    popover.style.display = "none";
+    popover.style.visibility = "visible";
+    let top = rect.bottom + 5;
+    let left = rect.left;
+    if (left + popoverRect.width > window.innerWidth - 10) {
+      left = window.innerWidth - popoverRect.width - 10;
+    }
+    if (left < 10) {
+      left = 10;
+    }
+    if (top + popoverRect.height > window.innerHeight - 10) {
+      top = rect.top - popoverRect.height - 5;
+    }
+    if (top < 10) {
+      top = 10;
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.display = "block";
+    parent.postMessage({
+      pluginMessage: {
+        type: "resize-plugin-window",
+        width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
+        // Ensure enough width for popover + padding
+        height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
+        // Ensure enough height for popover + padding
+      }
+    }, "*");
+    icon.addEventListener("mouseleave", () => {
+      popover.remove();
+      parent.postMessage({
+        pluginMessage: {
+          type: "reset-plugin-window-size"
+        }
+      }, "*");
+    });
+  };
+
+  // src/ui/displayColorsTab.ts
+  var displayColorsTab = (groupedData, targetList, isOutdatedTab = false) => {
+    var _a;
+    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+    targetList.innerHTML = "";
+    let headerText = "";
+    if (!targetList || !targetList.id) {
+      console.error("Target list or its ID is undefined.");
+      return;
+    }
+    if (targetList.id === "colorResultsList") headerText = "Fill";
+    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
+    if (headerText) {
+      const prevHeader = targetList.previousElementSibling;
+      if (prevHeader && prevHeader.classList.contains("section-header")) {
+        prevHeader.remove();
+      }
+      const header = document.createElement("div");
+      header.className = "section-header";
+      header.textContent = headerText;
+      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
+    }
+    const nameCount = {};
+    for (const key in groupedData) {
+      const group = groupedData[key];
+      if (group.length === 0) continue;
+      const firstInstance = group[0];
+      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
+      const groupHeader = document.createElement("ul");
+      groupHeader.classList.add("group-header");
+      const groupName = document.createElement("div");
+      groupName.classList.add("group-name");
+      if (targetList.id === "colorResultsList") {
+        const fillSwatch = document.createElement("div");
+        fillSwatch.classList.add("group-color-icon");
+        fillSwatch.style.backgroundColor = firstInstance.fill || "";
+        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
+          fillSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(fillSwatch);
+      } else if (targetList.id === "colorStrokeResultsList") {
+        const strokeSwatch = document.createElement("div");
+        strokeSwatch.classList.add("group-color-icon");
+        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
+        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
+          strokeSwatch.style.borderRadius = "999px";
+        }
+        groupHeader.appendChild(strokeSwatch);
+      }
+      let groupNameHtml = "";
+      if (targetList.id === "colorResultsList") {
+        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
+        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
+      } else if (targetList.id === "colorStrokeResultsList") {
+        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
+        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
+      }
+      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+      groupName.innerHTML = groupNameHtml;
+      const selectAllContainer = document.createElement("span");
+      selectAllContainer.classList.add("select-all-container");
+      const selectAllLink = document.createElement("a");
+      selectAllLink.href = "#";
+      selectAllLink.classList.add("select-all-link");
+      selectAllLink.title = "Select all";
+      const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgIcon.setAttribute("width", "20");
+      svgIcon.setAttribute("height", "20");
+      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+      selectAllLink.appendChild(svgIcon);
+      selectAllLink.style.visibility = "hidden";
+      selectAllLink.style.marginLeft = "auto";
+      selectAllLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nodeIds = group.map((item) => item.nodeId);
+        parent.postMessage({
+          pluginMessage: {
+            type: "select-nodes",
+            nodeIds
+          }
+        }, "*");
+      });
+      selectAllContainer.appendChild(selectAllLink);
+      groupName.appendChild(selectAllContainer);
+      groupHeader.appendChild(groupName);
+      groupHeader.addEventListener("mouseenter", () => {
+        selectAllLink.style.visibility = "visible";
+      });
+      groupHeader.addEventListener("mouseleave", () => {
+        selectAllLink.style.visibility = "hidden";
+      });
       targetList.appendChild(groupHeader);
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
@@ -2497,16 +2724,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
             strokeInfo.appendChild(strokeType);
             groupItem.appendChild(strokeContainer);
           }
-        } else {
-          groupItem.appendChild(componentNameContainer);
-        }
-        const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
-          isOutdated: instance.isOutdated
-        });
-        if (versionGroup) {
-          componentNameContainer.appendChild(versionGroup);
         }
         groupItems.appendChild(groupItem);
       });
@@ -2518,7 +2735,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
   };
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
-    window.UIModules.displayGroups = displayGroups;
+    window.UIModules.displayColorsTab = displayColorsTab;
   }
 })();
 
@@ -2639,10 +2856,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
-        versionText = "_._._";
+        versionText = "* * *";
       }
       if (hasLibraryVersion && isOutdated) {
-        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.textContent = `${versionText || "* * *"} \u2192 ${libraryVersion}`;
         versionBadge.classList.add("version-tag-outdated");
       } else if (versionText) {
         versionBadge.textContent = versionText;
@@ -2675,7 +2892,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
-    var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -2683,25 +2899,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       console.error("Target list or its ID is undefined.");
       return;
     }
-    if (targetList.id === "colorResultsList") headerText = "Fill";
-    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
-    if (headerText) {
-      const prevHeader = targetList.previousElementSibling;
-      if (prevHeader && prevHeader.classList.contains("section-header")) {
-        prevHeader.remove();
-      }
-      const header = document.createElement("div");
-      header.className = "section-header";
-      header.textContent = headerText;
-      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
-    }
     const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
       const firstInstance = group[0];
       const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
-      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+      if (group.length === 1) {
         const instance = group[0];
         const groupItem = document.createElement("ul");
         groupItem.classList.add("group-header");
@@ -2769,39 +2973,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.classList.add("group-header");
       const groupName = document.createElement("div");
       groupName.classList.add("group-name");
-      if (targetList.id === "colorResultsList") {
-        const fillSwatch = document.createElement("div");
-        fillSwatch.classList.add("group-color-icon");
-        fillSwatch.style.backgroundColor = firstInstance.fill || "";
-        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
-          fillSwatch.style.borderRadius = "999px";
-        }
-        groupHeader.appendChild(fillSwatch);
-      } else if (targetList.id === "colorStrokeResultsList") {
-        const strokeSwatch = document.createElement("div");
-        strokeSwatch.classList.add("group-color-icon");
-        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
-        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
-          strokeSwatch.style.borderRadius = "999px";
-        }
-        groupHeader.appendChild(strokeSwatch);
-      } else {
-        const groupicon = document.createElement("div");
-        groupicon.classList.add("instance-icon");
-        const icon = createIcon(firstInstance.type);
-        groupicon.appendChild(icon);
-        groupHeader.appendChild(groupicon);
-      }
+      const groupicon = document.createElement("div");
+      groupicon.classList.add("instance-icon");
+      const icon = createIcon(firstInstance.type);
+      groupicon.appendChild(icon);
+      groupHeader.appendChild(groupicon);
       let groupNameHtml = "";
-      if (targetList.id === "colorResultsList") {
-        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
-        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
-      } else if (targetList.id === "colorStrokeResultsList") {
-        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
-        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
-      } else {
-        groupNameHtml += name;
-      }
+      groupNameHtml += name;
       groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
       groupName.innerHTML = groupNameHtml;
       const selectAllContainer = document.createElement("span");
@@ -2905,116 +3083,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
           hiddenLabel.textContent = "hidden";
           componentNameContainer.appendChild(hiddenLabel);
         }
-        if (instance.color) {
-          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
-          groupItem.appendChild(componentNameContainer);
-          if (instance.fill) {
-            const fillContainer = document.createElement("div");
-            fillContainer.style.display = "flex";
-            fillContainer.style.alignItems = "center";
-            fillContainer.style.marginTop = "0px";
-            fillContainer.style.marginLeft = "0px";
-            fillContainer.style.marginBottom = "4px";
-            const fillSwatch = document.createElement("div");
-            fillSwatch.style.width = "16px";
-            fillSwatch.style.height = "16px";
-            fillSwatch.style.backgroundColor = instance.fill;
-            if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
-              fillSwatch.style.borderRadius = "999px";
-            } else {
-              fillSwatch.style.borderRadius = "4px";
-            }
-            fillSwatch.style.marginRight = "4px";
-            fillSwatch.style.marginLeft = "00px";
-            fillSwatch.style.border = "1px solid #ddd";
-            const fillInfo = document.createElement("div");
-            fillInfo.style.display = "flex";
-            fillInfo.style.flexDirection = "row";
-            fillInfo.style.gap = "4px";
-            fillInfo.style.justifyContent = "space-between";
-            fillInfo.style.width = "100%";
-            groupItem.appendChild(componentNameContainer);
-            const varInfo = document.createElement("span");
-            const fillType = document.createElement("span");
-            fillType.textContent = "Fill";
-            fillType.style.color = "var(--text-light-color)";
-            fillType.style.fontWeight = "300";
-            fillType.style.marginLeft = "auto";
-            fillType.style.fontSize = "var(--font-small)";
-            const collectionName = document.createElement("span");
-            if (instance.fill_variable_name) {
-              varInfo.textContent = instance.fill_variable_name;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-              if (instance.fill_collection_name) {
-                collectionName.textContent = ` from ${instance.fill_collection_name}`;
-                collectionName.style.color = "var(--text-light-color)";
-                collectionName.style.fontWeight = "300";
-              }
-            } else {
-              varInfo.textContent = instance.fill;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-            }
-            fillInfo.appendChild(varInfo);
-            fillInfo.appendChild(collectionName);
-            fillInfo.appendChild(fillType);
-            groupItem.appendChild(fillContainer);
-          }
-          if (instance.stroke) {
-            const collectionName = document.createElement("span");
-            const strokeContainer = document.createElement("div");
-            strokeContainer.style.display = "flex";
-            strokeContainer.style.alignItems = "center";
-            strokeContainer.style.marginTop = "0px";
-            strokeContainer.style.marginLeft = "0px";
-            strokeContainer.style.marginBottom = "4px";
-            const strokeSwatch = document.createElement("div");
-            strokeSwatch.style.width = "16px";
-            strokeSwatch.style.height = "16px";
-            strokeSwatch.style.backgroundColor = instance.stroke;
-            if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
-              strokeSwatch.style.borderRadius = "999px";
-            } else {
-              strokeSwatch.style.borderRadius = "3px";
-            }
-            strokeSwatch.style.marginRight = "8px";
-            strokeSwatch.style.border = "1px solid #ddd";
-            const strokeInfo = document.createElement("div");
-            strokeInfo.style.display = "flex";
-            strokeInfo.style.flexDirection = "row";
-            strokeInfo.style.gap = "4px";
-            strokeInfo.style.justifyContent = "space-between";
-            strokeInfo.style.width = "100%";
-            const varInfo = document.createElement("span");
-            if (instance.stroke_variable_name) {
-              varInfo.textContent = instance.stroke_variable_name;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-              if (instance.stroke_collection_name) {
-                collectionName.textContent = ` from ${instance.stroke_collection_name}`;
-                collectionName.style.color = "var(--text-light-color)";
-                collectionName.style.fontWeight = "300";
-              }
-            } else {
-              varInfo.textContent = instance.stroke;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-            }
-            const strokeType = document.createElement("span");
-            strokeType.textContent = "Stroke";
-            strokeType.style.color = "var(--text-light-color)";
-            strokeType.style.fontWeight = "300";
-            strokeType.style.marginLeft = "auto";
-            strokeType.style.fontSize = "var(--font-small)";
-            strokeInfo.appendChild(varInfo);
-            strokeInfo.appendChild(collectionName);
-            strokeInfo.appendChild(strokeType);
-            groupItem.appendChild(strokeContainer);
-          }
-        } else {
-          groupItem.appendChild(componentNameContainer);
-        }
+        groupItem.appendChild(componentNameContainer);
         const versionGroup = displayVersionTag({
           instanceVersion: instance.nodeVersion,
           libraryVersion: instance.libraryComponentVersion,
@@ -3222,65 +3291,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
   };
 
-  // src/ui/displayVersionTag.ts
-  function displayVersionTag(options) {
-    const {
-      instanceVersion = "none",
-      libraryVersion = "none",
-      isOutdated = "",
-      isGroupHeader = false,
-      uniqueVersions = []
-    } = options;
-    let versionText = "";
-    const versionGroup = document.createElement("span");
-    versionGroup.classList.add("version-group");
-    const versionBadge = document.createElement("span");
-    versionBadge.classList.add("version-tag");
-    if (isGroupHeader) {
-      const hasVersions = uniqueVersions.some((version) => version && version !== "none");
-      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
-      if (!hasVersions && !hasLibraryVersion) {
-        return versionGroup;
-      }
-      if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
-        versionText = uniqueVersions[0];
-      } else if (hasVersions) {
-        versionText = "_._._";
-      }
-      if (hasLibraryVersion && isOutdated) {
-        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
-        versionBadge.classList.add("version-tag-outdated");
-      } else if (versionText) {
-        versionBadge.textContent = versionText;
-      } else {
-        return versionGroup;
-      }
-    } else {
-      const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
-      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
-      if (!hasInstanceVersion && !hasLibraryVersion) {
-        return versionGroup;
-      }
-      if (hasLibraryVersion && isOutdated) {
-        versionBadge.textContent = `${instanceVersion || "none"} \u2192 ${libraryVersion}`;
-        versionBadge.classList.add("version-tag-outdated");
-      } else if (hasInstanceVersion) {
-        versionBadge.textContent = instanceVersion;
-        if (isOutdated === false) {
-          versionBadge.classList.add("version-tag-latest");
-        }
-      } else {
-        return versionGroup;
-      }
-    }
-    if (versionBadge.textContent) {
-      versionGroup.appendChild(versionBadge);
-    }
-    return versionGroup;
-  }
-
-  // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
+  // src/ui/displayColorsTab.ts
+  var displayColorsTab = (groupedData, targetList, isOutdatedTab = false) => {
     var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
@@ -3307,70 +3319,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (group.length === 0) continue;
       const firstInstance = group[0];
       const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
-      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
-        const instance = group[0];
-        const groupItem = document.createElement("ul");
-        groupItem.classList.add("group-header");
-        const componentNameContainer = document.createElement("span");
-        componentNameContainer.classList.add("component-name-container");
-        const itemIcon = createIcon(instance.type);
-        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
-        itemIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "scroll-to-node",
-                nodeId: instance.nodeId
-              }
-            },
-            "*"
-          );
-        });
-        itemIcon.addEventListener("mouseenter", () => {
-          showPopover(itemIcon, instance);
-        });
-        const nameLink = document.createElement("a");
-        nameLink.href = "#";
-        nameLink.classList.add("component-link");
-        nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName || "";
-        nameLink.addEventListener("click", (e) => {
-          e.preventDefault();
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "scroll-to-node",
-                nodeId: instance.nodeId
-              }
-            },
-            "*"
-          );
-        });
-        componentNameContainer.appendChild(nameLink);
-        if (instance.parentName) {
-          const parentName = document.createElement("span");
-          parentName.classList.add("parent-component-name");
-          parentName.textContent = "in " + instance.parentName;
-          componentNameContainer.appendChild(parentName);
-        }
-        if (instance.hidden) {
-          const hiddenLabel = document.createElement("span");
-          hiddenLabel.classList.add("hidden-label");
-          hiddenLabel.textContent = "hidden";
-          componentNameContainer.appendChild(hiddenLabel);
-        }
-        const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
-          isOutdated: instance.isOutdated
-        });
-        if (versionGroup) {
-          componentNameContainer.appendChild(versionGroup);
-        }
-        groupItem.appendChild(componentNameContainer);
-        targetList.appendChild(groupItem);
-        continue;
-      }
       const groupHeader = document.createElement("ul");
       groupHeader.classList.add("group-header");
       const groupName = document.createElement("div");
@@ -3391,12 +3339,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
           strokeSwatch.style.borderRadius = "999px";
         }
         groupHeader.appendChild(strokeSwatch);
-      } else {
-        const groupicon = document.createElement("div");
-        groupicon.classList.add("instance-icon");
-        const icon = createIcon(firstInstance.type);
-        groupicon.appendChild(icon);
-        groupHeader.appendChild(groupicon);
       }
       let groupNameHtml = "";
       if (targetList.id === "colorResultsList") {
@@ -3405,8 +3347,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       } else if (targetList.id === "colorStrokeResultsList") {
         groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
         groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
-      } else {
-        groupNameHtml += name;
       }
       groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
       groupName.innerHTML = groupNameHtml;
@@ -3443,18 +3383,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.addEventListener("mouseleave", () => {
         selectAllLink.style.visibility = "hidden";
       });
-      const versionsInGroup = group.map((item) => item.nodeVersion || "none");
-      const libraryVersionsInGroup = group.map((item) => item.libraryComponentVersion || "none");
-      const uniqueVersions = [...new Set(versionsInGroup)];
-      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
-      const hasOutdatedItems = group.some((item) => item.isOutdated);
-      const versionGroupHeader = displayVersionTag({
-        uniqueVersions,
-        libraryVersion: uniqueLibraryVersions[0],
-        isGroupHeader: true,
-        isOutdated: hasOutdatedItems
-      });
-      groupHeader.appendChild(versionGroupHeader);
       targetList.appendChild(groupHeader);
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
@@ -3618,16 +3546,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
             strokeInfo.appendChild(strokeType);
             groupItem.appendChild(strokeContainer);
           }
-        } else {
-          groupItem.appendChild(componentNameContainer);
-        }
-        const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
-          isOutdated: instance.isOutdated
-        });
-        if (versionGroup) {
-          componentNameContainer.appendChild(versionGroup);
         }
         groupItems.appendChild(groupItem);
       });
@@ -3639,7 +3557,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
   };
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
-    window.UIModules.displayGroups = displayGroups;
+    window.UIModules.displayColorsTab = displayColorsTab;
   }
 
   // src/ui/processAndDisplayColors.ts
@@ -3685,7 +3603,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         sortedGroupedFillColors[key] = groupedFillColors[key];
       });
       if (fillFilteredCount > 0) {
-        displayGroups(sortedGroupedFillColors, colorResultsList);
+        displayColorsTab(sortedGroupedFillColors, colorResultsList);
       } else {
         colorResultsList.innerHTML = "";
         if (fillHeader && fillHeader.classList.contains("section-header") && fillHeader.textContent === "Fill") {
@@ -3729,7 +3647,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
       });
       if (strokeFilteredCount > 0) {
-        displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+        displayColorsTab(sortedGroupedStrokeColors, colorStrokeResultsList);
       } else {
         colorStrokeResultsList.innerHTML = "";
         if (strokeHeader && strokeHeader.classList.contains("section-header") && strokeHeader.textContent === "Stroke") {
@@ -3879,10 +3797,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
         versionText = uniqueVersions[0];
       } else if (hasVersions) {
-        versionText = "_._._";
+        versionText = "* * *";
       }
       if (hasLibraryVersion && isOutdated) {
-        versionBadge.textContent = `${versionText || "_._._"} \u2192 ${libraryVersion}`;
+        versionBadge.textContent = `${versionText || "* * *"} \u2192 ${libraryVersion}`;
         versionBadge.classList.add("version-tag-outdated");
       } else if (versionText) {
         versionBadge.textContent = versionText;
@@ -3915,7 +3833,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
-    var _a;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -3923,25 +3840,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       console.error("Target list or its ID is undefined.");
       return;
     }
-    if (targetList.id === "colorResultsList") headerText = "Fill";
-    if (targetList.id === "colorStrokeResultsList") headerText = "Stroke";
-    if (headerText) {
-      const prevHeader = targetList.previousElementSibling;
-      if (prevHeader && prevHeader.classList.contains("section-header")) {
-        prevHeader.remove();
-      }
-      const header = document.createElement("div");
-      header.className = "section-header";
-      header.textContent = headerText;
-      (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
-    }
     const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
       const firstInstance = group[0];
       const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
-      if (group.length === 1 && (targetList.id !== "colorResultsList" && targetList.id !== "colorStrokeResultsList")) {
+      if (group.length === 1) {
         const instance = group[0];
         const groupItem = document.createElement("ul");
         groupItem.classList.add("group-header");
@@ -4009,39 +3914,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
       groupHeader.classList.add("group-header");
       const groupName = document.createElement("div");
       groupName.classList.add("group-name");
-      if (targetList.id === "colorResultsList") {
-        const fillSwatch = document.createElement("div");
-        fillSwatch.classList.add("group-color-icon");
-        fillSwatch.style.backgroundColor = firstInstance.fill || "";
-        if (firstInstance.fill_collection_name === "2" || firstInstance.fill_collection_name === "Color Styles") {
-          fillSwatch.style.borderRadius = "999px";
-        }
-        groupHeader.appendChild(fillSwatch);
-      } else if (targetList.id === "colorStrokeResultsList") {
-        const strokeSwatch = document.createElement("div");
-        strokeSwatch.classList.add("group-color-icon");
-        strokeSwatch.style.backgroundColor = firstInstance.stroke || "";
-        if (firstInstance.stroke_collection_name === "2" || firstInstance.stroke_collection_name === "Color Styles") {
-          strokeSwatch.style.borderRadius = "999px";
-        }
-        groupHeader.appendChild(strokeSwatch);
-      } else {
-        const groupicon = document.createElement("div");
-        groupicon.classList.add("instance-icon");
-        const icon = createIcon(firstInstance.type);
-        groupicon.appendChild(icon);
-        groupHeader.appendChild(groupicon);
-      }
+      const groupicon = document.createElement("div");
+      groupicon.classList.add("instance-icon");
+      const icon = createIcon(firstInstance.type);
+      groupicon.appendChild(icon);
+      groupHeader.appendChild(groupicon);
       let groupNameHtml = "";
-      if (targetList.id === "colorResultsList") {
-        groupNameHtml += firstInstance.fill_variable_name ? firstInstance.fill_variable_name : firstInstance.fill;
-        groupNameHtml += firstInstance.fill_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.fill_collection_name}&nbsp;</span>` : "";
-      } else if (targetList.id === "colorStrokeResultsList") {
-        groupNameHtml += firstInstance.stroke_variable_name ? firstInstance.stroke_variable_name : firstInstance.stroke;
-        groupNameHtml += firstInstance.stroke_collection_name ? `<span style="font-weight:300">&nbsp;from ${firstInstance.stroke_collection_name}&nbsp;</span>` : "";
-      } else {
-        groupNameHtml += name;
-      }
+      groupNameHtml += name;
       groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
       groupName.innerHTML = groupNameHtml;
       const selectAllContainer = document.createElement("span");
@@ -4145,116 +4024,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
           hiddenLabel.textContent = "hidden";
           componentNameContainer.appendChild(hiddenLabel);
         }
-        if (instance.color) {
-          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
-          groupItem.appendChild(componentNameContainer);
-          if (instance.fill) {
-            const fillContainer = document.createElement("div");
-            fillContainer.style.display = "flex";
-            fillContainer.style.alignItems = "center";
-            fillContainer.style.marginTop = "0px";
-            fillContainer.style.marginLeft = "0px";
-            fillContainer.style.marginBottom = "4px";
-            const fillSwatch = document.createElement("div");
-            fillSwatch.style.width = "16px";
-            fillSwatch.style.height = "16px";
-            fillSwatch.style.backgroundColor = instance.fill;
-            if (instance.fill_collection_name === "2" || instance.fill_collection_name === "Color Styles") {
-              fillSwatch.style.borderRadius = "999px";
-            } else {
-              fillSwatch.style.borderRadius = "4px";
-            }
-            fillSwatch.style.marginRight = "4px";
-            fillSwatch.style.marginLeft = "00px";
-            fillSwatch.style.border = "1px solid #ddd";
-            const fillInfo = document.createElement("div");
-            fillInfo.style.display = "flex";
-            fillInfo.style.flexDirection = "row";
-            fillInfo.style.gap = "4px";
-            fillInfo.style.justifyContent = "space-between";
-            fillInfo.style.width = "100%";
-            groupItem.appendChild(componentNameContainer);
-            const varInfo = document.createElement("span");
-            const fillType = document.createElement("span");
-            fillType.textContent = "Fill";
-            fillType.style.color = "var(--text-light-color)";
-            fillType.style.fontWeight = "300";
-            fillType.style.marginLeft = "auto";
-            fillType.style.fontSize = "var(--font-small)";
-            const collectionName = document.createElement("span");
-            if (instance.fill_variable_name) {
-              varInfo.textContent = instance.fill_variable_name;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-              if (instance.fill_collection_name) {
-                collectionName.textContent = ` from ${instance.fill_collection_name}`;
-                collectionName.style.color = "var(--text-light-color)";
-                collectionName.style.fontWeight = "300";
-              }
-            } else {
-              varInfo.textContent = instance.fill;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-            }
-            fillInfo.appendChild(varInfo);
-            fillInfo.appendChild(collectionName);
-            fillInfo.appendChild(fillType);
-            groupItem.appendChild(fillContainer);
-          }
-          if (instance.stroke) {
-            const collectionName = document.createElement("span");
-            const strokeContainer = document.createElement("div");
-            strokeContainer.style.display = "flex";
-            strokeContainer.style.alignItems = "center";
-            strokeContainer.style.marginTop = "0px";
-            strokeContainer.style.marginLeft = "0px";
-            strokeContainer.style.marginBottom = "4px";
-            const strokeSwatch = document.createElement("div");
-            strokeSwatch.style.width = "16px";
-            strokeSwatch.style.height = "16px";
-            strokeSwatch.style.backgroundColor = instance.stroke;
-            if (instance.stroke_collection_name === "2" || instance.stroke_collection_name === "Color Styles") {
-              strokeSwatch.style.borderRadius = "999px";
-            } else {
-              strokeSwatch.style.borderRadius = "3px";
-            }
-            strokeSwatch.style.marginRight = "8px";
-            strokeSwatch.style.border = "1px solid #ddd";
-            const strokeInfo = document.createElement("div");
-            strokeInfo.style.display = "flex";
-            strokeInfo.style.flexDirection = "row";
-            strokeInfo.style.gap = "4px";
-            strokeInfo.style.justifyContent = "space-between";
-            strokeInfo.style.width = "100%";
-            const varInfo = document.createElement("span");
-            if (instance.stroke_variable_name) {
-              varInfo.textContent = instance.stroke_variable_name;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-              if (instance.stroke_collection_name) {
-                collectionName.textContent = ` from ${instance.stroke_collection_name}`;
-                collectionName.style.color = "var(--text-light-color)";
-                collectionName.style.fontWeight = "300";
-              }
-            } else {
-              varInfo.textContent = instance.stroke;
-              varInfo.style.color = "var(--text-light-color)";
-              varInfo.style.fontWeight = "400";
-            }
-            const strokeType = document.createElement("span");
-            strokeType.textContent = "Stroke";
-            strokeType.style.color = "var(--text-light-color)";
-            strokeType.style.fontWeight = "300";
-            strokeType.style.marginLeft = "auto";
-            strokeType.style.fontSize = "var(--font-small)";
-            strokeInfo.appendChild(varInfo);
-            strokeInfo.appendChild(collectionName);
-            strokeInfo.appendChild(strokeType);
-            groupItem.appendChild(strokeContainer);
-          }
-        } else {
-          groupItem.appendChild(componentNameContainer);
-        }
+        groupItem.appendChild(componentNameContainer);
         const versionGroup = displayVersionTag({
           instanceVersion: instance.nodeVersion,
           libraryVersion: instance.libraryComponentVersion,

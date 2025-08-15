@@ -50,12 +50,12 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       versionText = uniqueVersions[0];
     } else if (hasVersions) {
       // Если у элементов группы номер версии разный
-      versionText = '_._._';
+      versionText = '* * *';
     }
     
     // Если присутствует libraryVersion и isOutdated=true
     if (hasLibraryVersion && isOutdated) {
-      versionBadge.textContent = `${versionText || '_._._'} → ${libraryVersion}`;
+      versionBadge.textContent = `${versionText || '* * *'} → ${libraryVersion}`;
       versionBadge.classList.add('version-tag-outdated');
     } else if (versionText) {
       versionBadge.textContent = versionText;

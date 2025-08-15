@@ -1,4 +1,4 @@
-import { displayGroups } from './displayGroups';
+import { displayColorsTab } from './displayColorsTab';
 
 /**
  * Обрабатывает и отображает цвета (fill и stroke)
@@ -64,7 +64,7 @@ export function processAndDisplayColors(
             sortedGroupedFillColors[key] = groupedFillColors[key];
         });
         if (fillFilteredCount > 0) {
-            displayGroups(sortedGroupedFillColors, colorResultsList);
+            displayColorsTab(sortedGroupedFillColors, colorResultsList);
         } else {
             colorResultsList.innerHTML = '';
             if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
@@ -120,7 +120,7 @@ export function processAndDisplayColors(
         });
 
         if (strokeFilteredCount > 0) {
-            displayGroups(sortedGroupedStrokeColors, colorStrokeResultsList);
+            displayColorsTab(sortedGroupedStrokeColors, colorStrokeResultsList);
         } else {
             colorStrokeResultsList.innerHTML = '';
             if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
