@@ -267,7 +267,7 @@ export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLEleme
 
       // Добавляем popover при наведении на иконку
       itemIcon.addEventListener('mouseenter', () => {
-        showPopover(itemIcon, instance);
+        showPopover(itemIcon, instance as any);
       });
 
       // Создаем ссылку на название инстанса

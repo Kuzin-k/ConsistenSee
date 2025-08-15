@@ -2161,6 +2161,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
+    var _a, _b;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -2227,8 +2228,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
           componentNameContainer.appendChild(hiddenLabel);
         }
         const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
+          instanceVersion: (_a = instance.nodeVersion) != null ? _a : void 0,
+          libraryVersion: (_b = instance.libraryComponentVersion) != null ? _b : void 0,
           isOutdated: instance.isOutdated
         });
         if (versionGroup) {
@@ -2300,6 +2301,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
       group.forEach((instance) => {
+        var _a2, _b2;
         const groupItem = document.createElement("li");
         const componentNameContainer = document.createElement("div");
         componentNameContainer.classList.add("component-name-container");
@@ -2354,8 +2356,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
         groupItem.appendChild(componentNameContainer);
         const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
+          instanceVersion: (_a2 = instance.nodeVersion) != null ? _a2 : void 0,
+          libraryVersion: (_b2 = instance.libraryComponentVersion) != null ? _b2 : void 0,
           isOutdated: instance.isOutdated
         });
         if (versionGroup) {
@@ -2892,6 +2894,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
+    var _a, _b;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -2958,8 +2961,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
           componentNameContainer.appendChild(hiddenLabel);
         }
         const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
+          instanceVersion: (_a = instance.nodeVersion) != null ? _a : void 0,
+          libraryVersion: (_b = instance.libraryComponentVersion) != null ? _b : void 0,
           isOutdated: instance.isOutdated
         });
         if (versionGroup) {
@@ -3031,6 +3034,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
       group.forEach((instance) => {
+        var _a2, _b2;
         const groupItem = document.createElement("li");
         const componentNameContainer = document.createElement("div");
         componentNameContainer.classList.add("component-name-container");
@@ -3085,8 +3089,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
         groupItem.appendChild(componentNameContainer);
         const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
+          instanceVersion: (_a2 = instance.nodeVersion) != null ? _a2 : void 0,
+          libraryVersion: (_b2 = instance.libraryComponentVersion) != null ? _b2 : void 0,
           isOutdated: instance.isOutdated
         });
         if (versionGroup) {
@@ -3833,6 +3837,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
+    var _a, _b;
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -3899,8 +3904,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
           componentNameContainer.appendChild(hiddenLabel);
         }
         const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
+          instanceVersion: (_a = instance.nodeVersion) != null ? _a : void 0,
+          libraryVersion: (_b = instance.libraryComponentVersion) != null ? _b : void 0,
           isOutdated: instance.isOutdated
         });
         if (versionGroup) {
@@ -3972,6 +3977,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const groupItems = document.createElement("ul");
       groupItems.classList.add("group-items");
       group.forEach((instance) => {
+        var _a2, _b2;
         const groupItem = document.createElement("li");
         const componentNameContainer = document.createElement("div");
         componentNameContainer.classList.add("component-name-container");
@@ -4026,8 +4032,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
         groupItem.appendChild(componentNameContainer);
         const versionGroup = displayVersionTag({
-          instanceVersion: instance.nodeVersion,
-          libraryVersion: instance.libraryComponentVersion,
+          instanceVersion: (_a2 = instance.nodeVersion) != null ? _a2 : void 0,
+          libraryVersion: (_b2 = instance.libraryComponentVersion) != null ? _b2 : void 0,
           isOutdated: instance.isOutdated
         });
         if (versionGroup) {

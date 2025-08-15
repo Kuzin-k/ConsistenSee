@@ -1,7 +1,6 @@
 /**
  * Модуль управления всплывающими подсказками (поповерами)
- * @module showPopover
- */
+ * @module showPopover */
 
 import { ComponentData } from '../shared/types';
 
@@ -18,7 +17,7 @@ import { ComponentData } from '../shared/types';
  * - Поддерживает форматирование сложных объектов
  * 
  * @param {Element} icon - DOM элемент иконки-триггера для поповера
- * @param {ComponentInstance} instance - Объект с данными компонента, включающий:
+ * @param {ComponentData} instance - Объект с данными компонента, включающий:
  *    - name: название компонента
  *    - id: уникальный идентификатор
  *    - версию

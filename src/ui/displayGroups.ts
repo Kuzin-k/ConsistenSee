@@ -151,7 +151,7 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
       });
 
       // Добавляем popover при наведении на иконку
-      itemIcon.addEventListener('mouseenter', () => {showPopover(itemIcon, instance);});
+      itemIcon.addEventListener('mouseenter', () => {showPopover(itemIcon, instance as any);});
 
       // Создаем ссылку на название инстанса
       const nameLink = document.createElement('a');
@@ -191,17 +191,17 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
         }
 
       // тег версии для одиночного элемента на первом уровне
-      const versionGroup = displayVersionTag({
-        instanceVersion: instance.nodeVersion,
-        libraryVersion: instance.libraryComponentVersion,
-        isOutdated: instance.isOutdated
-      });
-      if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
-      
-      
-      groupItem.appendChild(componentNameContainer);
-      targetList.appendChild(groupItem);
-      continue; // Переходим к следующей группе
+            const versionGroup = displayVersionTag({
+              instanceVersion: instance.nodeVersion ?? undefined,
+              libraryVersion: instance.libraryComponentVersion ?? undefined,
+              isOutdated: instance.isOutdated
+            });
+            if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
+            
+            
+            groupItem.appendChild(componentNameContainer);
+            targetList.appendChild(groupItem);
+            continue; // Переходим к следующей группе
     }
 
     // Для групп с более чем одним элементом оставляем существующую логику
@@ -329,7 +329,7 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
 
       // Добавляем popover при наведении на иконку
       itemIcon.addEventListener('mouseenter', () => {
-        showPopover(itemIcon, instance);
+        showPopover(itemIcon, instance as any);
       });
 
       // Создаем ссылку на название инстанса
@@ -378,14 +378,14 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
       groupItem.appendChild(componentNameContainer);
 
       // тег версии одиночного элемента внутри группы 
-      const versionGroup = displayVersionTag({
-        instanceVersion: instance.nodeVersion,
-        libraryVersion: instance.libraryComponentVersion,
-        isOutdated: instance.isOutdated
-      });
-
-      if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
-      groupItems.appendChild(groupItem);
+            const versionGroup = displayVersionTag({
+              instanceVersion: instance.nodeVersion ?? undefined,
+              libraryVersion: instance.libraryComponentVersion ?? undefined,
+              isOutdated: instance.isOutdated
+            });
+      
+            if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
+            groupItems.appendChild(groupItem);
     });
     targetList.appendChild(groupItems);
     // Добавляем обработчик клика для заголовка группы
