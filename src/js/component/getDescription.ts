@@ -2,20 +2,27 @@
  * Извлекает описание и версию из описания узла или его главного компонента.
  * Если узел является INSTANCE, пытается получить описание из его mainComponent или родительского mainComponentSet.
  * @param {SceneNode | ComponentNode | ComponentSetNode} node - Узел (может быть INSTANCE, COMPONENT, или COMPONENT_SET) для получения описания.
- * @returns {Promise<Object>} Объект с описанием (`description`) и найденной версией (`nodeVersion`).
+ * @returns {Promise<Object>} Объект с описанием (`description`) и найденными версиями:
+ *   - `nodeVersion` — основная найденная версия (например, "1.2.3")
+ *   - `nodeVersionMinimal` — версия из формата "v X.X.X (minimal)", если указана
  */
-export async function getDescription(node: SceneNode | ComponentNode | ComponentSetNode): Promise<{ description: string, nodeVersion: string | null }> {
+export async function getDescription(node: SceneNode | ComponentNode | ComponentSetNode): Promise<{ description: string, nodeVersion: string | null, nodeVersionMinimal: string | null }> {
   let description = '';
   // let nodeToParse = node; // Эта переменная менее критична, если description правильно каскадируется.
 
   if (!node) {
     console.warn('getDescription: получен пустой узел.');
-    return { description: '', nodeVersion: null };
+    return { description: '', nodeVersion: null, nodeVersionMinimal: null };
   }
 
   try {
     // 1. Сначала пытаемся получить описание непосредственно с самого узла.
-    description = node.description || '';
+    // Некоторые типы SceneNode не содержат поле description, поэтому читаем безопасно.
+    if ('description' in node && (node as any).description) {
+      description = (node as any).description || '';
+    } else {
+      description = '';
+    }
 
     // 2. Если узел - КОМПОНЕНТ и у него нет своего описания,
     //    а его родитель - НАБОР КОМПОНЕНТОВ, берем описание из набора.
@@ -56,11 +63,22 @@ export async function getDescription(node: SceneNode | ComponentNode | Component
 
   // Извлекаем версию из полученного описания с помощью регулярного выражения
   let nodeVersion = null;
+  let nodeVersionMinimal = null;
+  
   if (description) { // Убедимся, что description это строка
+    const descStr = String(description);
+    // Паттерн для специальной формы "v X.Y.Z (minimal)" — ищем и отдельную minimal-версию
+    const minimalPattern = /v\s*(\d+\.\d+\.\d+)\s*\(minimal\)/i;
+    const minimalMatch = descStr.match(minimalPattern);
+    if (minimalMatch) {
+      nodeVersionMinimal = minimalMatch[1];
+    }
+
+    // Общий паттерн для основной версии "v X.Y.Z" (без учета minimal)
     const versionPattern = /v\s*(\d+\.\d+\.\d+)/i; // Паттерн для поиска "v X.Y.Z"
-    const match = String(description).match(versionPattern); // Приводим description к строке на всякий случай
+    const match = descStr.match(versionPattern); // Приводим description к строке на всякий случай
     nodeVersion = match ? match[1] : null; // Если найдено совпадение, берем первую группу (версию)
   }
 
-  return { description: description || '', nodeVersion };
+  return { description: description || '', nodeVersion, nodeVersionMinimal };
 }

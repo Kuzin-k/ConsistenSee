@@ -4,7 +4,7 @@
  */
 
 // --- Экспорт нативных типов Figma для удобства ---
-export type { Paint, SceneNode, InstanceNode, ComponentNode, ComponentSetNode, GeometryMixin } from '@figma/plugin-typings';
+export type { Paint, SceneNode, ComponentNode, ComponentSetNode, GeometryMixin } from '@figma/plugin-typings';
 
 // --- Специфичные для плагина структуры данных ---
 
@@ -54,16 +54,19 @@ export interface ComponentData {
   mainComponentSetKey: string | null;
   mainComponentSetName: string | null;
   mainComponentSetId: string | null;
-  fileKey: string;
   isIcon: boolean;
   size: string | number;
   isNested: boolean;
+  isLost: boolean;
   skipUpdate: boolean;
   pluginDataKey?: string;
   // Поля статуса обновления
-  isOutdated?: boolean;
+  isOutdated: boolean;
+  isNotLatest: boolean;
+  checkVersion: string | null;
   libraryComponentId?: string | null;
   libraryComponentVersion?: string | null;
+  libraryComponentVersionMinimal?: string | null;
   updateStatus?: 'checking' | 'checked' | null;
 }
 
@@ -71,10 +74,12 @@ export interface ComponentData {
 export interface ComponentsResult {
   instances: ComponentData[];
   outdated?: ComponentData[];
+  lost?: ComponentData[];
   counts: {
     components: number;
     icons: number;
     outdated?: number;
+    lost?: number;
   };
   executionTime?: number;
 }

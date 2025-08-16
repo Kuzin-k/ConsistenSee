@@ -1,8 +1,8 @@
 import { convertRgbToHex } from './convertRgbToHex';
+import { getParentComponentName } from '../component/getParentComponentName';
+import { processVariableBindings } from './processVariableBindings';
 import { checkIsNodeOrParentHidden } from '../utils/checkIsNodeOrParentHidden';
 import { ColorData, ColorsResult, SceneNode, Paint, GeometryMixin } from '../../shared/types';
-import { processVariableBindings } from './processVariableBindings';
-import { getParentComponentName } from '../component/getParentComponentName';
 
 // Constants for special color values
 const COLOR_MIXED = '#MIXED' as const;

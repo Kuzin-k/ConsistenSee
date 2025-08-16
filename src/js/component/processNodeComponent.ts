@@ -30,8 +30,8 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
           console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name}:`, error);
           figma.ui.postMessage({
             type: 'error' as const,
-            message: `Ошибка при получении mainComponent для ${node.name}: ${error.message}`
-          }); // Cast error to Error type to access .message
+            message: `Ошибка при получении mainComponent для ${node.name}: ${(error as Error).message}`
+          });
           return null;
         }
       } else if (node.type === 'COMPONENT') {
