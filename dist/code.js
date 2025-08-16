@@ -76,16 +76,27 @@ var convertRgbToHex = ({ r, g, b }) => {
   }
 };
 
-// src/js/utils/checkIsNodeOrParentHidden.ts
-var checkIsNodeOrParentHidden = (node) => {
-  let currentNode = node;
-  while (currentNode) {
-    if (currentNode.visible === false) {
-      return true;
+// src/js/component/getParentComponentName.ts
+var getParentComponentName = async (node) => {
+  let parentNode = node.parent;
+  while (parentNode) {
+    if (parentNode.type === "INSTANCE") {
+      try {
+        const parentMainComponent = await parentNode.getMainComponentAsync();
+        if (parentMainComponent) {
+          if (parentMainComponent.parent && parentMainComponent.parent.type === "COMPONENT_SET") {
+            return parentMainComponent.parent.name;
+          }
+          return parentMainComponent.name;
+        }
+      } catch (error) {
+        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F ${parentNode.name} (ID: ${parentNode.id}):`, error);
+      }
+      return null;
     }
-    currentNode = currentNode.parent;
+    parentNode = parentNode.parent;
   }
-  return false;
+  return null;
 };
 
 // src/js/color/processVariableBindings.ts
@@ -117,27 +128,16 @@ var processVariableBindings = async (node, nodeData, propertyType, prefix) => {
   }
 };
 
-// src/js/component/getParentComponentName.ts
-var getParentComponentName = async (node) => {
-  let parentNode = node.parent;
-  while (parentNode) {
-    if (parentNode.type === "INSTANCE") {
-      try {
-        const parentMainComponent = await parentNode.getMainComponentAsync();
-        if (parentMainComponent) {
-          if (parentMainComponent.parent && parentMainComponent.parent.type === "COMPONENT_SET") {
-            return parentMainComponent.parent.name;
-          }
-          return parentMainComponent.name;
-        }
-      } catch (error) {
-        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F ${parentNode.name} (ID: ${parentNode.id}):`, error);
-      }
-      return null;
+// src/js/utils/checkIsNodeOrParentHidden.ts
+var checkIsNodeOrParentHidden = (node) => {
+  let currentNode = node;
+  while (currentNode) {
+    if (currentNode.visible === false) {
+      return true;
     }
-    parentNode = parentNode.parent;
+    currentNode = currentNode.parent;
   }
-  return null;
+  return false;
 };
 
 // src/js/color/processNodeColors.ts
@@ -268,10 +268,14 @@ async function getDescription(node) {
   let description = "";
   if (!node) {
     console.warn("getDescription: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u0443\u0437\u0435\u043B.");
-    return { description: "", nodeVersion: null };
+    return { description: "", nodeVersion: null, nodeVersionMinimal: null };
   }
   try {
-    description = node.description || "";
+    if ("description" in node && node.description) {
+      description = node.description || "";
+    } else {
+      description = "";
+    }
     if (node.type === "COMPONENT" && !description && node.parent && node.parent.type === "COMPONENT_SET") {
       description = node.parent.description || "";
     } else if (node.type === "INSTANCE") {
@@ -291,12 +295,19 @@ async function getDescription(node) {
     console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u0432 getDescription \u0434\u043B\u044F \u0443\u0437\u043B\u0430 "${node.name}" (ID: ${node.id}):`, error);
   }
   let nodeVersion = null;
+  let nodeVersionMinimal = null;
   if (description) {
+    const descStr = String(description);
+    const minimalPattern = /v\s*(\d+\.\d+\.\d+)\s*\(minimal\)/i;
+    const minimalMatch = descStr.match(minimalPattern);
+    if (minimalMatch) {
+      nodeVersionMinimal = minimalMatch[1];
+    }
     const versionPattern = /v\s*(\d+\.\d+\.\d+)/i;
-    const match = String(description).match(versionPattern);
+    const match = descStr.match(versionPattern);
     nodeVersion = match ? match[1] : null;
   }
-  return { description: description || "", nodeVersion };
+  return { description: description || "", nodeVersion, nodeVersionMinimal };
 }
 
 // src/js/component/processNodeComponent.ts
@@ -542,29 +553,52 @@ var getComponentCacheKey = (component) => {
 };
 
 // src/js/update/compareVersions.ts
-var compareVersions = (v1, v2) => {
-  const parts1 = v1.split(".").map(Number);
-  const parts2 = v2.split(".").map(Number);
-  const len = Math.max(parts1.length, parts2.length);
-  for (let i = 0; i < len; i++) {
-    const p1 = parts1[i] || 0;
-    const p2 = parts2[i] || 0;
-    if (p1 < p2) return -1;
-    if (p1 > p2) return 1;
+var compareVersions = (versionInstance, versionLatest, versionMinimal) => {
+  const extractNumeric = (v) => {
+    if (!v) return [];
+    const m = String(v).match(/^(\d+(?:\.\d+)*)/);
+    if (!m) return [];
+    return m[1].split(".").map((s) => Number(s));
+  };
+  const cmpParts = (a, b) => {
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const p1 = a[i] || 0;
+      const p2 = b[i] || 0;
+      if (p1 < p2) return -1;
+      if (p1 > p2) return 1;
+    }
+    return 0;
+  };
+  if (!versionLatest && !versionInstance) return "Latest";
+  if (!versionLatest) return "Latest";
+  if (!versionInstance) return "Outdated";
+  const instParts = extractNumeric(versionInstance);
+  const latestParts = extractNumeric(versionLatest);
+  const minimalParts = versionMinimal ? extractNumeric(versionMinimal) : null;
+  if (minimalParts) {
+    const cmpToMinimal = cmpParts(instParts, minimalParts);
+    if (cmpToMinimal < 0) return "Outdated";
+    const cmpToLatest = cmpParts(instParts, latestParts);
+    if (cmpToLatest < 0) return "NotLatest";
+    return "Latest";
   }
-  return 0;
+  const cmp = cmpParts(instParts, latestParts);
+  if (cmp < 0) return "Outdated";
+  return "Latest";
 };
 
-// src/js/update/checkUpdate.ts
+// src/js/update/updateAvailabilityCheck.ts
 var componentUpdateCache = /* @__PURE__ */ new Map();
-var checkUpdate = async (mainComponent) => {
+var updateAvailabilityCheck = async (mainComponent) => {
   var _a2, _b;
   if (!mainComponent) {
-    console.error("checkUpdate: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
+    console.error("updateAvailabilityCheck: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
     return {
       isOutdated: false,
       importedId: null,
       version: null,
+      checkVersion: null,
       description: null,
       mainComponentId: null,
       importedMainComponentId: null
@@ -576,6 +610,8 @@ var checkUpdate = async (mainComponent) => {
     const mainComponentVersion = mainComponentDescData.nodeVersion;
     const result = {
       isOutdated: false,
+      isNotLatest: false,
+      checkVersion: null,
       isLost: false,
       // Флаг, указывающий, что компонент не найден в библиотеке
       mainComponentId: mainComponent.id,
@@ -583,6 +619,8 @@ var checkUpdate = async (mainComponent) => {
       importedMainComponentId: null,
       libraryComponentId: null,
       libraryComponentVersion: null,
+      // Версия из библиотеки (пока неизвестна)
+      libraryComponentVersionMinimal: null,
       // Версия из библиотеки (пока неизвестна)
       version: mainComponentVersion,
       // Версия локального компонента
@@ -650,18 +688,24 @@ var checkUpdate = async (mainComponent) => {
     if (libraryVersionSourceNode) {
       const libraryDescData = await getDescription(libraryVersionSourceNode);
       const libraryVersion = libraryDescData.nodeVersion;
+      const libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
       result.libraryComponentVersion = libraryVersion;
+      result.libraryComponentVersionMinimal = libraryVersionMinimal;
       if (!result.description) {
         result.description = libraryDescData.description;
       }
       if (mainComponentVersion && libraryVersion) {
+        const compareResult = compareVersions(mainComponentVersion, libraryVersion, libraryVersionMinimal);
         console.log("\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0432\u0435\u0440\u0441\u0438\u0439:", {
           componentName: mainComponent.name,
           mainComponentVersion,
           libraryVersion,
-          compareResult: compareVersions(mainComponentVersion, libraryVersion)
+          libraryVersionMinimal,
+          compareResult
         });
-        result.isOutdated = compareVersions(mainComponentVersion, libraryVersion) < 0;
+        result.isOutdated = compareResult === "Outdated";
+        result.isNotLatest = compareResult === "NotLatest";
+        result.checkVersion = compareResult;
       } else if (importedComponentIdForComparison) {
         result.isOutdated = false;
       }
@@ -670,9 +714,11 @@ var checkUpdate = async (mainComponent) => {
     console.log("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430:", {
       name: mainComponent.name,
       isOutdated: result.isOutdated,
+      isNotLatest: result.isNotLatest,
       isLost: result.isLost,
       instanceVersion: mainComponentVersion,
       libraryVersion: result.libraryComponentVersion,
+      libraryVersionMinimal: result.libraryComponentVersionMinimal,
       cacheKey
     });
     return result;
@@ -684,25 +730,25 @@ var checkUpdate = async (mainComponent) => {
     });
     const safeResult = {
       isOutdated: false,
+      isNotLatest: false,
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
       libraryComponentId: null,
+      checkVersion: null,
       version: null,
       description: null,
       libraryComponentVersion: null,
+      libraryComponentVersionMinimal: null,
       isLost: false
     };
     return safeResult;
   }
 };
-var clearUpdateCache = () => {
-  componentUpdateCache.clear();
-};
 
 // src/js/update/checkComponentUpdates.ts
 var checkComponentUpdates = async (componentsResult2) => {
-  var _a2;
+  var _a2, _b;
   console.log("=== \u041D\u0430\u0447\u0430\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 ===");
   const totalComponentsToCheck = componentsResult2.instances.length;
   const updatedInstances = [];
@@ -720,17 +766,24 @@ var checkComponentUpdates = async (componentsResult2) => {
         updatedInstances.push(instance);
         continue;
       }
-      const updateInfo = await checkUpdate(mainComponent);
-      console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 checkUpdate \u0434\u043B\u044F", instance.name, {
+      const updateInfo = await updateAvailabilityCheck(mainComponent);
+      console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 updateAvailabilityCheck \u0434\u043B\u044F", instance.name, {
         isOutdated: updateInfo.isOutdated,
+        checkVersion: updateInfo.checkVersion,
         version: updateInfo.version,
+        isNotLatest: updateInfo.isNotLatest,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
+        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
         isLost: updateInfo.isLost
       });
       updatedInstances.push(__spreadProps(__spreadValues({}, instance), {
         isOutdated: updateInfo.isOutdated,
+        checkVersion: updateInfo.checkVersion,
+        isNotLatest: updateInfo.isNotLatest,
+        isLost: updateInfo.isLost,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
+        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
         updateStatus: "checked"
       }));
     } catch (componentError) {
@@ -743,8 +796,10 @@ var checkComponentUpdates = async (componentsResult2) => {
   }
   componentsResult2.instances = updatedInstances;
   componentsResult2.outdated = updatedInstances.filter((inst) => inst.isOutdated);
+  componentsResult2.lost = updatedInstances.filter((inst) => inst.isLost);
   if (componentsResult2.counts) {
     componentsResult2.counts.outdated = (_a2 = componentsResult2.outdated) == null ? void 0 : _a2.length;
+    componentsResult2.counts.lost = (_b = componentsResult2.lost) == null ? void 0 : _b.length;
   }
 };
 
@@ -753,26 +808,28 @@ if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", (event) => {
     const err = event.reason;
     console.error("Global unhandledrejection:", err);
-    if (err && err.message && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err.message)) {
+    const errMessage = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
       figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
       setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 15e3);
     } else {
       figma.ui.postMessage({
         type: "error",
-        message: `Unhandled Rejection: ${err.message || err}`
+        message: `Unhandled Rejection: ${errMessage}`
       });
     }
   });
   window.addEventListener("error", (event) => {
     const err = event.error;
     console.error("Global error:", err);
-    if (err && err.message && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err.message)) {
+    const errMessage = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
       figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
       setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 15e3);
     } else {
       figma.ui.postMessage({
         type: "error",
-        message: `Error: ${err.message || err}`
+        message: `Error: ${errMessage}`
       });
     }
   });
@@ -830,7 +887,16 @@ if (selectedSplashData) {
 }
 var lastColorsData = null;
 var totalStatsList = [];
+var componentUpdateCache2 = /* @__PURE__ */ new Map();
 var publishStatusCache = /* @__PURE__ */ new Map();
+function clearUpdateCache() {
+  try {
+    componentUpdateCache2.clear();
+    publishStatusCache.clear();
+  } catch (err) {
+    console.warn("clearUpdateCache failed:", err);
+  }
+}
 var componentsResult = {
   instances: [],
   counts: {
@@ -871,11 +937,15 @@ figma.ui.onmessage = async (msg) => {
     totalStatsList.length = 0;
     for (const selectedNode of selection) {
       uniqueNodesToProcess.add(selectedNode);
-      if (typeof selectedNode.findAll === "function") {
+      if ("findAll" in selectedNode && typeof selectedNode.findAll === "function") {
         const nodeStats = processNodeStatistics(selectedNode, selectedNode.name);
         totalStatsList.push(nodeStats);
-        const allDescendants = selectedNode.findAll();
-        allDescendants.forEach((descendant) => uniqueNodesToProcess.add(descendant));
+        try {
+          const allDescendants = selectedNode.findAll();
+          allDescendants.forEach((descendant) => uniqueNodesToProcess.add(descendant));
+        } catch (err) {
+          console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0432\u044B\u0437\u043E\u0432\u0435 findAll:", err, selectedNode);
+        }
       }
     }
     const nodesToProcess = Array.from(uniqueNodesToProcess);
@@ -1004,8 +1074,9 @@ figma.ui.onmessage = async (msg) => {
       });
     } catch (error) {
       console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435:", error);
-      figma.notify(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${error.message}`);
-      figma.ui.postMessage({ type: "error", message: `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${error.message}` });
+      const errMessage = error && typeof error === "object" && "message" in error ? String(error.message) : String(error);
+      figma.notify(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}`);
+      figma.ui.postMessage({ type: "error", message: `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}` });
       return;
     }
   } else if (msg.type === "scroll-to-node") {
@@ -1076,7 +1147,8 @@ figma.ui.onmessage = async (msg) => {
         nodes = foundNodes.filter((n) => n !== null);
       } catch (err) {
         console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0443\u0437\u043B\u043E\u0432:", err);
-        figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0443\u0437\u043B\u043E\u0432: " + err.message);
+        const errMessage = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+        figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0443\u0437\u043B\u043E\u0432: " + errMessage);
         return;
       }
       if (nodes.length === 0) {

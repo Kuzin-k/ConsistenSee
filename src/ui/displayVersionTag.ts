@@ -4,6 +4,7 @@ export interface VersionDisplayOptions {
   isOutdated?: boolean;
   isGroupHeader?: boolean;
   uniqueVersions?: string[];
+  checkVersion?: string;
 }
 
 /**
@@ -20,10 +21,14 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   const {
     instanceVersion = 'none',
     libraryVersion = 'none', 
-    isOutdated = false,
+    isOutdated = '',
+    checkVersion = '',
     isGroupHeader = false,
     uniqueVersions = []
   } = options;
+
+  let versionText = '';
+  console.log(libraryVersion, checkVersion);
 
   // Создаем контейнер для версионного тега
   const versionGroup = document.createElement('span');
@@ -40,11 +45,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
     const hasLibraryVersion = libraryVersion && libraryVersion !== 'none';
     
     // Если у всех элементов группы нет версии и у библиотеки нет версии, тег не отображается
-    if (!hasVersions && !hasLibraryVersion) {
-      return versionGroup; // Возвращаем пустой контейнер
-    }
-    
-    let versionText = '';
+    if (!hasVersions && !hasLibraryVersion) {return versionGroup;} // Возвращаем пустой контейнер
     
     // Определяем текст версии
     if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== 'none') {
@@ -52,12 +53,13 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       versionText = uniqueVersions[0];
     } else if (hasVersions) {
       // Если у элементов группы номер версии разный
-      versionText = '_._._';
+      versionText = '* * *';
+      versionBadge.classList.add("version-tag-notlatest");
     }
     
     // Если присутствует libraryVersion и isOutdated=true
     if (hasLibraryVersion && isOutdated) {
-      versionBadge.textContent = `${versionText || '_._._'} → ${libraryVersion}`;
+      versionBadge.textContent = `${versionText || '* * *'} → ${libraryVersion}`;
       versionBadge.classList.add('version-tag-outdated');
     } else if (versionText) {
       versionBadge.textContent = versionText;
@@ -65,7 +67,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       return versionGroup; // Возвращаем пустой контейнер если нет текста
     }
   } else {
-    // Обрабатываем отдельные элементы (не заголовки групп) - единая логика для всех вкладок
+    // Обрабатываем отдельные элементы (не заголовки групп)
     const hasInstanceVersion = instanceVersion && instanceVersion !== 'none';
     const hasLibraryVersion = libraryVersion && libraryVersion !== 'none';
     
@@ -74,15 +76,16 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       return versionGroup; // Возвращаем пустой контейнер
     }
     
-    // Если присутствует libraryVersion и isOutdated=true
-    if (hasLibraryVersion && isOutdated) {
+    // Если присутствует libraryVersion
+    if (hasLibraryVersion && checkVersion !=="Latest") {
       versionBadge.textContent = `${instanceVersion || 'none'} → ${libraryVersion}`;
-      versionBadge.classList.add('version-tag-outdated');
+      if (checkVersion==="NotLatest") {versionBadge.classList.add('version-tag-notlatest');}
+      if (checkVersion==="Outdated") {versionBadge.classList.add('version-tag-outdated');}
     } else if (hasInstanceVersion) {
       // Показываем только версию элемента если она есть
       versionBadge.textContent = instanceVersion;
       // Если есть версия и она не просрочена помечаем зеленым
-      if (isOutdated===false) versionBadge.classList.add('version-tag-latest');
+      if (checkVersion==="Latest") {versionBadge.classList.add('version-tag-latest');}
     } else {
       // Если нет версии элемента, но есть версия библиотеки (без isOutdated)
       return versionGroup; // Возвращаем пустой контейнер
@@ -90,9 +93,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   }
 
   // Добавляем тег в контейнер только если есть текст для отображения
-  if (versionBadge.textContent) {
-    versionGroup.appendChild(versionBadge);
-  }
+  if (versionBadge.textContent) {versionGroup.appendChild(versionBadge);}
 
   return versionGroup;
 }

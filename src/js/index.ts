@@ -23,7 +23,7 @@ import { processNodeComponent }   from './component/processNodeComponent';
 import { processNodeStatistics }  from './component/processNodeStatistics';
 
 import { checkComponentUpdates }  from './update/checkComponentUpdates';
-import { clearUpdateCache }       from './update/checkUpdate';
+
 
 
 // Глобальный обработчик ошибок для wasm/memory/out of bounds
@@ -32,8 +32,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     const err = event.reason;
     console.error('Global unhandledrejection:', err);
+    // Безопасно извлекаем сообщение ошибки как строку
+    const errMessage = (err && typeof err === 'object' && 'message' in err) ? String((err as any).message) : String(err);
     // Проверяем, связана ли ошибка с WebAssembly или памятью
-    if (err && err.message && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err.message)) {
+    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
       // Уведомляем пользователя о критической ошибке
       figma.notify('Критическая ошибка памяти Figma API. Плагин будет перезапущен.');
       // Закрываем плагин через 3 секунды с сообщением об ошибке
@@ -41,7 +43,7 @@ if (typeof window !== 'undefined') {
     } else {
       figma.ui.postMessage({
         type: 'error',
-        message: `Unhandled Rejection: ${err.message || err}`
+        message: `Unhandled Rejection: ${errMessage}`
       });
     }
   });
@@ -49,8 +51,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('error', (event: ErrorEvent) => {
     const err = event.error;
     console.error('Global error:', err);
+    // Безопасно извлекаем сообщение ошибки как строку
+    const errMessage = (err && typeof err === 'object' && 'message' in err) ? String((err as any).message) : String(err);
     // Проверяем, связана ли ошибка с WebAssembly или памятью
-    if (err && err.message && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err.message)) {
+    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
       // Уведомляем пользователя о критической ошибке
       figma.notify('Критическая ошибка памяти Figma API. Плагин будет перезапущен.');
       // Закрываем плагин через 3 секунды с сообщением об ошибке
@@ -58,7 +62,7 @@ if (typeof window !== 'undefined') {
     } else {
       figma.ui.postMessage({
         type: 'error',
-        message: `Error: ${err.message || err}`
+        message: `Error: ${errMessage}`
       });
     }
   });
@@ -125,17 +129,68 @@ if (selectedSplashData) {
   } as PluginMessage);
 }
 
-// Глобальные переменные с правильной типизацией
+/**
+ * @fileoverview This file contains the main logic for the ConsistenSee Figma plugin.
+ * It handles communication between the UI and the Figma API, processes nodes,
+ * and manages data caching.
+ */
+
+/**
+ * Global variable to store the results of the last color scan.
+ * @type {ColorsResult | null}
+ */
 let lastColorsData: ColorsResult | null = null; // To hold color data between checks
+
+/**
+ * Array to store statistics for all processed nodes.
+ * @type {NodeStatistics[]}
+ */
 let totalStatsList: NodeStatistics[] = [];
+
+/**
+ * Timestamp for the start of the analysis process.
+ * @type {number}
+ */
 let startTime: number = 0;
+
+/**
+ * The current selection of nodes in the Figma document.
+ * @type {readonly SceneNode[]}
+ */
 let selection: readonly SceneNode[] = [];
 
 // Кэши
+/**
+ * Cache for storing the update status of components.
+ * @type {Map<string, boolean>}
+ */
 const componentUpdateCache: Map<string, boolean> = new Map();
+
+/**
+ * Cache for storing the publish status of main components.
+ * @type {Map<string, PublishStatus>}
+ */
 const publishStatusCache: Map<string, PublishStatus> = new Map();
 
+/**
+ * Local fallback to clear update-related caches when the external module is missing.
+ * This mirrors the expected behavior of the original clearUpdateCache utility.
+ */
+function clearUpdateCache(): void {
+  try {
+    componentUpdateCache.clear();
+    publishStatusCache.clear();
+  } catch (err) {
+    // Non-fatal: log for debugging but do not break plugin flow
+    console.warn('clearUpdateCache failed:', err);
+  }
+}
+
 // Результаты (инициализируются перед каждым запуском)
+/**
+ * Object to store the results of the component analysis.
+ * @type {ComponentsResult}
+ */
 let componentsResult: ComponentsResult = {
   instances: [],
   counts: {
@@ -157,8 +212,9 @@ let colorsResultStroke: ColorsResult = {
 };
 
 /**
- * Основной обработчик сообщений от UI плагина
- * Обрабатывает различные команды, поступающие из пользовательского интерфейса.
+ * Main message handler for messages from the plugin's UI.
+ * Handles various commands coming from the user interface.
+ * @param {UIMessage} msg The message object from the UI.
  */
 figma.ui.onmessage = async (msg: UIMessage) => {
   console.log('Получено сообщение от UI:', msg.type);
@@ -169,7 +225,10 @@ figma.ui.onmessage = async (msg: UIMessage) => {
   // Обработчики для работы с данными компонента (get-component-data, clear-component-data)
   // Логика этих обработчиков находится ниже в этом же блоке onmessage
 
-  // Обработка основного запроса на анализ всех элементов в выделенной области
+  /**
+   * Handles the 'check-all' command from the UI.
+   * This command initiates a full analysis of the selected nodes.
+   */
   if (msg.type === 'check-all') {
       // Очищаем все кэши перед новым поиском
       clearUpdateCache();
@@ -201,14 +260,18 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       uniqueNodesToProcess.add(selectedNode);
 
       // Если узел является контейнером (имеет метод findAll), собираем все его потомки
-      if (typeof selectedNode.findAll === 'function') {
+      if ('findAll' in selectedNode && typeof (selectedNode as any).findAll === 'function') {
         // Собираем статистику для текущего выделенного элемента и всех его потомков
         const nodeStats = processNodeStatistics(selectedNode, selectedNode.name);
         totalStatsList.push(nodeStats);
 
         // Собираем всех потомков для последующей обработки
-        const allDescendants = selectedNode.findAll();
-        allDescendants.forEach(descendant => uniqueNodesToProcess.add(descendant));
+        try {
+          const allDescendants = (selectedNode as any).findAll();
+          allDescendants.forEach((descendant: SceneNode) => uniqueNodesToProcess.add(descendant));
+        } catch (err) {
+          console.error('Ошибка при вызове findAll:', err, selectedNode);
+        }
       }
     }
 
@@ -384,9 +447,11 @@ figma.ui.onmessage = async (msg: UIMessage) => {
     } catch (error) {
       // Обработка ошибок в процессе анализа
       console.error('Ошибка при проверке:', error);
-      figma.notify(`Ошибка при проверке: ${error.message}`);
+      // Безопасно извлекаем сообщение ошибки как строку (error может быть unknown)
+      const errMessage = (error && typeof error === 'object' && 'message' in error) ? String((error as any).message) : String(error);
+      figma.notify(`Ошибка при проверке: ${errMessage}`);
       // Отправляем сообщение об ошибке в UI
-      figma.ui.postMessage({ type: 'error', message: `Ошибка при проверке: ${error.message}` });
+      figma.ui.postMessage({ type: 'error', message: `Ошибка при проверке: ${errMessage}` });
       return;
     }
   }
@@ -486,7 +551,9 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       } catch (err) {
         // Обработка ошибок при выполнении Promise.all
         console.error('Ошибка при поиске группы узлов:', err);
-        figma.notify('Ошибка при поиске группы узлов: ' + err.message);
+        // Безопасно извлекаем сообщение ошибки как строку (err может быть unknown)
+        const errMessage = (err && typeof err === 'object' && 'message' in err) ? String((err as any).message) : String(err);
+        figma.notify('Ошибка при поиске группы узлов: ' + errMessage);
         return;
       }
       // Проверяем, найдены ли какие-либо узлы
@@ -789,3 +856,4 @@ figma.ui.onmessage = async (msg: UIMessage) => {
     }
   }
 };
+
