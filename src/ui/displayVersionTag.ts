@@ -4,6 +4,7 @@ export interface VersionDisplayOptions {
   isOutdated?: boolean;
   isGroupHeader?: boolean;
   uniqueVersions?: string[];
+  checkVersion?: string;
 }
 
 /**
@@ -21,11 +22,13 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
     instanceVersion = 'none',
     libraryVersion = 'none', 
     isOutdated = '',
+    checkVersion = '',
     isGroupHeader = false,
     uniqueVersions = []
   } = options;
 
   let versionText = '';
+  console.log(libraryVersion, checkVersion);
 
   // Создаем контейнер для версионного тега
   const versionGroup = document.createElement('span');
@@ -51,6 +54,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
     } else if (hasVersions) {
       // Если у элементов группы номер версии разный
       versionText = '* * *';
+      versionBadge.classList.add("version-tag-notlatest");
     }
     
     // Если присутствует libraryVersion и isOutdated=true
@@ -72,15 +76,16 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
       return versionGroup; // Возвращаем пустой контейнер
     }
     
-    // Если присутствует libraryVersion и isOutdated=true
-    if (hasLibraryVersion && isOutdated) {
+    // Если присутствует libraryVersion
+    if (hasLibraryVersion && checkVersion !=="Latest") {
       versionBadge.textContent = `${instanceVersion || 'none'} → ${libraryVersion}`;
-      versionBadge.classList.add('version-tag-outdated');
+      if (checkVersion==="NotLatest") {versionBadge.classList.add('version-tag-notlatest');}
+      if (checkVersion==="Outdated") {versionBadge.classList.add('version-tag-outdated');}
     } else if (hasInstanceVersion) {
       // Показываем только версию элемента если она есть
       versionBadge.textContent = instanceVersion;
       // Если есть версия и она не просрочена помечаем зеленым
-      if (isOutdated === false) {versionBadge.classList.add('version-tag-latest');}
+      if (checkVersion==="Latest") {versionBadge.classList.add('version-tag-latest');}
     } else {
       // Если нет версии элемента, но есть версия библиотеки (без isOutdated)
       return versionGroup; // Возвращаем пустой контейнер

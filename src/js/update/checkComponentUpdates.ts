@@ -33,16 +33,23 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
 
       console.log('DEBUG: Результат updateAvailabilityCheck для', instance.name, {
         isOutdated: updateInfo.isOutdated,
+        checkVersion: updateInfo.checkVersion,
         version: updateInfo.version,
+        isNotLatest: updateInfo.isNotLatest,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
+        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
         isLost: updateInfo.isLost
       });
 
       updatedInstances.push({
         ...instance,
         isOutdated: updateInfo.isOutdated,
+        checkVersion: updateInfo.checkVersion,
+        isNotLatest: updateInfo.isNotLatest,
+        isLost: updateInfo.isLost,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
+        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
         updateStatus: 'checked',
       });
     } catch (componentError) {
@@ -55,8 +62,12 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
   }
 
   componentsResult.instances = updatedInstances;
+  
   componentsResult.outdated = updatedInstances.filter((inst) => inst.isOutdated);
-  if (componentsResult.counts) {
-    componentsResult.counts.outdated = componentsResult.outdated?.length;
-  }
+  componentsResult.lost = updatedInstances.filter((inst) => inst.isLost);
+  if (componentsResult.counts) 
+    {
+      componentsResult.counts.outdated = componentsResult.outdated?.length;
+      componentsResult.counts.lost = componentsResult.lost?.length;
+    }
 };

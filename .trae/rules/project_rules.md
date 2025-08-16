@@ -2,7 +2,7 @@
 
 ## Ты — эксперт по разработке Figma-плагинов
 
-Ты разрабатываешь Figma-плагин на TypeScript с использованием Figma Plugin API и Manifest v2. Ты хорошо знаешь структуру `manifest.json`, `ui.html`, `code.ts`, и особенности работы с `figma.*` API.
+Ты разрабатываешь Figma-плагин на TypeScript с использованием Figma Plugin API и Manifest versionLatest. Ты хорошо знаешь структуру `manifest.json`, `ui.html`, `code.ts`, и особенности работы с `figma.*` API.
 
 ## Общие принципы
 

@@ -25,6 +25,8 @@ interface ComponentInstance {
   libraryComponentVersion?: string | null;
   /** Версия, извлеченная из описания локального компонента. */
   nodeVersion?: string | null;
+  /** Версия, проверенная на актуальность. */
+  checkVersion?: string;
   /** Полное описание компонента. */
   description?: string | null;
   /** Флаг, указывающий, что это узел с информацией о цвете. */
@@ -194,12 +196,18 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
             const versionGroup = displayVersionTag({
               instanceVersion: instance.nodeVersion ?? undefined,
               libraryVersion: instance.libraryComponentVersion ?? undefined,
-              isOutdated: instance.isOutdated
+              isOutdated: instance.isOutdated,
+              checkVersion: instance.checkVersion ?? undefined
             });
-            if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
-            
-            
-            groupItem.appendChild(componentNameContainer);
+            if (versionGroup && componentNameContainer) {
+              try { componentNameContainer.appendChild(versionGroup); } catch (err) { console.error('Failed to append versionGroup to componentNameContainer', err); }
+            }
+
+            if (componentNameContainer) {
+              groupItem.appendChild(componentNameContainer);
+            } else {
+              console.error('displayGroups: componentNameContainer is undefined for single item', instance);
+            }
             targetList.appendChild(groupItem);
             continue; // Переходим к следующей группе
     }
@@ -223,7 +231,11 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
       let groupNameHtml = '';
       groupNameHtml += name;
       groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
-      groupName.innerHTML = groupNameHtml;
+      if (groupName && typeof (groupName as any).innerHTML !== 'undefined') {
+        groupName.innerHTML = groupNameHtml;
+      } else {
+        console.error('displayGroups: failed to set groupName.innerHTML, groupName is', groupName);
+      }
       
 
     
@@ -296,7 +308,12 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
         isOutdated: hasOutdatedItems
       });
       
-      groupHeader.appendChild(versionGroupHeader);
+      if (versionGroupHeader) {
+        groupHeader.appendChild(versionGroupHeader);
+      } else {
+        // versionGroupHeader may be undefined/null if displayVersionTag returns nothing
+        console.warn('displayGroups: versionGroupHeader is empty for group', name);
+      }
 
     targetList.appendChild(groupHeader);
 
@@ -381,7 +398,8 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
             const versionGroup = displayVersionTag({
               instanceVersion: instance.nodeVersion ?? undefined,
               libraryVersion: instance.libraryComponentVersion ?? undefined,
-              isOutdated: instance.isOutdated
+              isOutdated: instance.isOutdated,
+              checkVersion: instance.checkVersion ?? undefined
             });
       
             if (versionGroup) {componentNameContainer.appendChild(versionGroup);}

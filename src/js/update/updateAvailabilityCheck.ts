@@ -22,10 +22,15 @@ export interface UpdateInfo {
   importedMainComponentId: string | null;
   /** Версия компонента из библиотеки, извлеченная из его описания. */
   libraryComponentVersion?: string | null;
+  /** Минимальная версия компонента из библиотеки, извлеченная из его описания. */
+  libraryComponentVersionMinimal?: string | null;
   /** ID компонента в библиотеке. Может отличаться от `importedId` для компонентов в наборах. */
   libraryComponentId?: string | null;
   /** Указывает, был ли компонент "потерян" (true), т.е. не удалось импортировать его из библиотеки. */
   isLost?: boolean;
+  /** Указывает, что компонент соответствует minimal, но не latest (version >= minimal && version < latest). */
+  isNotLatest?: boolean;
+  checkVersion: string | null;
 }
 
 const componentUpdateCache = new Map<string, UpdateInfo>();
@@ -49,6 +54,7 @@ export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Pro
       isOutdated: false,
       importedId: null,
       version: null,
+      checkVersion: null,
       description: null,
       mainComponentId: null,
       importedMainComponentId: null,
@@ -75,12 +81,15 @@ export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Pro
     // Создаем объект, который будет хранить всю информацию о проверке.
     const result: UpdateInfo = {
       isOutdated: false,
+      isNotLatest:false,
+      checkVersion: null,
       isLost: false, // Флаг, указывающий, что компонент не найден в библиотеке
       mainComponentId: mainComponent.id,
       importedId: null,
       importedMainComponentId: null,
       libraryComponentId: null,
       libraryComponentVersion: null, // Версия из библиотеки (пока неизвестна)
+      libraryComponentVersionMinimal: null, // Версия из библиотеки (пока неизвестна)
       version: mainComponentVersion, // Версия локального компонента
       description: mainComponentDescData.description,
     };
@@ -133,7 +142,7 @@ export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Pro
       } catch (setError) {
         // Обрабатываем ошибки, которые могут возникнуть при импорте набора (например, удален или нет доступа).
         console.error(`Ошибка при импорте набора компонентов для "${mainComponent.name}":`, setError);
-        result.isOutdated = false; // Считаем компонент устаревшим, так как не можем проверить его актуальность.
+        result.isOutdated = false;
         result.isLost = true;
         result.description = (result.description || '') + ' [Error: Failed to import component set]';
       }
@@ -172,23 +181,27 @@ export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Pro
       // Получаем версию и описание из импортированного (библиотечного) компонента/набора.
       const libraryDescData = await getDescription(libraryVersionSourceNode);
       const libraryVersion = libraryDescData.nodeVersion;
+      const libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
 
       result.libraryComponentVersion = libraryVersion;
+      result.libraryComponentVersionMinimal = libraryVersionMinimal;
       // Если у локального компонента не было описания, используем описание из библиотеки.
-      if (!result.description) {
-        result.description = libraryDescData.description;
-      }
+      if (!result.description) {result.description = libraryDescData.description;}
 
       // --- 8a. Сравнение по строкам версий ---
       // Если и у локального, и у библиотечного компонента есть версии, сравниваем их.
       if (mainComponentVersion && libraryVersion) {
+        const compareResult = compareVersions(mainComponentVersion, libraryVersion, libraryVersionMinimal);
         console.log('Сравнение версий:', {
           componentName: mainComponent.name,
           mainComponentVersion,
           libraryVersion,
-          compareResult: compareVersions(mainComponentVersion, libraryVersion)
+          libraryVersionMinimal,
+          compareResult,
         });
-        result.isOutdated = compareVersions(mainComponentVersion, libraryVersion) < 0;
+        result.isOutdated = compareResult === 'Outdated';
+        result.isNotLatest = compareResult === 'NotLatest';
+        result.checkVersion = compareResult;
       } else if (importedComponentIdForComparison) {
         // Если версии отсутствуют, сравниваем ID
         result.isOutdated = false; // Эта строка закомментирована выше
@@ -203,9 +216,11 @@ export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Pro
     console.log('Результат проверки компонента:', {
       name: mainComponent.name,
       isOutdated: result.isOutdated,
+      isNotLatest: result.isNotLatest,
       isLost: result.isLost,
       instanceVersion: mainComponentVersion,
       libraryVersion: result.libraryComponentVersion,
+      libraryVersionMinimal: result.libraryComponentVersionMinimal,
       cacheKey,
     });
     // Возвращаем собранные данные.
@@ -222,13 +237,16 @@ export const updateAvailabilityCheck = async (mainComponent: ComponentNode): Pro
     // Возвращаем "безопасный" пустой результат, чтобы не нарушать работу плагина.
     const safeResult: UpdateInfo = {
       isOutdated: false,
+      isNotLatest: false,
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
       libraryComponentId: null,
+      checkVersion: null,
       version: null,
       description: null,
       libraryComponentVersion: null,
+      libraryComponentVersionMinimal: null,
       isLost: false,
     };
 
