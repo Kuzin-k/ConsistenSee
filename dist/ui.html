@@ -2112,7 +2112,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       uniqueVersions = []
     } = options;
     let versionText = "";
-    console.log(libraryVersion, checkVersion);
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -2881,7 +2880,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       uniqueVersions = []
     } = options;
     let versionText = "";
-    console.log(libraryVersion, checkVersion);
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -3216,19 +3214,34 @@ document.getElementById('setComponentData').addEventListener('click', function()
         nonIconCount++;
       }
     });
+    const parseVersionNumbers = (v) => {
+      if (!v || typeof v !== "string") return null;
+      const m = v.trim().replace(/^v\s*/i, "").match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+      if (!m) return null;
+      return [Number(m[1] || 0), Number(m[2] || 0), Number(m[3] || 0)];
+    };
+    const compareByVersionThenName = (a, b) => {
+      const aVer = parseVersionNumbers(a.nodeVersion);
+      const bVer = parseVersionNumbers(b.nodeVersion);
+      if (aVer && bVer) {
+        for (let i = 0; i < 3; i++) {
+          if ((aVer[i] || 0) < (bVer[i] || 0)) return -1;
+          if ((aVer[i] || 0) > (bVer[i] || 0)) return 1;
+        }
+      } else if (aVer && !bVer) {
+        return -1;
+      } else if (!aVer && bVer) {
+        return 1;
+      }
+      const aName = (a.name || "").toString();
+      const bName = (b.name || "").toString();
+      return aName.localeCompare(bName);
+    };
     for (const key in groupedInstances) {
-      groupedInstances[key].sort((a, b) => {
-        const aName = a.name || "";
-        const bName = b.name || "";
-        return aName.localeCompare(bName);
-      });
+      groupedInstances[key].sort(compareByVersionThenName);
     }
     for (const key in groupedIcons) {
-      groupedIcons[key].sort((a, b) => {
-        const aName = a.name || "";
-        const bName = b.name || "";
-        return aName.localeCompare(bName);
-      });
+      groupedIcons[key].sort(compareByVersionThenName);
     }
     const componentsTab = document.querySelector('[data-tab="instances"]');
     const iconsTab = document.querySelector('[data-tab="icons"]');
@@ -3860,7 +3873,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
       uniqueVersions = []
     } = options;
     let versionText = "";
-    console.log(libraryVersion, checkVersion);
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
