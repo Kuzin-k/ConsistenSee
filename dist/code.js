@@ -627,6 +627,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
           mainComponentId: mainComponent.id,
           importedId: null,
           importedMainComponentId: null,
+          libraryComponentName: null,
           libraryComponentId: null,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
@@ -694,6 +695,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       mainComponentId: mainComponent.id,
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
+      libraryComponentName: mainComponent.name,
       libraryComponentId: importedComponentIdForComparison,
       libraryComponentVersion: libraryVersion,
       libraryComponentVersionMinimal: libraryVersionMinimal,
@@ -734,6 +736,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
+      libraryComponentName: mainComponent ? mainComponent.name : null,
       libraryComponentId: null,
       checkVersion: null,
       version: instanceVersion != null ? instanceVersion : null,
@@ -760,6 +763,12 @@ var checkComponentUpdates = async (componentsResult2) => {
         updatedInstances.push(instance);
         continue;
       }
+      const trimmedName = (instance.name || "").trim();
+      const isInstanceWithSkippedName = instance.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
+      if (instance.isIcon === true || isInstanceWithSkippedName) {
+        updatedInstances.push(__spreadProps(__spreadValues({}, instance), { updateStatus: "checked" }));
+        continue;
+      }
       const mainComponent = await figma.getNodeByIdAsync(instance.mainComponentId);
       if (!mainComponent) {
         console.warn(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0439\u0442\u0438 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u0441 ID: ${instance.mainComponentId}`);
@@ -781,6 +790,7 @@ var checkComponentUpdates = async (componentsResult2) => {
         checkVersion: updateInfo.checkVersion,
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
+        libraryComponentName: updateInfo.libraryComponentName,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
         libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,

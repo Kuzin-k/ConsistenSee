@@ -70,6 +70,7 @@ export interface ComponentData {
   isOutdated: boolean;
   isNotLatest: boolean;
   checkVersion: string | null;
+  libraryComponentName?: string | null;
   libraryComponentId?: string | null;
   libraryComponentVersion?: string | null;
   libraryComponentVersionMinimal?: string | null;

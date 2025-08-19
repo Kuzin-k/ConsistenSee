@@ -187,17 +187,30 @@ export function processAndDisplayComponents(
     groupedIcons[key].sort(sortFunction);
   }
 
+  // Переопределяем счётчики для специальных вкладок исходя из реально отображаемых элементов
+  if (tabType === "outdated") {
+    outdatedCount = nonIconCount;
+  }
+  if (tabType === "lost") {
+    lostCount = nonIconCount;
+  }
+
   // Обновляем тексты вкладок с количеством
   const componentsTab = document.querySelector('[data-tab="instances"]');
   const iconsTab = document.querySelector('[data-tab="icons"]');
   const outdatedTab = document.querySelector('[data-tab="outdated"]');
   const lostTab = document.querySelector('[data-tab="lost"]');
 
-  if (componentsTab)
-    componentsTab.textContent = `All instances (${nonIconCount})`;
-  if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
-  if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
-  if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+  // Обновляем только соответствующие вкладки для текущего типа
+  if (tabType === "instances") {
+    if (componentsTab)
+      componentsTab.textContent = `All instances (${nonIconCount})`;
+    if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
+  } else if (tabType === "outdated") {
+    if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+  } else if (tabType === "lost") {
+    if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+  }
 
   // Передаём сгруппированные и отсортированные данные в модуль рендера
   const tabTitle = tabType === "outdated" || tabType === "lost";

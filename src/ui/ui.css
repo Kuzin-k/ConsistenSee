@@ -240,7 +240,7 @@ h3 {
 .tab-content.active {display: block;}
 
 /* Results and Icons */
-#results, #icons, #outdated, #colors, #log, #total {
+#results, #icons, #outdated, #colors, #log, #total, #lost {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   color: var(--color-text);
@@ -249,13 +249,15 @@ h3 {
   padding-bottom: 8px;
 }
 
-#results ul, #icons ul, #colors ul, #outdated ul, #log ul {
+#results ul, #icons ul, #colors ul, #outdated ul,
+#lost ul, #log, #lost ul {
   gap: 2px;
   margin-top:0px;
   padding-left: 0px;
 }
 
-#results li, #icons li, #colors li, #outdated li, #log li {
+#results li, #icons li, #colors li, #outdated li,
+#lost li, #log li {
   margin:0px;
   padding: 4px 0 0 16px;
   list-style-type: none;

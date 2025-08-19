@@ -26,6 +26,8 @@ export interface UpdateInfo {
   libraryComponentVersionMinimal?: string | null;
   /** ID компонента в библиотеке. Может отличаться от `importedId` для компонентов в наборах. */
   libraryComponentId?: string | null;
+  /** Имя компонента в библиотеке. */
+  libraryComponentName?: string | null;
   /** Указывает, был ли компонент "потерян" (true), т.е. не удалось импортировать его из библиотеки. */
   isLost: boolean;
   /** Указывает, что компонент соответствует minimal, но не latest (version >= minimal && version < latest). */
@@ -93,6 +95,7 @@ export const updateAvailabilityCheck = async (
           mainComponentId: mainComponent.id,
           importedId: null,
           importedMainComponentId: null,
+          libraryComponentName: null,
           libraryComponentId: null,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
@@ -168,6 +171,7 @@ export const updateAvailabilityCheck = async (
       mainComponentId: mainComponent.id,
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
+      libraryComponentName: mainComponent.name,
       libraryComponentId: importedComponentIdForComparison,
       libraryComponentVersion: libraryVersion,
       libraryComponentVersionMinimal: libraryVersionMinimal,
@@ -215,6 +219,7 @@ export const updateAvailabilityCheck = async (
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
+      libraryComponentName: mainComponent ? mainComponent.name : null,
       libraryComponentId: null,
       checkVersion: null,
       version: instanceVersion ?? null,

@@ -247,7 +247,7 @@ h3 {
 .tab-content.active {display: block;}
 
 /* Results and Icons */
-#results, #icons, #outdated, #colors, #log, #total {
+#results, #icons, #outdated, #colors, #log, #total, #lost {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   color: var(--color-text);
@@ -256,13 +256,15 @@ h3 {
   padding-bottom: 8px;
 }
 
-#results ul, #icons ul, #colors ul, #outdated ul, #log ul {
+#results ul, #icons ul, #colors ul, #outdated ul,
+#lost ul, #log, #lost ul {
   gap: 2px;
   margin-top:0px;
   padding-left: 0px;
 }
 
-#results li, #icons li, #colors li, #outdated li, #log li {
+#results li, #icons li, #colors li, #outdated li,
+#lost li, #log li {
   margin:0px;
   padding: 4px 0 0 16px;
   list-style-type: none;
@@ -896,14 +898,14 @@ input:checked + .slider:before {
       </div>
       <!-- Tabs --> 
       <div class="tabs">
-        <div class="tab active" data-tab="instances">All instances (0)</div>
+        <div class="tab active" data-tab="instances">All instances</div>
         <div class="tab" data-tab="colors">Colors</div>
         <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
-        <div class="tab" data-tab="outdated">Outdated (0)</div>
-        <div class="tab" data-tab="lost">Lost (0)</div>
-        <div class="tab" data-tab="icons">Icons (0)</div>
-        <div class="tab" data-tab="total">Total (0)</div>
+        <div class="tab" data-tab="outdated">Outdated</div>
+        <div class="tab" data-tab="lost">Lost</div>
+        <div class="tab" data-tab="icons">Icons</div>
+        <div class="tab" data-tab="total">Total</div>
       </div>
     </div>
     <!-- Контент --> 
@@ -3278,15 +3280,25 @@ document.getElementById('setComponentData').addEventListener('click', function()
     for (const key in groupedIcons) {
       groupedIcons[key].sort(sortFunction);
     }
+    if (tabType === "outdated") {
+      outdatedCount = nonIconCount;
+    }
+    if (tabType === "lost") {
+      lostCount = nonIconCount;
+    }
     const componentsTab = document.querySelector('[data-tab="instances"]');
     const iconsTab = document.querySelector('[data-tab="icons"]');
     const outdatedTab = document.querySelector('[data-tab="outdated"]');
     const lostTab = document.querySelector('[data-tab="lost"]');
-    if (componentsTab)
-      componentsTab.textContent = `All instances (${nonIconCount})`;
-    if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
-    if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
-    if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+    if (tabType === "instances") {
+      if (componentsTab)
+        componentsTab.textContent = `All instances (${nonIconCount})`;
+      if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
+    } else if (tabType === "outdated") {
+      if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+    } else if (tabType === "lost") {
+      if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+    }
     const tabTitle = tabType === "outdated" || tabType === "lost";
     if (tabType === "outdated" || tabType === "lost") {
       displayGroups(sortGroups(groupedInstances), resultsList, tabTitle);
