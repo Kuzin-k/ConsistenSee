@@ -29,7 +29,8 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         continue;
       }
 
-      const updateInfo = await updateAvailabilityCheck(mainComponent);
+      // Передаём версию текущего инстанса для корректной проверки относительно кэшированных версий библиотеки
+      const updateInfo = await updateAvailabilityCheck(mainComponent, instance.nodeVersion);
 
       console.log('DEBUG: Результат updateAvailabilityCheck для', instance.name, {
         isOutdated: updateInfo.isOutdated,
@@ -45,8 +46,8 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         ...instance,
         isOutdated: updateInfo.isOutdated,
         checkVersion: updateInfo.checkVersion,
-        isNotLatest: updateInfo.isNotLatest,
-        isLost: updateInfo.isLost,
+        isNotLatest: Boolean(updateInfo.isNotLatest),
+        isLost: Boolean(updateInfo.isLost),
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
         libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,

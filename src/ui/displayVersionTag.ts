@@ -28,7 +28,6 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   } = options;
 
   let versionText = '';
-  console.log(libraryVersion, checkVersion);
 
   // Создаем контейнер для версионного тега
   const versionGroup = document.createElement('span');

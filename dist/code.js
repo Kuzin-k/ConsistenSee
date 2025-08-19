@@ -590,133 +590,133 @@ var compareVersions = (versionInstance, versionLatest, versionMinimal) => {
 
 // src/js/update/updateAvailabilityCheck.ts
 var componentUpdateCache = /* @__PURE__ */ new Map();
-var updateAvailabilityCheck = async (mainComponent) => {
+var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
   var _a2, _b;
   if (!mainComponent) {
     console.error("updateAvailabilityCheck: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
     return {
       isOutdated: false,
       importedId: null,
-      version: null,
+      version: instanceVersion != null ? instanceVersion : null,
       checkVersion: null,
       description: null,
       mainComponentId: null,
-      importedMainComponentId: null
+      importedMainComponentId: null,
+      isLost: false,
+      isNotLatest: false
     };
   }
   try {
     const cacheKey = getComponentCacheKey(mainComponent);
-    const mainComponentDescData = await getDescription(mainComponent);
-    const mainComponentVersion = mainComponentDescData.nodeVersion;
+    const isPartOfSet = ((_a2 = mainComponent.parent) == null ? void 0 : _a2.type) === "COMPONENT_SET";
+    let libraryVersionSourceNode = null;
+    let importedComponentIdForComparison = null;
+    let libraryVersion = null;
+    let libraryVersionMinimal = null;
+    const cached = componentUpdateCache.get(cacheKey);
+    if (cached) {
+      libraryVersion = cached.latest;
+      libraryVersionMinimal = cached.minimal;
+      console.warn("DEBUG: \u0412\u0437\u044F\u043B\u0438 \u0438\u0437 \u043A\u044D\u0448\u0430 \u0434\u043B\u044F", cacheKey, { name: mainComponent.name, latest: libraryVersion, minimal: libraryVersionMinimal, lost: cached.lost });
+      if (cached.lost) {
+        const cachedLostResult = {
+          isOutdated: false,
+          isNotLatest: false,
+          checkVersion: null,
+          isLost: true,
+          mainComponentId: mainComponent.id,
+          importedId: null,
+          importedMainComponentId: null,
+          libraryComponentId: null,
+          libraryComponentVersion: null,
+          libraryComponentVersionMinimal: null,
+          version: instanceVersion != null ? instanceVersion : null,
+          description: null
+        };
+        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", { cacheKey, name: mainComponent.name });
+        return cachedLostResult;
+      }
+    } else {
+      if (!mainComponent.key) {
+        console.error("\u0423 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043A\u043B\u044E\u0447:", mainComponent.name);
+      } else if (isPartOfSet && ((_b = mainComponent.parent) == null ? void 0 : _b.key)) {
+        try {
+          const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
+          if (importedSet) {
+            libraryVersionSourceNode = importedSet;
+            const importedComponentInSet = importedSet.findChild(
+              (comp) => comp.type === "COMPONENT" && comp.key === mainComponent.key
+            );
+            if (importedComponentInSet) {
+              if (!importedComponentInSet.id) {
+                console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponentInSet.name}" \u0432 \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
+              } else {
+                importedComponentIdForComparison = importedComponentInSet.id;
+              }
+            } else {
+              console.error(`\u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${mainComponent.name}" (key: ${mainComponent.key}) \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u043C \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}"`);
+            }
+          } else {
+            console.error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043D\u0430\u0431\u043E\u0440 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}" (parent key: ${mainComponent.parent.key})`);
+          }
+        } catch (setError) {
+          console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043D\u0430\u0431\u043E\u0440\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}":`, setError);
+        }
+      } else {
+        try {
+          const importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
+          if (importedComponent) {
+            if (!importedComponent.id) {
+              console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponent.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
+            } else {
+              libraryVersionSourceNode = importedComponent;
+              importedComponentIdForComparison = importedComponent.id;
+            }
+          }
+        } catch (componentError) {
+          console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent.name}":`, componentError);
+        }
+      }
+      if (libraryVersionSourceNode) {
+        const libraryDescData = await getDescription(libraryVersionSourceNode);
+        libraryVersion = libraryDescData.nodeVersion;
+        libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
+        componentUpdateCache.set(cacheKey, { latest: libraryVersion, minimal: libraryVersionMinimal, lost: false });
+      } else {
+        componentUpdateCache.set(cacheKey, { latest: null, minimal: null, lost: true });
+      }
+    }
     const result = {
       isOutdated: false,
       isNotLatest: false,
       checkVersion: null,
       isLost: false,
-      // Флаг, указывающий, что компонент не найден в библиотеке
       mainComponentId: mainComponent.id,
-      importedId: null,
-      importedMainComponentId: null,
-      libraryComponentId: null,
-      libraryComponentVersion: null,
-      // Версия из библиотеки (пока неизвестна)
-      libraryComponentVersionMinimal: null,
-      // Версия из библиотеки (пока неизвестна)
-      version: mainComponentVersion,
-      // Версия локального компонента
-      description: mainComponentDescData.description
+      importedId: importedComponentIdForComparison,
+      importedMainComponentId: importedComponentIdForComparison,
+      libraryComponentId: importedComponentIdForComparison,
+      libraryComponentVersion: libraryVersion,
+      libraryComponentVersionMinimal: libraryVersionMinimal,
+      version: instanceVersion != null ? instanceVersion : null,
+      description: null
     };
-    if (!mainComponent.key) {
-      console.error("\u0423 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043A\u043B\u044E\u0447:", mainComponent.name);
-      componentUpdateCache.set(cacheKey, result);
-      return result;
-    }
-    const isPartOfSet = ((_a2 = mainComponent.parent) == null ? void 0 : _a2.type) === "COMPONENT_SET";
-    let libraryVersionSourceNode = null;
-    let importedComponentIdForComparison = null;
-    if (isPartOfSet && ((_b = mainComponent.parent) == null ? void 0 : _b.key)) {
-      try {
-        const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
-        if (importedSet) {
-          libraryVersionSourceNode = importedSet;
-          const importedComponentInSet = importedSet.findChild((comp) => comp.type === "COMPONENT" && comp.key === mainComponent.key);
-          if (importedComponentInSet) {
-            if (!importedComponentInSet.id) {
-              console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponentInSet.name}" \u0432 \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
-              result.isOutdated = false;
-              result.isLost = true;
-              result.description = (result.description || "") + " [Error: Imported component in set has no ID]";
-            } else {
-              importedComponentIdForComparison = importedComponentInSet.id;
-              result.libraryComponentId = importedComponentInSet.id;
-            }
-          } else {
-            console.error(`\u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${mainComponent.name}" (key: ${mainComponent.key}) \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u043C \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}"`);
-          }
-        } else {
-          console.error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043D\u0430\u0431\u043E\u0440 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}" (parent key: ${mainComponent.parent.key})`);
-        }
-      } catch (setError) {
-        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043D\u0430\u0431\u043E\u0440\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}":`, setError);
-        result.isOutdated = false;
-        result.isLost = true;
-        result.description = (result.description || "") + " [Error: Failed to import component set]";
-      }
+    if (libraryVersion || libraryVersionMinimal) {
+      const compareResult = compareVersions(instanceVersion, libraryVersion, libraryVersionMinimal);
+      result.isOutdated = compareResult === "Outdated";
+      result.isNotLatest = compareResult === "NotLatest";
+      result.checkVersion = compareResult;
+    } else if (importedComponentIdForComparison) {
+      result.isOutdated = false;
+      result.checkVersion = "Latest";
     } else {
-      try {
-        const importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
-        if (importedComponent) {
-          if (!importedComponent.id) {
-            console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponent.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
-            result.isOutdated = false;
-            result.isLost = true;
-            result.description = (result.description || "") + " [Error: Imported component has no ID]";
-          } else {
-            libraryVersionSourceNode = importedComponent;
-            importedComponentIdForComparison = importedComponent.id;
-            result.importedId = importedComponent.id;
-            result.importedMainComponentId = importedComponent.id;
-          }
-        }
-      } catch (componentError) {
-        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent.name}":`, componentError);
-        result.isOutdated = false;
-        result.isLost = true;
-        result.description = (result.description || "") + " [Error: Failed to import component]";
-      }
+      result.isLost = true;
     }
-    if (libraryVersionSourceNode) {
-      const libraryDescData = await getDescription(libraryVersionSourceNode);
-      const libraryVersion = libraryDescData.nodeVersion;
-      const libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
-      result.libraryComponentVersion = libraryVersion;
-      result.libraryComponentVersionMinimal = libraryVersionMinimal;
-      if (!result.description) {
-        result.description = libraryDescData.description;
-      }
-      if (mainComponentVersion && libraryVersion) {
-        const compareResult = compareVersions(mainComponentVersion, libraryVersion, libraryVersionMinimal);
-        console.log("\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0432\u0435\u0440\u0441\u0438\u0439:", {
-          componentName: mainComponent.name,
-          mainComponentVersion,
-          libraryVersion,
-          libraryVersionMinimal,
-          compareResult
-        });
-        result.isOutdated = compareResult === "Outdated";
-        result.isNotLatest = compareResult === "NotLatest";
-        result.checkVersion = compareResult;
-      } else if (importedComponentIdForComparison) {
-        result.isOutdated = false;
-      }
-    }
-    componentUpdateCache.set(cacheKey, result);
     console.log("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430:", {
       name: mainComponent.name,
       isOutdated: result.isOutdated,
       isNotLatest: result.isNotLatest,
       isLost: result.isLost,
-      instanceVersion: mainComponentVersion,
+      instanceVersion,
       libraryVersion: result.libraryComponentVersion,
       libraryVersionMinimal: result.libraryComponentVersionMinimal,
       cacheKey
@@ -736,7 +736,7 @@ var updateAvailabilityCheck = async (mainComponent) => {
       importedId: null,
       libraryComponentId: null,
       checkVersion: null,
-      version: null,
+      version: instanceVersion != null ? instanceVersion : null,
       description: null,
       libraryComponentVersion: null,
       libraryComponentVersionMinimal: null,
@@ -766,7 +766,7 @@ var checkComponentUpdates = async (componentsResult2) => {
         updatedInstances.push(instance);
         continue;
       }
-      const updateInfo = await updateAvailabilityCheck(mainComponent);
+      const updateInfo = await updateAvailabilityCheck(mainComponent, instance.nodeVersion);
       console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 updateAvailabilityCheck \u0434\u043B\u044F", instance.name, {
         isOutdated: updateInfo.isOutdated,
         checkVersion: updateInfo.checkVersion,
@@ -779,8 +779,8 @@ var checkComponentUpdates = async (componentsResult2) => {
       updatedInstances.push(__spreadProps(__spreadValues({}, instance), {
         isOutdated: updateInfo.isOutdated,
         checkVersion: updateInfo.checkVersion,
-        isNotLatest: updateInfo.isNotLatest,
-        isLost: updateInfo.isLost,
+        isNotLatest: Boolean(updateInfo.isNotLatest),
+        isLost: Boolean(updateInfo.isLost),
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
         libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
