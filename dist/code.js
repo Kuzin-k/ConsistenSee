@@ -602,6 +602,8 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       description: null,
       mainComponentId: null,
       importedMainComponentId: null,
+      libraryComponentName: null,
+      libraryComponentSetName: null,
       isLost: false,
       isNotLatest: false
     };
@@ -611,6 +613,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     const isPartOfSet = ((_a2 = mainComponent.parent) == null ? void 0 : _a2.type) === "COMPONENT_SET";
     let libraryVersionSourceNode = null;
     let importedComponentIdForComparison = null;
+    let libraryComponentSetName = null;
     let libraryVersion = null;
     let libraryVersionMinimal = null;
     const cached = componentUpdateCache.get(cacheKey);
@@ -628,6 +631,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
           importedId: null,
           importedMainComponentId: null,
           libraryComponentName: null,
+          libraryComponentSetName: null,
           libraryComponentId: null,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
@@ -645,6 +649,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
           const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
           if (importedSet) {
             libraryVersionSourceNode = importedSet;
+            libraryComponentSetName = importedSet.name;
             const importedComponentInSet = importedSet.findChild(
               (comp) => comp.type === "COMPONENT" && comp.key === mainComponent.key
             );
@@ -696,6 +701,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
       libraryComponentName: mainComponent.name,
+      libraryComponentSetName,
       libraryComponentId: importedComponentIdForComparison,
       libraryComponentVersion: libraryVersion,
       libraryComponentVersionMinimal: libraryVersionMinimal,
@@ -737,6 +743,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       importedMainComponentId: null,
       importedId: null,
       libraryComponentName: mainComponent ? mainComponent.name : null,
+      libraryComponentSetName: null,
       libraryComponentId: null,
       checkVersion: null,
       version: instanceVersion != null ? instanceVersion : null,
@@ -791,6 +798,7 @@ var checkComponentUpdates = async (componentsResult2) => {
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
         libraryComponentName: updateInfo.libraryComponentName,
+        libraryComponentSetName: updateInfo.libraryComponentSetName,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
         libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,

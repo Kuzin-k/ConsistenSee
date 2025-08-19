@@ -3,14 +3,12 @@
  * так и в frontend (ui.html) частях плагина.
  */
 
-// --- Экспорт нативных типов Figma для удобства ---
-export type {
-  Paint,
-  SceneNode,
-  ComponentNode,
-  ComponentSetNode,
-  GeometryMixin,
-} from "@figma/plugin-typings";
+// --- Локальные определения типов Figma ---
+export type Paint = any;
+export type SceneNode = any;
+export type ComponentNode = any;
+export type ComponentSetNode = any;
+export type GeometryMixin = any;
 
 // --- Специфичные для плагина структуры данных ---
 
@@ -71,6 +69,7 @@ export interface ComponentData {
   isNotLatest: boolean;
   checkVersion: string | null;
   libraryComponentName?: string | null;
+  libraryComponentSetName?: string | null;
   libraryComponentId?: string | null;
   libraryComponentVersion?: string | null;
   libraryComponentVersionMinimal?: string | null;

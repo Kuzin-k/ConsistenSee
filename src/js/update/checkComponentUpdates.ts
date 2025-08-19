@@ -59,6 +59,7 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
         libraryComponentName: updateInfo.libraryComponentName,
+        libraryComponentSetName: updateInfo.libraryComponentSetName,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
         libraryComponentVersionMinimal:updateInfo.libraryComponentVersionMinimal,

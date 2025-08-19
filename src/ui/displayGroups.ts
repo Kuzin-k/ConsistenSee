@@ -23,6 +23,8 @@ interface ComponentInstance {
   isOutdated?: boolean;
   /** Версия компонента из библиотеки (если доступна). */
   libraryComponentVersion?: string | null;
+  /** Имя набора компонентов из библиотеки (если доступно). */
+  libraryComponentSetName?: string | null;
   /** Версия, извлеченная из описания локального компонента. */
   nodeVersion?: string | null;
   /** Версия, проверенная на актуальность. */

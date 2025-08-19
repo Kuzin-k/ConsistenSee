@@ -28,6 +28,8 @@ export interface UpdateInfo {
   libraryComponentId?: string | null;
   /** Имя компонента в библиотеке. */
   libraryComponentName?: string | null;
+  /** Имя набора компонентов в библиотеке (если компонент является частью набора). */
+  libraryComponentSetName?: string | null;
   /** Указывает, был ли компонент "потерян" (true), т.е. не удалось импортировать его из библиотеки. */
   isLost: boolean;
   /** Указывает, что компонент соответствует minimal, но не latest (version >= minimal && version < latest). */
@@ -61,6 +63,8 @@ export const updateAvailabilityCheck = async (
       description: null,
       mainComponentId: null,
       importedMainComponentId: null,
+      libraryComponentName: null,
+      libraryComponentSetName: null,
       isLost: false,
       isNotLatest: false,
     };
@@ -73,6 +77,7 @@ export const updateAvailabilityCheck = async (
     const isPartOfSet = mainComponent.parent?.type === 'COMPONENT_SET';
     let libraryVersionSourceNode: ComponentNode | ComponentSetNode | null = null;
     let importedComponentIdForComparison: string | null = null;
+    let libraryComponentSetName: string | null = null;
 
     // Значения версий из библиотеки (latest/minimal)
     let libraryVersion: string | null = null;
@@ -96,6 +101,7 @@ export const updateAvailabilityCheck = async (
           importedId: null,
           importedMainComponentId: null,
           libraryComponentName: null,
+          libraryComponentSetName: null,
           libraryComponentId: null,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
@@ -115,6 +121,7 @@ export const updateAvailabilityCheck = async (
           const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
           if (importedSet) {
             libraryVersionSourceNode = importedSet;
+            libraryComponentSetName = importedSet.name;
             const importedComponentInSet = importedSet.findChild(
               (comp): comp is ComponentNode => comp.type === 'COMPONENT' && comp.key === mainComponent.key
             );
@@ -172,6 +179,7 @@ export const updateAvailabilityCheck = async (
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
       libraryComponentName: mainComponent.name,
+      libraryComponentSetName: libraryComponentSetName,
       libraryComponentId: importedComponentIdForComparison,
       libraryComponentVersion: libraryVersion,
       libraryComponentVersionMinimal: libraryVersionMinimal,
@@ -220,6 +228,7 @@ export const updateAvailabilityCheck = async (
       importedMainComponentId: null,
       importedId: null,
       libraryComponentName: mainComponent ? mainComponent.name : null,
+      libraryComponentSetName: null,
       libraryComponentId: null,
       checkVersion: null,
       version: instanceVersion ?? null,
