@@ -901,6 +901,7 @@ input:checked + .slider:before {
         <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
         <div class="tab" data-tab="outdated">Outdated (0)</div>
+        <div class="tab" data-tab="lost">Lost (0)</div>
         <div class="tab" data-tab="icons">Icons (0)</div>
         <div class="tab" data-tab="total">Total (0)</div>
       </div>
@@ -914,11 +915,20 @@ input:checked + .slider:before {
         <ul id="resultsList"></ul>
       </div>
     </div>
+
     <!-- Устаревшие инстансы -->
     <div id="outdated" class="tab-content">
       <div id="outdatedResults">
         <a href="#" class="toggle-groups" data-action="expand">expand all</a>
         <ul id="outdatedResultsList"></ul>
+      </div>
+    </div>
+
+    <!-- Потерянные инстансы -->
+    <div id="lost" class="tab-content">
+      <div id="lostResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="lostResultsList"></ul>
       </div>
     </div>
     <!-- Changelog --> 
@@ -1179,6 +1189,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
             let allInstances = [];
             UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, outdatedResultsList, null, 'outdated');
         }
+                if (window.lastDebugData.components) {
+            const lostResultsList = document.getElementById('lostResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, lostResultsList, null, 'lost');
+        }
                 // Re-process and display colors
                 UIModules.processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
             }
@@ -1393,6 +1408,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const outdatedResultsList = document.getElementById('outdatedResultsList');
             let allInstances = [];
             UIModules.processAndDisplayComponents(msg.components, allInstances, outdatedResultsList, null, 'outdated');
+        }
+
+        // Process lost components if present
+        if (msg.components) {
+            const lostResultsList = document.getElementById('lostResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(msg.components, allInstances, lostResultsList, null, 'lost');
         }
 
         // Process colors
@@ -3168,17 +3190,28 @@ document.getElementById('setComponentData').addEventListener('click', function()
           (instance) => instance.checkVersion === "Outdated"
         );
       }
+    } else if (tabType === "lost") {
+      if (componentsData.lost && componentsData.lost.length > 0) {
+        sourceInstances = componentsData.lost;
+      } else {
+        sourceInstances = componentsData.instances.filter(
+          (instance) => instance.isLost === true
+        );
+      }
     } else {
       sourceInstances = componentsData.instances;
     }
     allInstances = sourceInstances;
     const groupedInstances = {};
     const groupedIcons = {};
-    const showHiddenToggle = document.getElementById("showHiddenToggle");
+    const showHiddenToggle = document.getElementById(
+      "showHiddenToggle"
+    );
     const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
     let nonIconCount = 0;
     let iconCount = 0;
     let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === "number" ? componentsData.counts.outdated : componentsData.outdated ? componentsData.outdated.length : 0;
+    let lostCount = componentsData.counts && typeof componentsData.counts.lost === "number" ? componentsData.counts.lost : componentsData.lost ? componentsData.lost.length : 0;
     sourceInstances.forEach((instance) => {
       if (!showHidden && instance.hidden) {
         return;
@@ -3186,8 +3219,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (tabType === "outdated" && instance.checkVersion !== "Outdated") {
         return;
       }
+      if (tabType === "lost" && instance.isLost !== true) {
+        return;
+      }
       const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
-      if (tabType === "outdated") {
+      if (tabType === "outdated" || tabType === "lost") {
         if (!groupedInstances[groupKey]) {
           groupedInstances[groupKey] = [];
         }
@@ -3235,7 +3271,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const bName = b.name || "";
       return aName.localeCompare(bName);
     };
-    const sortFunction = tabType === "outdated" ? compareByName : compareByVersionThenName;
+    const sortFunction = tabType === "outdated" || tabType === "lost" ? compareByName : compareByVersionThenName;
     for (const key in groupedInstances) {
       groupedInstances[key].sort(sortFunction);
     }
@@ -3245,19 +3281,22 @@ document.getElementById('setComponentData').addEventListener('click', function()
     const componentsTab = document.querySelector('[data-tab="instances"]');
     const iconsTab = document.querySelector('[data-tab="icons"]');
     const outdatedTab = document.querySelector('[data-tab="outdated"]');
-    if (componentsTab) componentsTab.textContent = `All instances (${nonIconCount})`;
+    const lostTab = document.querySelector('[data-tab="lost"]');
+    if (componentsTab)
+      componentsTab.textContent = `All instances (${nonIconCount})`;
     if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
     if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
-    const isOutdatedTab = tabType === "outdated";
-    if (tabType === "outdated") {
-      displayGroups(sortGroups(groupedInstances), resultsList, isOutdatedTab);
+    if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+    const tabTitle = tabType === "outdated" || tabType === "lost";
+    if (tabType === "outdated" || tabType === "lost") {
+      displayGroups(sortGroups(groupedInstances), resultsList, tabTitle);
       if (iconResultsList) {
         iconResultsList.innerHTML = "";
       }
     } else {
-      displayGroups(sortGroups(groupedInstances), resultsList, isOutdatedTab);
+      displayGroups(sortGroups(groupedInstances), resultsList, false);
       if (iconResultsList) {
-        displayGroups(sortGroups(groupedIcons), iconResultsList, isOutdatedTab);
+        displayGroups(sortGroups(groupedIcons), iconResultsList, false);
       }
     }
   }

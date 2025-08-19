@@ -89,6 +89,7 @@
         <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
         <div class="tab" data-tab="outdated">Outdated (0)</div>
+        <div class="tab" data-tab="lost">Lost (0)</div>
         <div class="tab" data-tab="icons">Icons (0)</div>
         <div class="tab" data-tab="total">Total (0)</div>
       </div>
@@ -102,11 +103,20 @@
         <ul id="resultsList"></ul>
       </div>
     </div>
+
     <!-- Устаревшие инстансы -->
     <div id="outdated" class="tab-content">
       <div id="outdatedResults">
         <a href="#" class="toggle-groups" data-action="expand">expand all</a>
         <ul id="outdatedResultsList"></ul>
+      </div>
+    </div>
+
+    <!-- Потерянные инстансы -->
+    <div id="lost" class="tab-content">
+      <div id="lostResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="lostResultsList"></ul>
       </div>
     </div>
     <!-- Changelog --> 
@@ -367,6 +377,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
             let allInstances = [];
             UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, outdatedResultsList, null, 'outdated');
         }
+                if (window.lastDebugData.components) {
+            const lostResultsList = document.getElementById('lostResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, lostResultsList, null, 'lost');
+        }
                 // Re-process and display colors
                 UIModules.processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
             }
@@ -581,6 +596,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const outdatedResultsList = document.getElementById('outdatedResultsList');
             let allInstances = [];
             UIModules.processAndDisplayComponents(msg.components, allInstances, outdatedResultsList, null, 'outdated');
+        }
+
+        // Process lost components if present
+        if (msg.components) {
+            const lostResultsList = document.getElementById('lostResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(msg.components, allInstances, lostResultsList, null, 'lost');
         }
 
         // Process colors

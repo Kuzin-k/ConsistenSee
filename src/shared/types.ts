@@ -4,7 +4,13 @@
  */
 
 // --- Экспорт нативных типов Figma для удобства ---
-export type { Paint, SceneNode, ComponentNode, ComponentSetNode, GeometryMixin } from '@figma/plugin-typings';
+export type {
+  Paint,
+  SceneNode,
+  ComponentNode,
+  ComponentSetNode,
+  GeometryMixin,
+} from "@figma/plugin-typings";
 
 // --- Специфичные для плагина структуры данных ---
 
@@ -38,7 +44,7 @@ export interface ComponentTreeNode {
 
 /** Детальная информация о найденном компоненте/инстансе */
 export interface ComponentData {
-  type: 'COMPONENT' | 'INSTANCE' | 'COMPONENT_SET';
+  type: "COMPONENT" | "INSTANCE" | "COMPONENT_SET";
   name: string;
   nodeId: string;
   key: string | null;
@@ -67,7 +73,7 @@ export interface ComponentData {
   libraryComponentId?: string | null;
   libraryComponentVersion?: string | null;
   libraryComponentVersionMinimal?: string | null;
-  updateStatus?: 'checking' | 'checked' | null;
+  updateStatus?: "checking" | "checked" | null;
 }
 
 /** Результат анализа компонентов */
@@ -114,29 +120,44 @@ export interface ColorsResult {
 
 /** Сообщения, отправляемые из UI в Backend */
 export type UIMessage =
-  | { type: 'resize'; width: number; height: number }
-  | { type: 'check-all' }
-  | { type: 'check-updates'; components: ComponentsResult }
-  | { type: 'scroll-to-node'; nodeId: string }
-  | { type: 'select-nodes'; nodeIds: string[] }
-  | { type: 'get-component-data' }
-  | { type: 'set-component-data'; key: string; version: string }
-  | { type: 'clear-component-data' };
+  | { type: "resize"; width: number; height: number }
+  | { type: "check-all" }
+  | { type: "check-updates"; components: ComponentsResult }
+  | { type: "scroll-to-node"; nodeId: string }
+  | { type: "select-nodes"; nodeIds: string[] }
+  | { type: "get-component-data" }
+  | { type: "set-component-data"; key: string; version: string }
+  | { type: "clear-component-data" };
 
 /** Сообщения, отправляемые из Backend в UI */
 export type PluginMessage =
-  | { type: 'user-info'; user: { name: string; id: string } }
-  | { type: 'splash-data'; data: SplashScreenData }
-  | { type: 'progress-update'; phase: string; processed: number; total: number; message: string }
-  | { type: 'display-total'; data: { overallStats: NodeStatistics; totalCount: number } }
-  | { type: 'all-results';
+  | { type: "user-info"; user: { name: string; id: string } }
+  | { type: "splash-data"; data: SplashScreenData }
+  | {
+      type: "progress-update";
+      phase: string;
+      processed: number;
+      total: number;
+      message: string;
+    }
+  | {
+      type: "display-total";
+      data: { overallStats: NodeStatistics; totalCount: number };
+    }
+  | {
+      type: "all-results";
       components: ComponentsResult;
       colors: ColorsResult;
       colorsStroke: ColorsResult;
       componentTree: ComponentTreeNode[];
       totalStats: NodeStatistics;
     }
-  | { type: 'error'; message: string }
-  | { type: 'component-data-result'; data?: Record<string, any>; message?: string; isError?: boolean }
-  | { type: 'component-data-set'; message: string; isError?: boolean }
-  | { type: 'component-data-cleared'; message: string; isError?: boolean };
+  | { type: "error"; message: string }
+  | {
+      type: "component-data-result";
+      data?: Record<string, any>;
+      message?: string;
+      isError?: boolean;
+    }
+  | { type: "component-data-set"; message: string; isError?: boolean }
+  | { type: "component-data-cleared"; message: string; isError?: boolean };
