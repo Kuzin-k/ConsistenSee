@@ -357,11 +357,16 @@ document.getElementById('setComponentData').addEventListener('click', function()
             // Перерисовываем список инстансов при изменении состояния toggle
             if (window.lastDebugData) {
                 if (window.lastDebugData.components) {
-                    UIModules.processAndDisplayComponents(window.lastDebugData.components);
+                    const resultsList = document.getElementById('resultsList');
+                    const iconResultsList = document.getElementById('iconResultsList');
+                    let allInstances = [];
+                    UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, resultsList, iconResultsList);
                 }
-                if (window.lastDebugData.components && window.lastDebugData.components.outdated) {
-                    UIModules.processAndDisplayOutdatedComponents(window.lastDebugData.components); 
-                }
+                if (window.lastDebugData.components) {
+            const outdatedResultsList = document.getElementById('outdatedResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, outdatedResultsList, null, 'outdated');
+        }
                 // Re-process and display colors
                 UIModules.processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
             }
@@ -454,18 +459,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
         versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
         nodeInfo.appendChild(versionLine);
 
-        if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
-          const pluginDataKeyLine = document.createElement('div');
-          pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
-          pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
-          pluginDataKeyLine.style.marginLeft = '10px';
-          nodeInfo.appendChild(pluginDataKeyLine);
-
-          const pluginDataVersionLine = document.createElement('div');
-          pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
-          pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
-          pluginDataVersionLine.style.marginLeft = '10px';
-          nodeInfo.appendChild(pluginDataVersionLine);
+        if (nodeData.originalKey) {
+          const originalKeyLine = document.createElement('div');
+          originalKeyLine.textContent = `Оригинальный ключ: ${nodeData.originalKey}`;
+          originalKeyLine.style.color = '#666';
+          nodeInfo.appendChild(originalKeyLine);
         }
 
         container.appendChild(nodeInfo);
@@ -575,13 +573,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const resultsList = document.getElementById('resultsList');
             const iconResultsList = document.getElementById('iconResultsList');
             let allInstances = [];
-            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, resultsList, iconResultsList);
+            UIModules.processAndDisplayComponents(msg.components, allInstances, resultsList, iconResultsList);
         }
         
         // Process outdated components if present
-        if (msg.components && msg.components.outdated) {
+        if (msg.components) {
             const outdatedResultsList = document.getElementById('outdatedResultsList');
-            UIModules.processAndDisplayOutdatedComponents(msg.components, outdatedResultsList);
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(msg.components, allInstances, outdatedResultsList, null, 'outdated');
         }
 
         // Process colors
@@ -884,64 +883,37 @@ document.getElementById('setComponentData').addEventListener('click', function()
     // Functions moved to UIModules
 
     // Search functionality
-    searchInput.addEventListener('input', () => {
-      const searchTerm = searchInput.value.toLowerCase();
-      clearSearch.style.display = searchTerm ? 'block' : 'none';
+    if (searchInput && clearSearch && searchResults) {
+      searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        clearSearch.style.display = searchTerm ? 'block' : 'none';
 
-      if (!searchTerm) {
-        searchResults.innerHTML = '';
-        return;
-      }
+        if (!searchTerm) {
+          searchResults.innerHTML = '';
+          return;
+        }
 
-      const results = allInstances.filter(instance => {
-        const name = instance.name.toLowerCase();
-        const description = (instance.description || '').toLowerCase();
-        return name.includes(searchTerm) || description.includes(searchTerm);
+        const results = allInstances.filter(instance => {
+          const name = instance.name.toLowerCase();
+          const description = (instance.description || '').toLowerCase();
+          return name.includes(searchTerm) || description.includes(searchTerm);
+        });
+
+        UIModules.displaySearchResults(results, searchTerm);
       });
 
-      UIModules.displaySearchResults(results, searchTerm);
-    });
-
-    // Clear search
-    clearSearch.addEventListener('click', () => {
-      searchInput.value = '';
-      searchResults.innerHTML = '';
-      clearSearch.style.display = 'none';
-    });
+      // Clear search
+      clearSearch.addEventListener('click', () => {
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+        clearSearch.style.display = 'none';
+      });
+    }
 
     // Functions moved to UIModules
 
-    // Добавляем обработчик для кнопки "Проверить обновления"
-    document.addEventListener('DOMContentLoaded', () => {
-      const checkUpdatesButton = document.getElementById('check-updates');
-      if (checkUpdatesButton) {
-        checkUpdatesButton.addEventListener('click', () => {
-          // Показываем лоадер
-          loaderContainer.style.display = 'flex';
-          // Сбрасываем прогресс
-          processedCount.textContent = '0';
-          totalCount.textContent = '0';
-          progressBarFill.style.width = '0%';
-          // Показываем фазу
-          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
-          // Отправляем сообщение в backend
-          parent.postMessage({ pluginMessage: { type: 'check-updates' } }, '*');
-        });
-      }
-      
-      const keyInput = document.getElementById('componentKey');
-      const versionInput = document.getElementById('componentVersion');
-      const readButton = document.getElementById('readComponentData');
-      const setButton = document.getElementById('setComponentData');
-      const clearButton = document.getElementById('clearComponentData');
-      const outputElement = document.getElementById('componentDataOutput');
-      
-      // Проверяем, что все элементы найдены
-      if (!keyInput || !versionInput || !outputElement) {
-        console.error('Один или несколько элементов для работы с данными компонентов не найдены.');
-        return;
-      }
-    });
+    // Removed duplicate check-updates handler and redundant inputs init (moved earlier)
+
 </script>
 </body>
 </html>

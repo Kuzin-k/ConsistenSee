@@ -1169,11 +1169,16 @@ document.getElementById('setComponentData').addEventListener('click', function()
             // Перерисовываем список инстансов при изменении состояния toggle
             if (window.lastDebugData) {
                 if (window.lastDebugData.components) {
-                    UIModules.processAndDisplayComponents(window.lastDebugData.components);
+                    const resultsList = document.getElementById('resultsList');
+                    const iconResultsList = document.getElementById('iconResultsList');
+                    let allInstances = [];
+                    UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, resultsList, iconResultsList);
                 }
-                if (window.lastDebugData.components && window.lastDebugData.components.outdated) {
-                    UIModules.processAndDisplayOutdatedComponents(window.lastDebugData.components); 
-                }
+                if (window.lastDebugData.components) {
+            const outdatedResultsList = document.getElementById('outdatedResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, outdatedResultsList, null, 'outdated');
+        }
                 // Re-process and display colors
                 UIModules.processAndDisplayColors(window.lastDebugData.colors, window.lastDebugData.colorsStroke);
             }
@@ -1266,18 +1271,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
         versionLine.style.color = nodeData.version ? '#2e7d32' : '#d32f2f';
         nodeInfo.appendChild(versionLine);
 
-        if (nodeData.pluginDataKey || nodeData.pluginDataVersion) {
-          const pluginDataKeyLine = document.createElement('div');
-          pluginDataKeyLine.textContent = `Ключ из PluginData: ${nodeData.pluginDataKey || 'Не установлен'}`;
-          pluginDataKeyLine.style.color = nodeData.pluginDataKey ? '#2e7d32' : '#d32f2f';
-          pluginDataKeyLine.style.marginLeft = '10px';
-          nodeInfo.appendChild(pluginDataKeyLine);
-
-          const pluginDataVersionLine = document.createElement('div');
-          pluginDataVersionLine.textContent = `Версия из PluginData: ${nodeData.pluginDataVersion || 'Не установлена'}`;
-          pluginDataVersionLine.style.color = nodeData.pluginDataVersion ? '#2e7d32' : '#d32f2f';
-          pluginDataVersionLine.style.marginLeft = '10px';
-          nodeInfo.appendChild(pluginDataVersionLine);
+        if (nodeData.originalKey) {
+          const originalKeyLine = document.createElement('div');
+          originalKeyLine.textContent = `Оригинальный ключ: ${nodeData.originalKey}`;
+          originalKeyLine.style.color = '#666';
+          nodeInfo.appendChild(originalKeyLine);
         }
 
         container.appendChild(nodeInfo);
@@ -1387,13 +1385,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const resultsList = document.getElementById('resultsList');
             const iconResultsList = document.getElementById('iconResultsList');
             let allInstances = [];
-            UIModules.processAndDisplayComponents(window.lastDebugData.components, allInstances, resultsList, iconResultsList);
+            UIModules.processAndDisplayComponents(msg.components, allInstances, resultsList, iconResultsList);
         }
         
         // Process outdated components if present
-        if (msg.components && msg.components.outdated) {
+        if (msg.components) {
             const outdatedResultsList = document.getElementById('outdatedResultsList');
-            UIModules.processAndDisplayOutdatedComponents(msg.components, outdatedResultsList);
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(msg.components, allInstances, outdatedResultsList, null, 'outdated');
         }
 
         // Process colors
@@ -1696,64 +1695,37 @@ document.getElementById('setComponentData').addEventListener('click', function()
     // Functions moved to UIModules
 
     // Search functionality
-    searchInput.addEventListener('input', () => {
-      const searchTerm = searchInput.value.toLowerCase();
-      clearSearch.style.display = searchTerm ? 'block' : 'none';
+    if (searchInput && clearSearch && searchResults) {
+      searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        clearSearch.style.display = searchTerm ? 'block' : 'none';
 
-      if (!searchTerm) {
-        searchResults.innerHTML = '';
-        return;
-      }
+        if (!searchTerm) {
+          searchResults.innerHTML = '';
+          return;
+        }
 
-      const results = allInstances.filter(instance => {
-        const name = instance.name.toLowerCase();
-        const description = (instance.description || '').toLowerCase();
-        return name.includes(searchTerm) || description.includes(searchTerm);
+        const results = allInstances.filter(instance => {
+          const name = instance.name.toLowerCase();
+          const description = (instance.description || '').toLowerCase();
+          return name.includes(searchTerm) || description.includes(searchTerm);
+        });
+
+        UIModules.displaySearchResults(results, searchTerm);
       });
 
-      UIModules.displaySearchResults(results, searchTerm);
-    });
-
-    // Clear search
-    clearSearch.addEventListener('click', () => {
-      searchInput.value = '';
-      searchResults.innerHTML = '';
-      clearSearch.style.display = 'none';
-    });
+      // Clear search
+      clearSearch.addEventListener('click', () => {
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+        clearSearch.style.display = 'none';
+      });
+    }
 
     // Functions moved to UIModules
 
-    // Добавляем обработчик для кнопки "Проверить обновления"
-    document.addEventListener('DOMContentLoaded', () => {
-      const checkUpdatesButton = document.getElementById('check-updates');
-      if (checkUpdatesButton) {
-        checkUpdatesButton.addEventListener('click', () => {
-          // Показываем лоадер
-          loaderContainer.style.display = 'flex';
-          // Сбрасываем прогресс
-          processedCount.textContent = '0';
-          totalCount.textContent = '0';
-          progressBarFill.style.width = '0%';
-          // Показываем фазу
-          document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
-          // Отправляем сообщение в backend
-          parent.postMessage({ pluginMessage: { type: 'check-updates' } }, '*');
-        });
-      }
-      
-      const keyInput = document.getElementById('componentKey');
-      const versionInput = document.getElementById('componentVersion');
-      const readButton = document.getElementById('readComponentData');
-      const setButton = document.getElementById('setComponentData');
-      const clearButton = document.getElementById('clearComponentData');
-      const outputElement = document.getElementById('componentDataOutput');
-      
-      // Проверяем, что все элементы найдены
-      if (!keyInput || !versionInput || !outputElement) {
-        console.error('Один или несколько элементов для работы с данными компонентов не найдены.');
-        return;
-      }
-    });
+    // Removed duplicate check-updates handler and redundant inputs init (moved earlier)
+
 </script>
 <script>"use strict";
 (() => {
@@ -3186,8 +3158,20 @@ document.getElementById('setComponentData').addEventListener('click', function()
   }
 
   // src/ui/processAndDisplayComponents.ts
-  function processAndDisplayComponents(componentsData, allInstances, resultsList, iconResultsList) {
-    allInstances = componentsData.instances;
+  function processAndDisplayComponents(componentsData, allInstances, resultsList, iconResultsList, tabType = "instances") {
+    let sourceInstances;
+    if (tabType === "outdated") {
+      if (componentsData.outdated && componentsData.outdated.length > 0) {
+        sourceInstances = componentsData.outdated;
+      } else {
+        sourceInstances = componentsData.instances.filter(
+          (instance) => instance.checkVersion === "Outdated"
+        );
+      }
+    } else {
+      sourceInstances = componentsData.instances;
+    }
+    allInstances = sourceInstances;
     const groupedInstances = {};
     const groupedIcons = {};
     const showHiddenToggle = document.getElementById("showHiddenToggle");
@@ -3195,12 +3179,21 @@ document.getElementById('setComponentData').addEventListener('click', function()
     let nonIconCount = 0;
     let iconCount = 0;
     let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === "number" ? componentsData.counts.outdated : componentsData.outdated ? componentsData.outdated.length : 0;
-    componentsData.instances.forEach((instance) => {
+    sourceInstances.forEach((instance) => {
       if (!showHidden && instance.hidden) {
         return;
       }
+      if (tabType === "outdated" && instance.checkVersion !== "Outdated") {
+        return;
+      }
       const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
-      if (instance.isIcon === true) {
+      if (tabType === "outdated") {
+        if (!groupedInstances[groupKey]) {
+          groupedInstances[groupKey] = [];
+        }
+        groupedInstances[groupKey].push(instance);
+        nonIconCount++;
+      } else if (instance.isIcon === true) {
         if (!groupedIcons[groupKey]) {
           groupedIcons[groupKey] = [];
         }
@@ -3237,11 +3230,17 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const bName = (b.name || "").toString();
       return aName.localeCompare(bName);
     };
+    const compareByName = (a, b) => {
+      const aName = a.name || "";
+      const bName = b.name || "";
+      return aName.localeCompare(bName);
+    };
+    const sortFunction = tabType === "outdated" ? compareByName : compareByVersionThenName;
     for (const key in groupedInstances) {
-      groupedInstances[key].sort(compareByVersionThenName);
+      groupedInstances[key].sort(sortFunction);
     }
     for (const key in groupedIcons) {
-      groupedIcons[key].sort(compareByVersionThenName);
+      groupedIcons[key].sort(sortFunction);
     }
     const componentsTab = document.querySelector('[data-tab="instances"]');
     const iconsTab = document.querySelector('[data-tab="icons"]');
@@ -3249,8 +3248,18 @@ document.getElementById('setComponentData').addEventListener('click', function()
     if (componentsTab) componentsTab.textContent = `All instances (${nonIconCount})`;
     if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
     if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
-    displayGroups(sortGroups(groupedInstances), resultsList);
-    displayGroups(sortGroups(groupedIcons), iconResultsList);
+    const isOutdatedTab = tabType === "outdated";
+    if (tabType === "outdated") {
+      displayGroups(sortGroups(groupedInstances), resultsList, isOutdatedTab);
+      if (iconResultsList) {
+        iconResultsList.innerHTML = "";
+      }
+    } else {
+      displayGroups(sortGroups(groupedInstances), resultsList, isOutdatedTab);
+      if (iconResultsList) {
+        displayGroups(sortGroups(groupedIcons), iconResultsList, isOutdatedTab);
+      }
+    }
   }
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
@@ -3760,457 +3769,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
     window.UIModules.processAndDisplayColors = processAndDisplayColors;
-  }
-})();
-
-"use strict";
-(() => {
-  // src/ui/createIcon.ts
-  var createIcon = (type) => {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    let iconClass = "info-icon";
-    let iconId = "info-icon";
-    switch (type) {
-      case "INSTANCE":
-        iconClass = "instance-icon";
-        iconId = "instance-icon";
-        break;
-      case "TEXT":
-        iconClass = "text-icon";
-        iconId = "text-icon";
-        break;
-      case "FRAME":
-        iconClass = "frame-icon";
-        iconId = "frame-icon";
-        break;
-      case "RECTANGLE":
-        iconClass = "rectangle-icon";
-        iconId = "rectangle-icon";
-        break;
-      case "VECTOR":
-        iconClass = "frame-icon";
-        iconId = "frame-icon";
-        break;
-    }
-    svg.classList.add(iconClass);
-    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${iconId}`);
-    svg.appendChild(use);
-    return svg;
-  };
-
-  // src/ui/showPopover.ts
-  var showPopover = (icon, instance) => {
-    const popover = document.createElement("div");
-    popover.classList.add("popover");
-    const content = Object.entries(instance).map(([key, value]) => {
-      const boldKey = `<strong>${key}:</strong>`;
-      if (typeof value === "object" && value !== null) {
-        try {
-          return `${boldKey} ${JSON.stringify(value)}`;
-        } catch (e) {
-          return `${boldKey} [object]`;
-        }
-      }
-      return `${boldKey} ${value}`;
-    }).join("<br>");
-    popover.innerHTML = content;
-    document.body.appendChild(popover);
-    const rect = icon.getBoundingClientRect();
-    popover.style.visibility = "hidden";
-    popover.style.display = "block";
-    const popoverRect = popover.getBoundingClientRect();
-    popover.style.display = "none";
-    popover.style.visibility = "visible";
-    let top = rect.bottom + 5;
-    let left = rect.left;
-    if (left + popoverRect.width > window.innerWidth - 10) {
-      left = window.innerWidth - popoverRect.width - 10;
-    }
-    if (left < 10) {
-      left = 10;
-    }
-    if (top + popoverRect.height > window.innerHeight - 10) {
-      top = rect.top - popoverRect.height - 5;
-    }
-    if (top < 10) {
-      top = 10;
-    }
-    popover.style.left = `${left}px`;
-    popover.style.top = `${top}px`;
-    popover.style.display = "block";
-    parent.postMessage({
-      pluginMessage: {
-        type: "resize-plugin-window",
-        // Подбираем ширину/высоту с небольшим запасом (padding)
-        width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-        height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-      }
-    }, "*");
-    const onLeave = () => {
-      popover.remove();
-      parent.postMessage({
-        pluginMessage: {
-          type: "reset-plugin-window-size"
-        }
-      }, "*");
-      try {
-        icon.removeEventListener("mouseleave", onLeave);
-      } catch (e) {
-      }
-    };
-    icon.addEventListener("mouseleave", onLeave);
-  };
-
-  // src/ui/displayVersionTag.ts
-  function displayVersionTag(options) {
-    const {
-      instanceVersion = "none",
-      libraryVersion = "none",
-      isOutdated = "",
-      checkVersion = "",
-      isGroupHeader = false,
-      uniqueVersions = []
-    } = options;
-    let versionText = "";
-    const versionGroup = document.createElement("span");
-    versionGroup.classList.add("version-group");
-    const versionBadge = document.createElement("span");
-    versionBadge.classList.add("version-tag");
-    if (isGroupHeader) {
-      const hasVersions = uniqueVersions.some((version) => version && version !== "none");
-      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
-      if (!hasVersions && !hasLibraryVersion) {
-        return versionGroup;
-      }
-      if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== "none") {
-        versionText = uniqueVersions[0];
-      } else if (hasVersions) {
-        versionText = "* * *";
-        versionBadge.classList.add("version-tag-notlatest");
-      }
-      if (hasLibraryVersion && isOutdated) {
-        versionBadge.textContent = `${versionText || "* * *"} \u2192 ${libraryVersion}`;
-        versionBadge.classList.add("version-tag-outdated");
-      } else if (versionText) {
-        versionBadge.textContent = versionText;
-      } else {
-        return versionGroup;
-      }
-    } else {
-      const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
-      const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
-      if (!hasInstanceVersion && !hasLibraryVersion) {
-        return versionGroup;
-      }
-      if (hasLibraryVersion && checkVersion !== "Latest") {
-        versionBadge.textContent = `${instanceVersion || "none"} \u2192 ${libraryVersion}`;
-        if (checkVersion === "NotLatest") {
-          versionBadge.classList.add("version-tag-notlatest");
-        }
-        if (checkVersion === "Outdated") {
-          versionBadge.classList.add("version-tag-outdated");
-        }
-      } else if (hasInstanceVersion) {
-        versionBadge.textContent = instanceVersion;
-        if (checkVersion === "Latest") {
-          versionBadge.classList.add("version-tag-latest");
-        }
-      } else {
-        return versionGroup;
-      }
-    }
-    if (versionBadge.textContent) {
-      versionGroup.appendChild(versionBadge);
-    }
-    return versionGroup;
-  }
-
-  // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList, isOutdatedTab = false) => {
-    var _a, _b, _c;
-    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
-    targetList.innerHTML = "";
-    let headerText = "";
-    if (!targetList || !targetList.id) {
-      console.error("Target list or its ID is undefined.");
-      return;
-    }
-    const nameCount = {};
-    for (const key in groupedData) {
-      const group = groupedData[key];
-      if (group.length === 0) continue;
-      const firstInstance = group[0];
-      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
-      if (group.length === 1) {
-        const instance = group[0];
-        const groupItem = document.createElement("ul");
-        groupItem.classList.add("group-header");
-        const componentNameContainer = document.createElement("span");
-        componentNameContainer.classList.add("component-name-container");
-        const itemIcon = createIcon(instance.type);
-        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
-        itemIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "scroll-to-node",
-                nodeId: instance.nodeId
-              }
-            },
-            "*"
-          );
-        });
-        itemIcon.addEventListener("mouseenter", () => {
-          showPopover(itemIcon, instance);
-        });
-        const nameLink = document.createElement("a");
-        nameLink.href = "#";
-        nameLink.classList.add("component-link");
-        nameLink.textContent = instance.mainComponentSetName ? instance.mainComponentSetName : instance.mainComponentName || "";
-        nameLink.addEventListener("click", (e) => {
-          e.preventDefault();
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "scroll-to-node",
-                nodeId: instance.nodeId
-              }
-            },
-            "*"
-          );
-        });
-        componentNameContainer.appendChild(nameLink);
-        if (instance.parentName) {
-          const parentName = document.createElement("span");
-          parentName.classList.add("parent-component-name");
-          parentName.textContent = "in " + instance.parentName;
-          componentNameContainer.appendChild(parentName);
-        }
-        if (instance.hidden) {
-          const hiddenLabel = document.createElement("span");
-          hiddenLabel.classList.add("hidden-label");
-          hiddenLabel.textContent = "hidden";
-          componentNameContainer.appendChild(hiddenLabel);
-        }
-        const versionGroup = displayVersionTag({
-          instanceVersion: (_a = instance.nodeVersion) != null ? _a : void 0,
-          libraryVersion: (_b = instance.libraryComponentVersion) != null ? _b : void 0,
-          isOutdated: instance.isOutdated,
-          checkVersion: (_c = instance.checkVersion) != null ? _c : void 0
-        });
-        if (versionGroup && componentNameContainer) {
-          try {
-            componentNameContainer.appendChild(versionGroup);
-          } catch (err) {
-            console.error("Failed to append versionGroup to componentNameContainer", err);
-          }
-        }
-        if (componentNameContainer) {
-          groupItem.appendChild(componentNameContainer);
-        } else {
-          console.error("displayGroups: componentNameContainer is undefined for single item", instance);
-        }
-        targetList.appendChild(groupItem);
-        continue;
-      }
-      const groupHeader = document.createElement("ul");
-      groupHeader.classList.add("group-header");
-      const groupName = document.createElement("div");
-      groupName.classList.add("group-name");
-      const groupicon = document.createElement("div");
-      groupicon.classList.add("instance-icon");
-      const icon = createIcon(firstInstance.type);
-      groupicon.appendChild(icon);
-      groupHeader.appendChild(groupicon);
-      let groupNameHtml = "";
-      groupNameHtml += name;
-      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
-      if (groupName && typeof groupName.innerHTML !== "undefined") {
-        groupName.innerHTML = groupNameHtml;
-      } else {
-        console.error("displayGroups: failed to set groupName.innerHTML, groupName is", groupName);
-      }
-      const selectAllContainer = document.createElement("span");
-      selectAllContainer.classList.add("select-all-container");
-      const selectAllLink = document.createElement("a");
-      selectAllLink.href = "#";
-      selectAllLink.classList.add("select-all-link");
-      selectAllLink.title = "Select all";
-      const svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svgIcon.setAttribute("width", "20");
-      svgIcon.setAttribute("height", "20");
-      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
-      selectAllLink.appendChild(svgIcon);
-      selectAllLink.style.visibility = "hidden";
-      selectAllLink.style.marginLeft = "auto";
-      selectAllLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const nodeIds = group.map((item) => item.nodeId);
-        parent.postMessage({
-          pluginMessage: {
-            type: "select-nodes",
-            nodeIds
-          }
-        }, "*");
-      });
-      selectAllContainer.appendChild(selectAllLink);
-      groupName.appendChild(selectAllContainer);
-      groupHeader.appendChild(groupName);
-      groupHeader.addEventListener("mouseenter", () => {
-        selectAllLink.style.visibility = "visible";
-      });
-      groupHeader.addEventListener("mouseleave", () => {
-        selectAllLink.style.visibility = "hidden";
-      });
-      const versionsInGroup = group.map((item) => item.nodeVersion || "none");
-      const libraryVersionsInGroup = group.map((item) => item.libraryComponentVersion || "none");
-      const uniqueVersions = [...new Set(versionsInGroup)];
-      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
-      const hasOutdatedItems = group.some((item) => item.isOutdated);
-      const versionGroupHeader = displayVersionTag({
-        uniqueVersions,
-        libraryVersion: uniqueLibraryVersions[0],
-        isGroupHeader: true,
-        isOutdated: hasOutdatedItems
-      });
-      if (versionGroupHeader) {
-        groupHeader.appendChild(versionGroupHeader);
-      } else {
-        console.warn("displayGroups: versionGroupHeader is empty for group", name);
-      }
-      targetList.appendChild(groupHeader);
-      const groupItems = document.createElement("ul");
-      groupItems.classList.add("group-items");
-      group.forEach((instance) => {
-        var _a2, _b2, _c2;
-        const groupItem = document.createElement("li");
-        const componentNameContainer = document.createElement("div");
-        componentNameContainer.classList.add("component-name-container");
-        componentNameContainer.style.display = "flex";
-        componentNameContainer.style.alignItems = "right";
-        const itemIcon = createIcon(instance.type);
-        componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
-        itemIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "scroll-to-node",
-                nodeId: instance.nodeId
-              }
-            },
-            "*"
-          );
-        });
-        itemIcon.addEventListener("mouseenter", () => {
-          showPopover(itemIcon, instance);
-        });
-        const nameLink = document.createElement("a");
-        nameLink.href = "#";
-        nameLink.classList.add("component-link");
-        nameLink.textContent = instance.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F";
-        nameLink.addEventListener("click", (e) => {
-          e.preventDefault();
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "scroll-to-node",
-                nodeId: instance.nodeId
-                // Передаем nodeId инстанса
-              }
-            },
-            "*"
-          );
-        });
-        componentNameContainer.appendChild(nameLink);
-        if (instance.parentName) {
-          const parentName = document.createElement("span");
-          parentName.classList.add("parent-component-name");
-          parentName.textContent = "in " + instance.parentName;
-          componentNameContainer.appendChild(parentName);
-        }
-        if (instance.hidden) {
-          const hiddenLabel = document.createElement("span");
-          hiddenLabel.classList.add("hidden-label");
-          hiddenLabel.textContent = "hidden";
-          componentNameContainer.appendChild(hiddenLabel);
-        }
-        groupItem.appendChild(componentNameContainer);
-        const versionGroup = displayVersionTag({
-          instanceVersion: (_a2 = instance.nodeVersion) != null ? _a2 : void 0,
-          libraryVersion: (_b2 = instance.libraryComponentVersion) != null ? _b2 : void 0,
-          isOutdated: instance.isOutdated,
-          checkVersion: (_c2 = instance.checkVersion) != null ? _c2 : void 0
-        });
-        if (versionGroup) {
-          componentNameContainer.appendChild(versionGroup);
-        }
-        groupItems.appendChild(groupItem);
-      });
-      targetList.appendChild(groupItems);
-      groupHeader.addEventListener("click", () => {
-        groupItems.classList.toggle("expanded");
-      });
-    }
-  };
-  if (typeof window !== "undefined") {
-    window.UIModules = window.UIModules || {};
-    window.UIModules.displayGroups = displayGroups;
-  }
-
-  // src/ui/sortGroups.ts
-  function sortGroups(groups) {
-    return Object.fromEntries(
-      Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
-        const firstItemA = groupAItems[0];
-        const firstItemB = groupBItems[0];
-        const aName = (firstItemA.mainComponentSetName || firstItemA.mainComponentName || firstItemA.name || "").replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim().replace(/^[^a-zA-Z0-9\/]+/, "");
-        const bName = (firstItemB.mainComponentSetName || firstItemB.mainComponentName || firstItemB.name || "").replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim().replace(/^[^a-zA-Z0-9\/]+/, "");
-        const aSpecial = /^[._]/.test(aName);
-        const bSpecial = /^[._]/.test(bName);
-        if (aSpecial && !bSpecial) return 1;
-        if (!aSpecial && bSpecial) return -1;
-        return aName.localeCompare(bName, void 0, { numeric: true, sensitivity: "accent" });
-      })
-    );
-  }
-
-  // src/ui/processAndDisplayOutdatedComponents.ts
-  function processAndDisplayOutdatedComponents(componentsData, outdatedResultsList) {
-    const outdatedInstancesArray = componentsData.outdated || [];
-    const groupedOutdatedInstances = {};
-    const showHiddenToggle = document.getElementById("showHiddenToggle");
-    const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
-    let outdatedCount = 0;
-    const filteredOutdatedInstances = showHidden ? outdatedInstancesArray : outdatedInstancesArray.filter((instance) => !instance.hidden);
-    filteredOutdatedInstances.forEach((instance) => {
-      if (!showHidden && instance.hidden) {
-        return;
-      }
-      const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
-      if (!groupedOutdatedInstances[groupKey]) {
-        groupedOutdatedInstances[groupKey] = [];
-      }
-      groupedOutdatedInstances[groupKey].push(instance);
-    });
-    outdatedCount = filteredOutdatedInstances.length;
-    for (const key in groupedOutdatedInstances) {
-      groupedOutdatedInstances[key].sort((a, b) => {
-        const aName = a.name || "";
-        const bName = b.name || "";
-        return aName.localeCompare(bName);
-      });
-    }
-    const outdatedTab = document.querySelector('[data-tab="outdated"]');
-    if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
-    displayGroups(sortGroups(groupedOutdatedInstances), outdatedResultsList, true);
-  }
-  if (typeof window !== "undefined") {
-    window.UIModules = window.UIModules || {};
-    window.UIModules.processAndDisplayOutdatedComponents = processAndDisplayOutdatedComponents;
   }
 })();
 
