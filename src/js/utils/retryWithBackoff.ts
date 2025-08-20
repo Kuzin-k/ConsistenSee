@@ -63,7 +63,7 @@ export const retryWithBackoff = async <T>(
       if (!connectionIssueReported) {
         figma.ui.postMessage({
           type: 'connection-waiting' as const,
-          message: 'Проблемы с соединением. Ожидание восстановления...'
+          message: 'Waiting for connection...'
         });
         connectionIssueReported = true;
       }

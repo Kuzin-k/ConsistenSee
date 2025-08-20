@@ -1638,8 +1638,35 @@ document.getElementById('setComponentData').addEventListener('click', function()
           //console.error('Не удалось создать дерево отладки');
         }
       } 
+      if (msg.type === 'connection-waiting') {
+        // Показываем сообщение о проблемах с соединением
+        loaderContainer.style.display = 'flex';
+        document.getElementById('progressPhase').textContent = 'Waiting for connection...';
+        processedCount.textContent = '0';
+        totalCount.textContent = '0';
+        progressBarFill.style.width = '0%';
+        return;
+      }
+      
+      if (msg.type === 'retry-notification') {
+        // Показываем сообщение о повторной попытке, но только если счетчик еще не запущен
+        const currentPhase = document.getElementById('progressPhase').textContent;
+        if (!currentPhase.includes('из')) {
+          document.getElementById('progressPhase').textContent = msg.message;
+        }
+        return;
+      }
+      
       if (msg.type === 'error') {
-          loaderContainer.style.display = 'none';
+          // Проверяем, является ли это ошибкой соединения
+          const isConnectionError = msg.message && (
+            msg.message.includes('Соединение с Figma недоступно') ||
+            msg.message.includes('Не удалось восстановить соединение')
+          );
+          
+          if (!isConnectionError) {
+            loaderContainer.style.display = 'none';
+          }
         
           // Удаляем предыдущее сообщение об ошибке, если оно есть
           const existingError = document.querySelector('.error-message');

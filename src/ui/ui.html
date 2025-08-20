@@ -786,7 +786,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (msg.type === 'connection-waiting') {
         // Показываем сообщение о проблемах с соединением
         loaderContainer.style.display = 'flex';
-        document.getElementById('progressPhase').textContent = 'Проблемы с соединением. Ожидание восстановления...';
+        document.getElementById('progressPhase').textContent = 'Waiting for connection...';
         processedCount.textContent = '0';
         totalCount.textContent = '0';
         progressBarFill.style.width = '0%';

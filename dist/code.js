@@ -53,6 +53,7 @@ var retryWithBackoff = async (operation, options = {}) => {
     onRetry
   } = options;
   let lastError;
+  let connectionIssueReported = false;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
@@ -60,6 +61,13 @@ var retryWithBackoff = async (operation, options = {}) => {
       lastError = error instanceof Error ? error : new Error(String(error));
       if (!isConnectionError(lastError)) {
         throw lastError;
+      }
+      if (!connectionIssueReported) {
+        figma.ui.postMessage({
+          type: "connection-waiting",
+          message: "Waiting for connection..."
+        });
+        connectionIssueReported = true;
       }
       if (attempt === maxRetries) {
         throw lastError;
@@ -1070,8 +1078,8 @@ figma.ui.onmessage = async (msg) => {
     if (!await checkFigmaConnection()) {
       console.warn("[check-all] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E, \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F...");
       figma.ui.postMessage({
-        type: "error",
-        message: "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E. \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F..."
+        type: "connection-waiting",
+        message: "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u044B \u0441 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435\u043C. \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F..."
       });
       const connectionRestored = await waitForConnection(3e4);
       if (!connectionRestored) {
@@ -1083,8 +1091,11 @@ figma.ui.onmessage = async (msg) => {
       }
       console.log("[check-all] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E.");
       figma.ui.postMessage({
-        type: "error",
-        message: "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E. \u041D\u0430\u0447\u0438\u043D\u0430\u0435\u043C \u0430\u043D\u0430\u043B\u0438\u0437..."
+        type: "progress-update",
+        processed: 0,
+        total: 0,
+        phase: "analysis-start",
+        currentComponentName: "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E. \u041D\u0430\u0447\u0438\u043D\u0430\u0435\u043C \u0430\u043D\u0430\u043B\u0438\u0437..."
       });
     }
     clearUpdateCache();
