@@ -56,7 +56,13 @@ export interface UpdateInfo {
 }
 
 // Кэш хранит версии из библиотеки и признак потери компонента для уникального ключа компонента
-const componentUpdateCache = new Map<string, { latest: string | null; minimal: string | null; lost: boolean }>();
+const componentUpdateCache = new Map<string, { 
+  latest: string | null; 
+  minimal: string | null; 
+  lost: boolean;
+  libraryComponentSetName: string | null;
+  libraryComponentId: string | null;
+}>();
 /**
  * Проверяет, требует ли компонент обновления, сравнивая ВЕРСИЮ КОНКРЕТНОГО ИНСТАНСА
  * с версией из библиотеки (latest/minimal), которые кэшируются по ключу компонента.
@@ -107,6 +113,8 @@ export const updateAvailabilityCheck = async (
     if (cached) {
       libraryVersion = cached.latest;
       libraryVersionMinimal = cached.minimal;
+      libraryComponentSetName = cached.libraryComponentSetName;
+      importedComponentIdForComparison = cached.libraryComponentId;
       console.warn('DEBUG: Взяли из кэша для', cacheKey, { name: mainComponent.name, latest: libraryVersion, minimal: libraryVersionMinimal, lost: cached.lost });
 
       // Если ранее компонент не удалось найти в библиотеке — сразу возвращаем isLost=true
@@ -122,11 +130,11 @@ export const updateAvailabilityCheck = async (
           isLost: true,
           isDeprecated: isDeprecated,
           mainComponentId: mainComponent.id,
-          importedId: null,
-          importedMainComponentId: null,
+          importedId: cached.libraryComponentId,
+          importedMainComponentId: cached.libraryComponentId,
           libraryComponentName: null,
-          libraryComponentSetName: null,
-          libraryComponentId: null,
+          libraryComponentSetName: cached.libraryComponentSetName,
+          libraryComponentId: cached.libraryComponentId,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
           version: instanceVersion ?? null,
@@ -188,10 +196,22 @@ export const updateAvailabilityCheck = async (
         libraryVersion = libraryDescData.nodeVersion;
         libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
         // Кладём в кэш версии и помечаем, что компонент найден (lost=false)
-        componentUpdateCache.set(cacheKey, { latest: libraryVersion, minimal: libraryVersionMinimal, lost: false });
+        componentUpdateCache.set(cacheKey, { 
+          latest: libraryVersion, 
+          minimal: libraryVersionMinimal, 
+          lost: false,
+          libraryComponentSetName: libraryComponentSetName,
+          libraryComponentId: importedComponentIdForComparison
+        });
       } else {
         // Ничего не импортировано — считаем, что компонент потерян и кэшируем это состояние
-        componentUpdateCache.set(cacheKey, { latest: null, minimal: null, lost: true });
+        componentUpdateCache.set(cacheKey, { 
+          latest: null, 
+          minimal: null, 
+          lost: true,
+          libraryComponentSetName: null,
+          libraryComponentId: null
+        });
       }
     }
 

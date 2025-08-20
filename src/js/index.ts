@@ -23,6 +23,7 @@ import { processNodeComponent }   from './component/processNodeComponent';
 import { processNodeStatistics }  from './component/processNodeStatistics';
 
 import { checkComponentUpdates }  from './update/checkComponentUpdates';
+import { clearUpdateCache }       from './update/updateAvailabilityCheck';
 
 
 
@@ -172,19 +173,7 @@ const componentUpdateCache: Map<string, boolean> = new Map();
  */
 const publishStatusCache: Map<string, PublishStatus> = new Map();
 
-/**
- * Local fallback to clear update-related caches when the external module is missing.
- * This mirrors the expected behavior of the original clearUpdateCache utility.
- */
-function clearUpdateCache(): void {
-  try {
-    componentUpdateCache.clear();
-    publishStatusCache.clear();
-  } catch (err) {
-    // Non-fatal: log for debugging but do not break plugin flow
-    console.warn('clearUpdateCache failed:', err);
-  }
-}
+// Локальная функция clearUpdateCache удалена - используем импортированную из updateAvailabilityCheck.ts
 
 // Результаты (инициализируются перед каждым запуском)
 /**
@@ -829,6 +818,10 @@ figma.ui.onmessage = async (msg: UIMessage) => {
   // === Новый обработчик для проверки обновлений по кнопке ===
   else if (msg.type === 'check-updates') {
     console.log('Received update check request');
+    // Очищаем кеш перед проверкой обновлений
+    clearUpdateCache();
+    console.log('Кеш очищен перед проверкой обновлений.');
+    
     let componentsToCheck: ComponentsResult | null = null;
 
     // Use the component data sent from UI
