@@ -118,6 +118,19 @@ export function displaySearchResults(results: any[], searchTerm: string): void {
     return;
   }
 
+  // Показываем результаты поиска и скрываем обычный контент
+  searchResults.style.display = 'block';
+  const resultsDiv = document.getElementById('results');
+  if (resultsDiv) {
+    resultsDiv.style.display = 'none';
+  }
+
+  // Убеждаемся, что подвкладки видны при поиске
+  const subTabs = document.getElementById('subTabs');
+  if (subTabs) {
+    subTabs.style.display = 'flex';
+  }
+
   searchResults.innerHTML = '';
   
   if (results.length === 0) {

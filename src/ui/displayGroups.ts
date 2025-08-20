@@ -23,6 +23,8 @@ interface ComponentInstance {
   isOutdated?: boolean;
   /** Версия компонента из библиотеки (если доступна). */
   libraryComponentVersion?: string | null;
+  /** Имя набора компонентов из библиотеки (если доступно). */
+  libraryComponentSetName?: string | null;
   /** Версия, извлеченная из описания локального компонента. */
   nodeVersion?: string | null;
   /** Версия, проверенная на актуальность. */
@@ -54,9 +56,9 @@ interface GroupedData {
   [key: string]: ComponentInstance[];
 }
 
-import { createIcon } from './createIcon';
-import { showPopover } from './showPopover';
-import { displayVersionTag } from './displayVersionTag';
+import { createIcon } from "./createIcon";
+import { showPopover } from "./showPopover";
+import { displayVersionTag } from "./displayVersionTag";
 
 // Основная функция отображения групп
 /**
@@ -94,21 +96,26 @@ import { displayVersionTag } from './displayVersionTag';
  *       - **Для цветов:** Дополнительно рендерится детальная информация о цвете (HEX-код, имя переменной, коллекция).
  * 6.  **Фильтрация:** Учитывает состояние переключателя "Show hidden" для отображения или скрытия невидимых элементов.
  */
-export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement, isOutdatedTab: boolean = false): void => {
-  const showHidden = document.getElementById('showHiddenToggle') ? 
-    (document.getElementById('showHiddenToggle') as HTMLInputElement).checked : true;
-  
-  targetList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
-  
+export const displayGroups = (
+  groupedData: GroupedData,
+  targetList: HTMLElement,
+  isOutdatedTab: boolean = false,
+  tabType: string = ""
+): void => {
+  const showHidden = document.getElementById("showHiddenToggle")
+    ? (document.getElementById("showHiddenToggle") as HTMLInputElement).checked
+    : true;
+
+  targetList.innerHTML = ""; // Очищаем список перед добавлением новых элементов
+
   // Добавляем заголовок перед списком элементов
-  let headerText = '';
+  let headerText = "";
   // Сначала проверим, существует ли targetList и его id
   if (!targetList || !targetList.id) {
-    console.error('Target list or its ID is undefined.');
+    console.error("Target list or its ID is undefined.");
     return;
   }
- 
-  
+
   // Логика для подсчета имен
   const nameCount: { [key: string]: number } = {};
 
@@ -121,11 +128,14 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
     const firstInstance = group[0];
     // название - имя компонента из библиотеки
 
-    const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName 
-      : firstInstance.mainComponentName ? firstInstance.mainComponentName 
+    const name = firstInstance.mainComponentSetName
+      ? firstInstance.mainComponentSetName
+      : firstInstance.mainComponentName
+      ? firstInstance.mainComponentName
       : firstInstance.name;
-    
+
     // Если в группе только один элемент, показываем его без группировки
+    /*
     if (group.length === 1) {
       const instance = group[0];
       const groupItem = document.createElement('ul');
@@ -197,7 +207,8 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
               instanceVersion: instance.nodeVersion ?? undefined,
               libraryVersion: instance.libraryComponentVersion ?? undefined,
               isOutdated: instance.isOutdated,
-              checkVersion: instance.checkVersion ?? undefined
+              checkVersion: instance.checkVersion ?? undefined,
+              tabType: tabType
             });
             if (versionGroup && componentNameContainer) {
               try { componentNameContainer.appendChild(versionGroup); } catch (err) { console.error('Failed to append versionGroup to componentNameContainer', err); }
@@ -211,210 +222,225 @@ export const displayGroups = (groupedData: GroupedData, targetList: HTMLElement,
             targetList.appendChild(groupItem);
             continue; // Переходим к следующей группе
     }
-
+    */
     // Для групп с более чем одним элементом оставляем существующую логику
-    const groupHeader = document.createElement('ul');
-    groupHeader.classList.add('group-header');
+    const groupHeader = document.createElement("ul");
+    groupHeader.classList.add("group-header");
 
-    const groupName = document.createElement('div');
-    groupName.classList.add('group-name');
+    const groupName = document.createElement("div");
+    groupName.classList.add("group-name");
 
     // иконка для инстансов и прочих элементов
-    const groupicon = document.createElement('div');
-    groupicon.classList.add('instance-icon');
+    const groupicon = document.createElement("div");
+    groupicon.classList.add("instance-icon");
     const icon = createIcon(firstInstance.type);
     groupicon.appendChild(icon);
     groupHeader.appendChild(groupicon);
-    
-    //ТУТ заголовки групп
-     // Формируем groupName через innerHTML для корректного применения форматирования
-      let groupNameHtml = '';
-      groupNameHtml += name;
-      groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
-      if (groupName && typeof (groupName as any).innerHTML !== 'undefined') {
-        groupName.innerHTML = groupNameHtml;
-      } else {
-        console.error('displayGroups: failed to set groupName.innerHTML, groupName is', groupName);
-      }
-      
 
-    
+    //ТУТ заголовки групп
+    // Формируем groupName через innerHTML для корректного применения форматирования
+    let groupNameHtml = "";
+    groupNameHtml += name;
+    groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
+    if (groupName && typeof (groupName as any).innerHTML !== "undefined") {
+      groupName.innerHTML = groupNameHtml;
+    } else {
+      console.error(
+        "displayGroups: failed to set groupName.innerHTML, groupName is",
+        groupName
+      );
+    }
 
     // Остальная логика для создания контейнера select all и добавления его в заголовок группы
-    
-      // Создаем контейнер для select all, который будет виден только при наведении
-      const selectAllContainer = document.createElement('span');
-      selectAllContainer.classList.add('select-all-container');
-      
-      // Создаем ссылку select all
-      const selectAllLink = document.createElement('a');
-      selectAllLink.href = '#';
-      selectAllLink.classList.add('select-all-link');
-      selectAllLink.title = 'Select all'; // Добавляем атрибут title для отображения tooltip
-      
-      // Создаем SVG иконку вместо текста
-      const svgIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svgIcon.setAttribute('width', '20');
-      svgIcon.setAttribute('height', '20');
-      svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
-      selectAllLink.appendChild(svgIcon);
-      selectAllLink.style.visibility = 'hidden'; // Изначально скрыта
-      selectAllLink.style.marginLeft = 'auto';
-      
-      // Добавляем обработчик клика для выбора всех элементов группы
-      selectAllLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Предотвращаем раскрытие/закрытие группы при клике на ссылку
-        
-        // Собираем nodeIds всех элементов группы
-        const nodeIds = group.map(item => item.nodeId);
-        
-        // Отправляем сообщение в плагин для выбора элементов
-        parent.postMessage({
+
+    // Создаем контейнер для select all, который будет виден только при наведении
+    const selectAllContainer = document.createElement("span");
+    selectAllContainer.classList.add("select-all-container");
+
+    // Создаем ссылку select all
+    const selectAllLink = document.createElement("a");
+    selectAllLink.href = "#";
+    selectAllLink.classList.add("select-all-link");
+    selectAllLink.title = "Select all"; // Добавляем атрибут title для отображения tooltip
+
+    // Создаем SVG иконку вместо текста
+    const svgIcon = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg"
+    );
+    svgIcon.setAttribute("width", "20");
+    svgIcon.setAttribute("height", "20");
+    svgIcon.innerHTML = '<use xlink:href="#select-all-icon"></use>';
+    selectAllLink.appendChild(svgIcon);
+    selectAllLink.style.visibility = "hidden"; // Изначально скрыта
+    selectAllLink.style.marginLeft = "auto";
+
+    // Добавляем обработчик клика для выбора всех элементов группы
+    selectAllLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Предотвращаем раскрытие/закрытие группы при клике на ссылку
+
+      // Собираем nodeIds всех элементов группы
+      const nodeIds = group.map((item) => item.nodeId);
+
+      // Отправляем сообщение в плагин для выбора элементов
+      parent.postMessage(
+        {
           pluginMessage: {
-            type: 'select-nodes',
-            nodeIds: nodeIds
-          }
-        }, '*');
-      });
-      
-      selectAllContainer.appendChild(selectAllLink);
-      
-      groupName.appendChild(selectAllContainer);
-      groupHeader.appendChild(groupName);
-      
-      // Добавляем обработчики событий для показа/скрытия ссылки при наведении
-      groupHeader.addEventListener('mouseenter', () => {
-        selectAllLink.style.visibility = 'visible';
-      });
-      
-      groupHeader.addEventListener('mouseleave', () => {
-        selectAllLink.style.visibility = 'hidden';
-      });
-    
-      // Бейдж версии заголовка группы
-      const versionsInGroup = group.map(item => item.nodeVersion || 'none');
-      const libraryVersionsInGroup = group.map(item => item.libraryComponentVersion || 'none');
-      const uniqueVersions = [...new Set(versionsInGroup)];
-      const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
-      
-      // Проверяем, есть ли устаревшие элементы в группе
-      const hasOutdatedItems = group.some(item => item.isOutdated);
-      
-      const versionGroupHeader = displayVersionTag({
-        uniqueVersions: uniqueVersions,
-        libraryVersion: uniqueLibraryVersions[0],
-        isGroupHeader: true,
-        isOutdated: hasOutdatedItems
-      });
-      
-      if (versionGroupHeader) {
-        groupHeader.appendChild(versionGroupHeader);
-      } else {
-        // versionGroupHeader may be undefined/null if displayVersionTag returns nothing
-        console.warn('displayGroups: versionGroupHeader is empty for group', name);
-      }
+            type: "select-nodes",
+            nodeIds: nodeIds,
+          },
+        },
+        "*"
+      );
+    });
+
+    selectAllContainer.appendChild(selectAllLink);
+
+    groupName.appendChild(selectAllContainer);
+    groupHeader.appendChild(groupName);
+
+    // Добавляем обработчики событий для показа/скрытия ссылки при наведении
+    groupHeader.addEventListener("mouseenter", () => {
+      selectAllLink.style.visibility = "visible";
+    });
+
+    groupHeader.addEventListener("mouseleave", () => {
+      selectAllLink.style.visibility = "hidden";
+    });
+
+    // Бейдж версии заголовка группы
+    const versionsInGroup = group.map((item) => item.nodeVersion || "      ");
+    const libraryVersionsInGroup = group.map(
+      (item) => item.libraryComponentVersion || "      "
+    );
+    const uniqueVersions = [...new Set(versionsInGroup)];
+    const uniqueLibraryVersions = [...new Set(libraryVersionsInGroup)];
+
+    // Проверяем, есть ли устаревшие элементы в группе
+    const hasOutdatedItems = group.some((item) => item.isOutdated);
+
+    const versionGroupHeader = displayVersionTag({
+      uniqueVersions: uniqueVersions,
+      libraryVersion: uniqueLibraryVersions[0],
+      isGroupHeader: true,
+      isOutdated: hasOutdatedItems,
+      groupItems: group,
+      tabType: tabType,
+    });
+
+    if (versionGroupHeader) {
+      groupHeader.appendChild(versionGroupHeader);
+    } else {
+      // versionGroupHeader may be undefined/null if displayVersionTag returns nothing
+      console.warn(
+        "displayGroups: versionGroupHeader is empty for group",
+        name
+      );
+    }
 
     targetList.appendChild(groupHeader);
 
-    const groupItems = document.createElement('ul');
-    groupItems.classList.add('group-items');
+    const groupItems = document.createElement("ul");
+    groupItems.classList.add("group-items");
 
     group.forEach((instance) => {
-      const groupItem = document.createElement('li');
-      const componentNameContainer = document.createElement('div');
-      componentNameContainer.classList.add('component-name-container');
-      componentNameContainer.style.display = 'flex';
-      componentNameContainer.style.alignItems = 'right';
+      const groupItem = document.createElement("li");
+      const componentNameContainer = document.createElement("div");
+      componentNameContainer.classList.add("component-name-container");
+      componentNameContainer.style.display = "flex";
+      componentNameContainer.style.alignItems = "right";
       // Добавляем иконку для элемента на основе его типа
       const itemIcon = createIcon(instance.type);
-      componentNameContainer.insertBefore(itemIcon, componentNameContainer.firstChild);
+      componentNameContainer.insertBefore(
+        itemIcon,
+        componentNameContainer.firstChild
+      );
 
       // Добавляем обработчик клика для иконки
-      itemIcon.addEventListener('click', (e) => {
+      itemIcon.addEventListener("click", (e) => {
         e.stopPropagation(); // Предотвращаем всплытие события
         parent.postMessage(
           {
             pluginMessage: {
-              type: 'scroll-to-node',
+              type: "scroll-to-node",
               nodeId: instance.nodeId,
             },
           },
-          '*'
+          "*"
         );
       });
 
       // Добавляем popover при наведении на иконку
-      itemIcon.addEventListener('mouseenter', () => {
+      itemIcon.addEventListener("mouseenter", () => {
         showPopover(itemIcon, instance as any);
       });
 
       // Создаем ссылку на название инстанса
-      const nameLink = document.createElement('a');
-      nameLink.href = '#'; // Убираем стандартное поведение ссылки
-      nameLink.classList.add('component-link');
-      nameLink.textContent = instance.name || 'Без названия';
-      
-     
+      const nameLink = document.createElement("a");
+      nameLink.href = "#"; // Убираем стандартное поведение ссылки
+      nameLink.classList.add("component-link");
+      nameLink.textContent = instance.name || "Без названия";
 
       // Добавляем обработчик клика для отправки nodeId в плагин
-      nameLink.addEventListener('click', (e) => {
+      nameLink.addEventListener("click", (e) => {
         e.preventDefault(); // Отменяем стандартное поведение ссылки
         parent.postMessage(
           {
             pluginMessage: {
-              type: 'scroll-to-node',
+              type: "scroll-to-node",
               nodeId: instance.nodeId, // Передаем nodeId инстанса
             },
           },
-          '*'
+          "*"
         );
       });
-
-      
 
       componentNameContainer.appendChild(nameLink);
 
       // Add parent component name if exists
       if (instance.parentName) {
-        const parentName = document.createElement('span');
-        parentName.classList.add('parent-component-name');
-        parentName.textContent = 'in ' + instance.parentName;
+        const parentName = document.createElement("span");
+        parentName.classList.add("parent-component-name");
+        parentName.textContent = "in " + instance.parentName;
         componentNameContainer.appendChild(parentName);
       }
 
       // Добавляем метку (hidden), если элемент скрыт
       if (instance.hidden) {
-        const hiddenLabel = document.createElement('span');
-        hiddenLabel.classList.add('hidden-label');
-        hiddenLabel.textContent = 'hidden';
+        const hiddenLabel = document.createElement("span");
+        hiddenLabel.classList.add("hidden-label");
+        hiddenLabel.textContent = "hidden";
         componentNameContainer.appendChild(hiddenLabel);
       }
 
       // Добавляем информацию о цвете, если это элемент с цветом
       groupItem.appendChild(componentNameContainer);
 
-      // тег версии одиночного элемента внутри группы 
-            const versionGroup = displayVersionTag({
-              instanceVersion: instance.nodeVersion ?? undefined,
-              libraryVersion: instance.libraryComponentVersion ?? undefined,
-              isOutdated: instance.isOutdated,
-              checkVersion: instance.checkVersion ?? undefined
-            });
-      
-            if (versionGroup) {componentNameContainer.appendChild(versionGroup);}
-            groupItems.appendChild(groupItem);
+      // тег версии одиночного элемента внутри группы
+      const versionGroup = displayVersionTag({
+        instanceVersion: instance.nodeVersion ?? undefined,
+        libraryVersion: instance.libraryComponentVersion ?? undefined,
+        isOutdated: instance.isOutdated,
+        checkVersion: instance.checkVersion ?? undefined,
+        tabType: tabType,
+      });
+
+      if (versionGroup) {
+        componentNameContainer.appendChild(versionGroup);
+      }
+      groupItems.appendChild(groupItem);
     });
     targetList.appendChild(groupItems);
     // Добавляем обработчик клика для заголовка группы
-    groupHeader.addEventListener('click', () => {
-      groupItems.classList.toggle('expanded');
+    groupHeader.addEventListener("click", () => {
+      groupItems.classList.toggle("expanded");
     });
   }
 };
 
 // Добавляем функцию к глобальному объекту UIModules
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   (window as any).UIModules = (window as any).UIModules || {};
   (window as any).UIModules.displayGroups = displayGroups;
 }

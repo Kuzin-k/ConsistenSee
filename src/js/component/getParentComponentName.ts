@@ -1,4 +1,5 @@
-import { SceneNode, InstanceNode } from '../../shared/types';
+import { SceneNode } from '../../shared/types';
+import { retryGetMainComponent } from '../utils/retryWithBackoff';
 
 /**
  * Асинхронно находит имя родительского компонента для указанного узла.
@@ -12,7 +13,7 @@ export const getParentComponentName = async (node: SceneNode): Promise<string | 
   while (parentNode) {
     if (parentNode.type === 'INSTANCE') {
       try {
-        const parentMainComponent = await (parentNode as InstanceNode).getMainComponentAsync();
+        const parentMainComponent = await retryGetMainComponent(parentNode as any, parentNode.name);
         if (parentMainComponent) {
           if (parentMainComponent.parent && parentMainComponent.parent.type === 'COMPONENT_SET') {
             return parentMainComponent.parent.name;
@@ -20,7 +21,7 @@ export const getParentComponentName = async (node: SceneNode): Promise<string | 
           return parentMainComponent.name;
         }
       } catch (error) {
-        console.error(`Ошибка при получении mainComponent для родителя ${parentNode.name} (ID: ${parentNode.id}):`, error);
+        console.error(`Ошибка при получении mainComponent для родителя ${parentNode.name} после повторных попыток:`, error);
       }
       return null;
     }

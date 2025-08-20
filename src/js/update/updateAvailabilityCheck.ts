@@ -4,6 +4,21 @@ import { getComponentCacheKey } from '../component/getComponentCacheKey';
 import { compareVersions } from './compareVersions';
 
 /**
+ * Проверяет, является ли компонент deprecated на основе его названия и названия набора.
+ * @param componentName Название компонента
+ * @param setName Название набора компонентов (если есть)
+ * @returns true если компонент deprecated
+ */
+const checkIsDeprecated = (componentName: string, setName: string = ''): boolean => {
+  return componentName.includes('Deprecated') || 
+    componentName.includes('DEPRECATED') || 
+    componentName.includes('❌') ||
+    setName.includes('Deprecated') || 
+    setName.includes('DEPRECATED') || 
+    setName.includes('❌');
+};
+
+/**
  * Содержит подробную информацию об актуальности компонента.
  * Эта структура данных хранит результаты проверки версии компонента.
  */
@@ -26,15 +41,28 @@ export interface UpdateInfo {
   libraryComponentVersionMinimal?: string | null;
   /** ID компонента в библиотеке. Может отличаться от `importedId` для компонентов в наборах. */
   libraryComponentId?: string | null;
+  /** Имя компонента в библиотеке. */
+  libraryComponentName?: string | null;
+  /** Имя набора компонентов в библиотеке (если компонент является частью набора). */
+  libraryComponentSetName?: string | null;
   /** Указывает, был ли компонент "потерян" (true), т.е. не удалось импортировать его из библиотеки. */
   isLost: boolean;
   /** Указывает, что компонент соответствует minimal, но не latest (version >= minimal && version < latest). */
   isNotLatest: boolean;
+  /** Указывает, является ли компонент устаревшим/deprecated (содержит 'Deprecated', 'DEPRECATED' или '❌' в названии). */
+  isDeprecated: boolean;
+  /* Результат проверки версии */
   checkVersion: string | null;
 }
 
 // Кэш хранит версии из библиотеки и признак потери компонента для уникального ключа компонента
-const componentUpdateCache = new Map<string, { latest: string | null; minimal: string | null; lost: boolean }>();
+const componentUpdateCache = new Map<string, { 
+  latest: string | null; 
+  minimal: string | null; 
+  lost: boolean;
+  libraryComponentSetName: string | null;
+  libraryComponentId: string | null;
+}>();
 /**
  * Проверяет, требует ли компонент обновления, сравнивая ВЕРСИЮ КОНКРЕТНОГО ИНСТАНСА
  * с версией из библиотеки (latest/minimal), которые кэшируются по ключу компонента.
@@ -59,8 +87,11 @@ export const updateAvailabilityCheck = async (
       description: null,
       mainComponentId: null,
       importedMainComponentId: null,
+      libraryComponentName: null,
+      libraryComponentSetName: null,
       isLost: false,
       isNotLatest: false,
+      isDeprecated: false,
     };
   }
 
@@ -71,6 +102,7 @@ export const updateAvailabilityCheck = async (
     const isPartOfSet = mainComponent.parent?.type === 'COMPONENT_SET';
     let libraryVersionSourceNode: ComponentNode | ComponentSetNode | null = null;
     let importedComponentIdForComparison: string | null = null;
+    let libraryComponentSetName: string | null = null;
 
     // Значения версий из библиотеки (latest/minimal)
     let libraryVersion: string | null = null;
@@ -81,27 +113,38 @@ export const updateAvailabilityCheck = async (
     if (cached) {
       libraryVersion = cached.latest;
       libraryVersionMinimal = cached.minimal;
+      libraryComponentSetName = cached.libraryComponentSetName;
+      importedComponentIdForComparison = cached.libraryComponentId;
       console.warn('DEBUG: Взяли из кэша для', cacheKey, { name: mainComponent.name, latest: libraryVersion, minimal: libraryVersionMinimal, lost: cached.lost });
 
       // Если ранее компонент не удалось найти в библиотеке — сразу возвращаем isLost=true
       if (cached.lost) {
+        // Проверяем deprecated статус даже для потерянных компонентов
+        const componentName = mainComponent.name || '';
+        const isDeprecated = checkIsDeprecated(componentName);
+        
         const cachedLostResult: UpdateInfo = {
           isOutdated: false,
           isNotLatest: false,
           checkVersion: null,
           isLost: true,
+          isDeprecated: isDeprecated,
           mainComponentId: mainComponent.id,
-          importedId: null,
-          importedMainComponentId: null,
-          libraryComponentId: null,
+          importedId: cached.libraryComponentId,
+          importedMainComponentId: cached.libraryComponentId,
+          libraryComponentName: null,
+          libraryComponentSetName: cached.libraryComponentSetName,
+          libraryComponentId: cached.libraryComponentId,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
           version: instanceVersion ?? null,
           description: null,
         };
-        console.warn('DEBUG: Компонент помечен как потерянный (из кэша)', { cacheKey, name: mainComponent.name });
+        console.warn('DEBUG: Компонент помечен как потерянный (из кэша)', { cacheKey, name: mainComponent.name, isDeprecated });
         return cachedLostResult;
       }
+      // Для найденных в кеше компонентов также проверяем deprecated статус
+      // Это важно для корректной обработки идентичных экземпляров
     } else {
       // --- 4. Если в кэше нет — импортируем из библиотеки и читаем версии ---
       if (!mainComponent.key) {
@@ -112,6 +155,7 @@ export const updateAvailabilityCheck = async (
           const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
           if (importedSet) {
             libraryVersionSourceNode = importedSet;
+            libraryComponentSetName = importedSet.name;
             const importedComponentInSet = importedSet.findChild(
               (comp): comp is ComponentNode => comp.type === 'COMPONENT' && comp.key === mainComponent.key
             );
@@ -152,22 +196,42 @@ export const updateAvailabilityCheck = async (
         libraryVersion = libraryDescData.nodeVersion;
         libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
         // Кладём в кэш версии и помечаем, что компонент найден (lost=false)
-        componentUpdateCache.set(cacheKey, { latest: libraryVersion, minimal: libraryVersionMinimal, lost: false });
+        componentUpdateCache.set(cacheKey, { 
+          latest: libraryVersion, 
+          minimal: libraryVersionMinimal, 
+          lost: false,
+          libraryComponentSetName: libraryComponentSetName,
+          libraryComponentId: importedComponentIdForComparison
+        });
       } else {
         // Ничего не импортировано — считаем, что компонент потерян и кэшируем это состояние
-        componentUpdateCache.set(cacheKey, { latest: null, minimal: null, lost: true });
+        componentUpdateCache.set(cacheKey, { 
+          latest: null, 
+          minimal: null, 
+          lost: true,
+          libraryComponentSetName: null,
+          libraryComponentId: null
+        });
       }
     }
 
     // --- 5. Формируем результат и сравниваем версии ---
+    // Проверяем, является ли компонент deprecated
+    const componentName = mainComponent.name || '';
+    const setName = libraryComponentSetName || '';
+    const isDeprecated = checkIsDeprecated(componentName, setName);
+
     const result: UpdateInfo = {
       isOutdated: false,
       isNotLatest: false,
       checkVersion: null,
       isLost: false,
+      isDeprecated: isDeprecated,
       mainComponentId: mainComponent.id,
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
+      libraryComponentName: mainComponent.name,
+      libraryComponentSetName: libraryComponentSetName,
       libraryComponentId: importedComponentIdForComparison,
       libraryComponentVersion: libraryVersion,
       libraryComponentVersionMinimal: libraryVersionMinimal,
@@ -212,9 +276,12 @@ export const updateAvailabilityCheck = async (
     const safeResult: UpdateInfo = {
       isOutdated: false,
       isNotLatest: false,
+      isDeprecated: false,
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
+      libraryComponentName: mainComponent ? mainComponent.name : null,
+      libraryComponentSetName: null,
       libraryComponentId: null,
       checkVersion: null,
       version: instanceVersion ?? null,

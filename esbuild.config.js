@@ -99,17 +99,7 @@ async function build() {
       loader: { '.ts': 'ts' },
     });
     
-    const processAndDisplayOutdatedComponentsResult = await esbuild.build({
-      entryPoints: ['src/ui/processAndDisplayOutdatedComponents.ts'],
-      bundle: true,
-      write: false,
-      target: 'es2017',
-      format: 'iife',
-      loader: { '.ts': 'ts' },
-    });
-    
 
-    // Добавьте сборку displayDebugTab после processAndDisplayOutdatedComponentsResult
     const displayDebugTabResult = await esbuild.build({
       entryPoints: ['src/ui/displayDebugTab.ts'],
       bundle: true,
@@ -130,7 +120,6 @@ async function build() {
                    displayColorsTabResult.outputFiles[0].text + '\n' +
                    processAndDisplayComponentsResult.outputFiles[0].text + '\n' +
                    processAndDisplayColorsResult.outputFiles[0].text + '\n' +
-                   processAndDisplayOutdatedComponentsResult.outputFiles[0].text + '\n' +
                    displayDebugTabResult.outputFiles[0].text;
 
     // 2. Собираем основной код плагина (backend)

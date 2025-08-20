@@ -22,6 +22,16 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         continue;
       }
 
+      // Пропускаем проверку:
+      // 1) для иконок (isIcon === true)
+      // 2) для инстансов, имя которых начинается с '_' или '.'
+      const trimmedName = (instance.name || '').trim();
+      const isInstanceWithSkippedName = instance.type === 'INSTANCE' && (trimmedName.startsWith('_') || trimmedName.startsWith('.'));
+      if (instance.isIcon === true || isInstanceWithSkippedName) {
+        updatedInstances.push({ ...instance, updateStatus: 'checked' });
+        continue;
+      }
+
       const mainComponent = (await figma.getNodeByIdAsync(instance.mainComponentId)) as ComponentNode | null;
       if (!mainComponent) {
         console.warn(`Не удалось найти компонент с ID: ${instance.mainComponentId}`);
@@ -48,10 +58,13 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         checkVersion: updateInfo.checkVersion,
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
+        isDeprecated: Boolean(updateInfo.isDeprecated),
+        libraryComponentName: updateInfo.libraryComponentName,
+        libraryComponentSetName: updateInfo.libraryComponentSetName,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
-        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
-        updateStatus: 'checked',
+        libraryComponentVersionMinimal:updateInfo.libraryComponentVersionMinimal,
+        updateStatus: "checked",
       });
     } catch (componentError) {
       console.warn(`Ошибка при проверке компонента "${instance.name}":`, componentError);
@@ -66,9 +79,11 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
   
   componentsResult.outdated = updatedInstances.filter((inst) => inst.isOutdated);
   componentsResult.lost = updatedInstances.filter((inst) => inst.isLost);
+  componentsResult.deprecated = updatedInstances.filter((inst) => inst.isDeprecated);
   if (componentsResult.counts) 
     {
       componentsResult.counts.outdated = componentsResult.outdated?.length;
       componentsResult.counts.lost = componentsResult.lost?.length;
+      componentsResult.counts.deprecated = componentsResult.deprecated?.length;
     }
 };

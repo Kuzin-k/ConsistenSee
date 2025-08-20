@@ -38,6 +38,100 @@ var updateProgress = async (phase, processed, total, message, currentComponentNa
   await delay(1);
 };
 
+// src/js/utils/retryWithBackoff.ts
+var isConnectionError = (error) => {
+  var _a2;
+  const message = ((_a2 = error == null ? void 0 : error.message) == null ? void 0 : _a2.toLowerCase()) || "";
+  return message.includes("unable to establish connection") || message.includes("connection timeout") || message.includes("network error") || message.includes("connection failed") || message.includes("timeout");
+};
+var retryWithBackoff = async (operation, options = {}) => {
+  const {
+    maxRetries = 3,
+    initialDelay = 1e3,
+    maxDelay = 1e4,
+    backoffMultiplier = 2,
+    onRetry
+  } = options;
+  let lastError;
+  let connectionIssueReported = false;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (!isConnectionError(lastError)) {
+        throw lastError;
+      }
+      if (!connectionIssueReported) {
+        figma.ui.postMessage({
+          type: "connection-waiting",
+          message: "Waiting for connection..."
+        });
+        connectionIssueReported = true;
+      }
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+      if (onRetry) {
+        onRetry(attempt + 1, lastError);
+      }
+      const delay2 = Math.min(
+        initialDelay * Math.pow(backoffMultiplier, attempt),
+        maxDelay
+      );
+      console.log(`[retryWithBackoff] \u041F\u043E\u043F\u044B\u0442\u043A\u0430 ${attempt + 1}/${maxRetries + 1} \u043D\u0435\u0443\u0434\u0430\u0447\u043D\u0430. \u041F\u043E\u0432\u0442\u043E\u0440 \u0447\u0435\u0440\u0435\u0437 ${delay2}\u043C\u0441. \u041E\u0448\u0438\u0431\u043A\u0430:`, lastError.message);
+      await new Promise((resolve) => setTimeout(resolve, delay2));
+    }
+  }
+  throw lastError;
+};
+var retryGetMainComponent = async (node, nodeName) => {
+  return retryWithBackoff(
+    () => node.getMainComponentAsync(),
+    {
+      maxRetries: 3,
+      initialDelay: 2e3,
+      // Увеличиваем начальную задержку для Figma API
+      maxDelay: 15e3,
+      onRetry: (attempt, error) => {
+        console.log(`[retryGetMainComponent] \u041F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u043F\u043E\u043F\u044B\u0442\u043A\u0430 ${attempt} \u0434\u043B\u044F \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${nodeName}": ${error.message}`);
+        figma.ui.postMessage({
+          type: "retry-notification",
+          message: `\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u043F\u043E\u043F\u044B\u0442\u043A\u0430 ${attempt}/3 \u0434\u043B\u044F \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${nodeName}"`
+        });
+      }
+    }
+  );
+};
+var checkFigmaConnection = async () => {
+  try {
+    const currentPage = figma.currentPage;
+    if (currentPage && currentPage.name) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("[checkFigmaConnection] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F:", error);
+    return false;
+  }
+};
+var waitForConnection = async (maxWaitTime = 3e4) => {
+  const startTime = Date.now();
+  const checkInterval = 2e3;
+  while (Date.now() - startTime < maxWaitTime) {
+    if (await checkFigmaConnection()) {
+      return true;
+    }
+    console.log("[waitForConnection] \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F...");
+    figma.ui.postMessage({
+      type: "connection-waiting",
+      message: "\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0441 Figma..."
+    });
+    await new Promise((resolve) => setTimeout(resolve, checkInterval));
+  }
+  return false;
+};
+
 // src/js/color/clearRgbToHexCache.ts
 var rgbToHexCache = /* @__PURE__ */ new Map();
 var clearRgbToHexCache = () => {
@@ -82,7 +176,7 @@ var getParentComponentName = async (node) => {
   while (parentNode) {
     if (parentNode.type === "INSTANCE") {
       try {
-        const parentMainComponent = await parentNode.getMainComponentAsync();
+        const parentMainComponent = await retryGetMainComponent(parentNode, parentNode.name);
         if (parentMainComponent) {
           if (parentMainComponent.parent && parentMainComponent.parent.type === "COMPONENT_SET") {
             return parentMainComponent.parent.name;
@@ -90,7 +184,7 @@ var getParentComponentName = async (node) => {
           return parentMainComponent.name;
         }
       } catch (error) {
-        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F ${parentNode.name} (ID: ${parentNode.id}):`, error);
+        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F ${parentNode.name} \u043F\u043E\u0441\u043B\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u044B\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`, error);
       }
       return null;
     }
@@ -108,11 +202,25 @@ var processVariableBindings = async (node, nodeData, propertyType, prefix) => {
     const binding = boundVariables[propertyType][0];
     if (binding && binding.id) {
       try {
-        const variable = await figma.variables.getVariableByIdAsync(binding.id);
+        const variable = await retryWithBackoff(
+          () => figma.variables.getVariableByIdAsync(binding.id),
+          {
+            onRetry: (attempt, error) => {
+              console.warn(`Retry ${attempt} for getting variable by ID ${binding.id}:`, error.message);
+            }
+          }
+        );
         if (variable) {
           nodeData[`${prefix}_variable_name`] = variable.name;
           try {
-            const collection = await figma.variables.getVariableCollectionByIdAsync(variable.variableCollectionId);
+            const collection = await retryWithBackoff(
+              () => figma.variables.getVariableCollectionByIdAsync(variable.variableCollectionId),
+              {
+                onRetry: (attempt, error) => {
+                  console.warn(`Retry ${attempt} for getting variable collection by ID ${variable.variableCollectionId}:`, error.message);
+                }
+              }
+            );
             nodeData[`${prefix}_collection_name`] = collection ? collection.name : COLLECTION_NOT_FOUND;
             nodeData[`${prefix}_collection_id`] = collection ? collection.id : null;
           } catch (collectionError) {
@@ -280,12 +388,16 @@ async function getDescription(node) {
       description = node.parent.description || "";
     } else if (node.type === "INSTANCE") {
       if (!description) {
-        const mainComponent = await node.getMainComponentAsync();
-        if (mainComponent) {
-          description = mainComponent.description || "";
-          if (!description && mainComponent.parent && mainComponent.parent.type === "COMPONENT_SET") {
-            description = mainComponent.parent.description || "";
+        try {
+          const mainComponent = await retryGetMainComponent(node, node.name);
+          if (mainComponent) {
+            description = mainComponent.description || "";
+            if (!description && mainComponent.parent && mainComponent.parent.type === "COMPONENT_SET") {
+              description = mainComponent.parent.description || "";
+            }
           }
+        } catch (retryError) {
+          console.error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u044B\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`, retryError);
         }
       }
     } else if (node.type === "COMPONENT" && !description && node.parent && node.parent.type === "COMPONENT_SET") {
@@ -315,12 +427,12 @@ var processNodeComponent = async (node, componentsResult2) => {
   let mainComponent = null;
   if (node.type === "INSTANCE") {
     try {
-      mainComponent = await node.getMainComponentAsync();
+      mainComponent = await retryGetMainComponent(node, node.name);
     } catch (error) {
-      console.error(`[processNodeComponent] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name}:`, error);
+      console.error(`[processNodeComponent] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`, error);
       figma.ui.postMessage({
         type: "error",
-        message: `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name}: ${error.message}`
+        message: `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A: ${error.message}`
       });
       return null;
     }
@@ -398,6 +510,11 @@ var processNodeComponent = async (node, componentsResult2) => {
       return null;
     }
     const componentData = {
+      isLost: false,
+      isDeprecated: false,
+      isOutdated: false,
+      isNotLatest: false,
+      checkVersion: "false",
       type: node.type,
       // Тип узла
       name: name.trim(),
@@ -430,8 +547,6 @@ var processNodeComponent = async (node, componentsResult2) => {
       // Имя набора компонентов (если есть)
       mainComponentSetId: mainComponentSetId ? mainComponentSetId : null,
       // Имя набора компонентов (если есть)
-      fileKey: figma.fileKey,
-      // Ключ текущего файла Figma
       isIcon,
       // Является ли иконкой
       size: isIcon ? width : `${width}x${height}`,
@@ -487,8 +602,6 @@ var processComponentSetNode = async (node, parentSet = null) => {
       //mainComponentName: name, // Имя главного компонента (для набора это его собственное имя)
       //mainComponentKey: node.key, // Для COMPONENT_SET используем его собственный ключ
       //mainComponentId: node.id, // ID самого набора
-      fileKey: figma.fileKey,
-      // Ключ текущего файла Figma
       isIcon: false,
       // COMPONENT_SET сам по себе не является иконкой
       size: `${Math.round(node.width)}x${Math.round(node.height)}`,
@@ -589,6 +702,9 @@ var compareVersions = (versionInstance, versionLatest, versionMinimal) => {
 };
 
 // src/js/update/updateAvailabilityCheck.ts
+var checkIsDeprecated = (componentName, setName = "") => {
+  return componentName.includes("Deprecated") || componentName.includes("DEPRECATED") || componentName.includes("\u274C") || setName.includes("Deprecated") || setName.includes("DEPRECATED") || setName.includes("\u274C");
+};
 var componentUpdateCache = /* @__PURE__ */ new Map();
 var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
   var _a2, _b;
@@ -602,8 +718,11 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       description: null,
       mainComponentId: null,
       importedMainComponentId: null,
+      libraryComponentName: null,
+      libraryComponentSetName: null,
       isLost: false,
-      isNotLatest: false
+      isNotLatest: false,
+      isDeprecated: false
     };
   }
   try {
@@ -611,29 +730,37 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     const isPartOfSet = ((_a2 = mainComponent.parent) == null ? void 0 : _a2.type) === "COMPONENT_SET";
     let libraryVersionSourceNode = null;
     let importedComponentIdForComparison = null;
+    let libraryComponentSetName = null;
     let libraryVersion = null;
     let libraryVersionMinimal = null;
     const cached = componentUpdateCache.get(cacheKey);
     if (cached) {
       libraryVersion = cached.latest;
       libraryVersionMinimal = cached.minimal;
+      libraryComponentSetName = cached.libraryComponentSetName;
+      importedComponentIdForComparison = cached.libraryComponentId;
       console.warn("DEBUG: \u0412\u0437\u044F\u043B\u0438 \u0438\u0437 \u043A\u044D\u0448\u0430 \u0434\u043B\u044F", cacheKey, { name: mainComponent.name, latest: libraryVersion, minimal: libraryVersionMinimal, lost: cached.lost });
       if (cached.lost) {
+        const componentName2 = mainComponent.name || "";
+        const isDeprecated2 = checkIsDeprecated(componentName2);
         const cachedLostResult = {
           isOutdated: false,
           isNotLatest: false,
           checkVersion: null,
           isLost: true,
+          isDeprecated: isDeprecated2,
           mainComponentId: mainComponent.id,
-          importedId: null,
-          importedMainComponentId: null,
-          libraryComponentId: null,
+          importedId: cached.libraryComponentId,
+          importedMainComponentId: cached.libraryComponentId,
+          libraryComponentName: null,
+          libraryComponentSetName: cached.libraryComponentSetName,
+          libraryComponentId: cached.libraryComponentId,
           libraryComponentVersion: null,
           libraryComponentVersionMinimal: null,
           version: instanceVersion != null ? instanceVersion : null,
           description: null
         };
-        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", { cacheKey, name: mainComponent.name });
+        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", { cacheKey, name: mainComponent.name, isDeprecated: isDeprecated2 });
         return cachedLostResult;
       }
     } else {
@@ -644,6 +771,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
           const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
           if (importedSet) {
             libraryVersionSourceNode = importedSet;
+            libraryComponentSetName = importedSet.name;
             const importedComponentInSet = importedSet.findChild(
               (comp) => comp.type === "COMPONENT" && comp.key === mainComponent.key
             );
@@ -681,19 +809,37 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
         const libraryDescData = await getDescription(libraryVersionSourceNode);
         libraryVersion = libraryDescData.nodeVersion;
         libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
-        componentUpdateCache.set(cacheKey, { latest: libraryVersion, minimal: libraryVersionMinimal, lost: false });
+        componentUpdateCache.set(cacheKey, {
+          latest: libraryVersion,
+          minimal: libraryVersionMinimal,
+          lost: false,
+          libraryComponentSetName,
+          libraryComponentId: importedComponentIdForComparison
+        });
       } else {
-        componentUpdateCache.set(cacheKey, { latest: null, minimal: null, lost: true });
+        componentUpdateCache.set(cacheKey, {
+          latest: null,
+          minimal: null,
+          lost: true,
+          libraryComponentSetName: null,
+          libraryComponentId: null
+        });
       }
     }
+    const componentName = mainComponent.name || "";
+    const setName = libraryComponentSetName || "";
+    const isDeprecated = checkIsDeprecated(componentName, setName);
     const result = {
       isOutdated: false,
       isNotLatest: false,
       checkVersion: null,
       isLost: false,
+      isDeprecated,
       mainComponentId: mainComponent.id,
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
+      libraryComponentName: mainComponent.name,
+      libraryComponentSetName,
       libraryComponentId: importedComponentIdForComparison,
       libraryComponentVersion: libraryVersion,
       libraryComponentVersionMinimal: libraryVersionMinimal,
@@ -731,9 +877,12 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     const safeResult = {
       isOutdated: false,
       isNotLatest: false,
+      isDeprecated: false,
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
+      libraryComponentName: mainComponent ? mainComponent.name : null,
+      libraryComponentSetName: null,
       libraryComponentId: null,
       checkVersion: null,
       version: instanceVersion != null ? instanceVersion : null,
@@ -745,10 +894,13 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     return safeResult;
   }
 };
+var clearUpdateCache = () => {
+  componentUpdateCache.clear();
+};
 
 // src/js/update/checkComponentUpdates.ts
 var checkComponentUpdates = async (componentsResult2) => {
-  var _a2, _b;
+  var _a2, _b, _c;
   console.log("=== \u041D\u0430\u0447\u0430\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 ===");
   const totalComponentsToCheck = componentsResult2.instances.length;
   const updatedInstances = [];
@@ -758,6 +910,12 @@ var checkComponentUpdates = async (componentsResult2) => {
     try {
       if (!instance.mainComponentId || instance.remote === false) {
         updatedInstances.push(instance);
+        continue;
+      }
+      const trimmedName = (instance.name || "").trim();
+      const isInstanceWithSkippedName = instance.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
+      if (instance.isIcon === true || isInstanceWithSkippedName) {
+        updatedInstances.push(__spreadProps(__spreadValues({}, instance), { updateStatus: "checked" }));
         continue;
       }
       const mainComponent = await figma.getNodeByIdAsync(instance.mainComponentId);
@@ -781,6 +939,9 @@ var checkComponentUpdates = async (componentsResult2) => {
         checkVersion: updateInfo.checkVersion,
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
+        isDeprecated: Boolean(updateInfo.isDeprecated),
+        libraryComponentName: updateInfo.libraryComponentName,
+        libraryComponentSetName: updateInfo.libraryComponentSetName,
         libraryComponentId: updateInfo.libraryComponentId,
         libraryComponentVersion: updateInfo.libraryComponentVersion,
         libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
@@ -797,9 +958,11 @@ var checkComponentUpdates = async (componentsResult2) => {
   componentsResult2.instances = updatedInstances;
   componentsResult2.outdated = updatedInstances.filter((inst) => inst.isOutdated);
   componentsResult2.lost = updatedInstances.filter((inst) => inst.isLost);
+  componentsResult2.deprecated = updatedInstances.filter((inst) => inst.isDeprecated);
   if (componentsResult2.counts) {
     componentsResult2.counts.outdated = (_a2 = componentsResult2.outdated) == null ? void 0 : _a2.length;
     componentsResult2.counts.lost = (_b = componentsResult2.lost) == null ? void 0 : _b.length;
+    componentsResult2.counts.deprecated = (_c = componentsResult2.deprecated) == null ? void 0 : _c.length;
   }
 };
 
@@ -808,7 +971,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", (event) => {
     const err = event.reason;
     console.error("Global unhandledrejection:", err);
-    const errMessage = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+    const errMessage = err instanceof Error ? err.message : String(err);
     if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
       figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
       setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 15e3);
@@ -822,7 +985,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("error", (event) => {
     const err = event.error;
     console.error("Global error:", err);
-    const errMessage = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+    const errMessage = err instanceof Error ? err.message : String(err);
     if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
       figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
       setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 15e3);
@@ -887,16 +1050,7 @@ if (selectedSplashData) {
 }
 var lastColorsData = null;
 var totalStatsList = [];
-var componentUpdateCache2 = /* @__PURE__ */ new Map();
 var publishStatusCache = /* @__PURE__ */ new Map();
-function clearUpdateCache() {
-  try {
-    componentUpdateCache2.clear();
-    publishStatusCache.clear();
-  } catch (err) {
-    console.warn("clearUpdateCache failed:", err);
-  }
-}
 var componentsResult = {
   instances: [],
   counts: {
@@ -920,6 +1074,30 @@ figma.ui.onmessage = async (msg) => {
     figma.ui.resize(msg.width, msg.height);
   }
   if (msg.type === "check-all") {
+    console.log("[check-all] \u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0441 Figma...");
+    if (!await checkFigmaConnection()) {
+      console.warn("[check-all] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E, \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F...");
+      figma.ui.postMessage({
+        type: "connection-waiting",
+        message: "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u044B \u0441 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435\u043C. \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F..."
+      });
+      const connectionRestored = await waitForConnection(3e4);
+      if (!connectionRestored) {
+        figma.ui.postMessage({
+          type: "error",
+          message: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435."
+        });
+        return;
+      }
+      console.log("[check-all] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E.");
+      figma.ui.postMessage({
+        type: "progress-update",
+        processed: 0,
+        total: 0,
+        phase: "analysis-start",
+        currentComponentName: "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E. \u041D\u0430\u0447\u0438\u043D\u0430\u0435\u043C \u0430\u043D\u0430\u043B\u0438\u0437..."
+      });
+    }
     clearUpdateCache();
     clearRgbToHexCache();
     publishStatusCache.clear();
@@ -942,7 +1120,11 @@ figma.ui.onmessage = async (msg) => {
         totalStatsList.push(nodeStats);
         try {
           const allDescendants = selectedNode.findAll();
-          allDescendants.forEach((descendant) => uniqueNodesToProcess.add(descendant));
+          allDescendants.forEach((descendant) => {
+            if (descendant && descendant.type !== "PAGE" && "visible" in descendant) {
+              uniqueNodesToProcess.add(descendant);
+            }
+          });
         } catch (err) {
           console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0432\u044B\u0437\u043E\u0432\u0435 findAll:", err, selectedNode);
         }
@@ -998,13 +1180,13 @@ figma.ui.onmessage = async (msg) => {
           try {
             hasColor = hasFillOrStroke(node);
           } catch (err) {
-            console.error(`[${index + 1}] ERROR in hasFillOrStroke:`, err);
+            console.error(`[${index + 1}] ERROR in hasFillOrStroke:`, err instanceof Error ? err.message : String(err));
           }
           if (hasColor) {
             try {
               await processNodeColors(node, colorsResult, colorsResultStroke);
             } catch (err) {
-              console.error(`[${index + 1}] ERROR in processNodeColors:`, err);
+              console.error(`[${index + 1}] ERROR in processNodeColors:`, err instanceof Error ? err.message : String(err));
             }
           }
           if (node.type === "INSTANCE") {
@@ -1074,7 +1256,7 @@ figma.ui.onmessage = async (msg) => {
       });
     } catch (error) {
       console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435:", error);
-      const errMessage = error && typeof error === "object" && "message" in error ? String(error.message) : String(error);
+      const errMessage = error instanceof Error ? error.message : String(error);
       figma.notify(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}`);
       figma.ui.postMessage({ type: "error", message: `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}` });
       return;
@@ -1088,11 +1270,12 @@ figma.ui.onmessage = async (msg) => {
           node = await figma.getNodeByIdAsync(nodeId);
         } catch (err) {
           console.error("[PLUGIN] getNodeByIdAsync error:", err);
-          figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u0434\u043E\u0441\u0442\u0443\u043F\u0430 \u043A \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0443: " + err.message);
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u0434\u043E\u0441\u0442\u0443\u043F\u0430 \u043A \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0443: " + errorMessage);
           return;
         }
         console.log("[PLUGIN] Node found:", !!node, node);
-        if (node && "type" in node && typeof node.visible === "boolean") {
+        if (node && "type" in node && node.type !== "PAGE" && "visible" in node) {
           let page = node.parent;
           while (page && page.type !== "PAGE") page = page.parent;
           if (page && page.id && page.id !== figma.currentPage.id) {
@@ -1103,8 +1286,8 @@ figma.ui.onmessage = async (msg) => {
             figma.currentPage.selection = [node];
           } catch (err) {
             console.error("\u041E\u0448\u0438\u0431\u043A\u0430 scrollAndZoomIntoView:", err, node);
-            figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0437\u0438\u0446\u0438\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F: " + err.message);
-            if (err && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err.message)) {
+            figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0437\u0438\u0446\u0438\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F: " + (err instanceof Error ? err.message : String(err)));
+            if (err && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err instanceof Error ? err.message : String(err))) {
               figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
               setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 3e3);
             }
@@ -1117,8 +1300,8 @@ figma.ui.onmessage = async (msg) => {
         }
       } catch (criticalErr) {
         console.error("Critical error in scroll-to-node:", criticalErr);
-        figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u0441 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C: " + (criticalErr.message || criticalErr));
-        if (criticalErr && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(criticalErr.message)) {
+        figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u0441 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C: " + (criticalErr instanceof Error ? criticalErr.message : String(criticalErr)));
+        if (criticalErr && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(criticalErr instanceof Error ? criticalErr.message : String(criticalErr))) {
           figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
           setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 3e3);
         }
@@ -1137,7 +1320,7 @@ figma.ui.onmessage = async (msg) => {
           nodeIds.map(async (id) => {
             try {
               const n = await figma.getNodeByIdAsync(id);
-              return n && "type" in n && typeof n.visible === "boolean" ? n : null;
+              return n && "type" in n && n.type !== "PAGE" && "visible" in n ? n : null;
             } catch (err) {
               console.error("\u041E\u0448\u0438\u0431\u043A\u0430 getNodeByIdAsync:", id, err);
               return null;
@@ -1147,7 +1330,7 @@ figma.ui.onmessage = async (msg) => {
         nodes = foundNodes.filter((n) => n !== null);
       } catch (err) {
         console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0443\u0437\u043B\u043E\u0432:", err);
-        const errMessage = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+        const errMessage = err instanceof Error ? err.message : String(err);
         figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0443\u0437\u043B\u043E\u0432: " + errMessage);
         return;
       }
@@ -1208,7 +1391,7 @@ figma.ui.onmessage = async (msg) => {
           componentData[node.id] = {
             name: node.name,
             type: node.type,
-            error: `\u041E\u0448\u0438\u0431\u043A\u0430 \u0447\u0442\u0435\u043D\u0438\u044F \u0434\u0430\u043D\u043D\u044B\u0445: ${error.message}`
+            error: `\u041E\u0448\u0438\u0431\u043A\u0430 \u0447\u0442\u0435\u043D\u0438\u044F \u0434\u0430\u043D\u043D\u044B\u0445: ${error instanceof Error ? error.message : String(error)}`
           };
         }
       }
@@ -1294,7 +1477,7 @@ figma.ui.onmessage = async (msg) => {
       console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u0437\u0430\u043F\u0440\u043E\u0441\u0430 \u043D\u0430 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0443 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430:", error);
       figma.ui.postMessage({
         type: "component-data-set",
-        message: `\u041E\u0448\u0438\u0431\u043A\u0430: ${error.message}`,
+        message: `\u041E\u0448\u0438\u0431\u043A\u0430: ${error instanceof Error ? error.message : String(error)}`,
         isError: true
       });
     }
@@ -1353,6 +1536,8 @@ figma.ui.onmessage = async (msg) => {
     }
   } else if (msg.type === "check-updates") {
     console.log("Received update check request");
+    clearUpdateCache();
+    console.log("\u041A\u0435\u0448 \u043E\u0447\u0438\u0449\u0435\u043D \u043F\u0435\u0440\u0435\u0434 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u043E\u0439 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439.");
     let componentsToCheck = null;
     if (msg.components && msg.components.instances) {
       componentsToCheck = msg.components;
@@ -1371,7 +1556,7 @@ figma.ui.onmessage = async (msg) => {
       console.error("Error during update check:", error);
       figma.ui.postMessage({
         type: "error",
-        message: `Error checking for updates: ${error.message}`
+        message: `Error checking for updates: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   }
