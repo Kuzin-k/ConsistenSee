@@ -45,6 +45,7 @@ export const retryWithBackoff = async <T>(
   } = options;
 
   let lastError: Error;
+  let connectionIssueReported = false;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -56,6 +57,15 @@ export const retryWithBackoff = async <T>(
       // Если это не ошибка соединения, не повторяем попытку
       if (!isConnectionError(lastError)) {
         throw lastError;
+      }
+      
+      // Отправляем сообщение о проблемах с соединением только один раз
+      if (!connectionIssueReported) {
+        figma.ui.postMessage({
+          type: 'connection-waiting' as const,
+          message: 'Проблемы с соединением. Ожидание восстановления...'
+        });
+        connectionIssueReported = true;
       }
       
       // Если это последняя попытка, выбрасываем ошибку

@@ -226,8 +226,8 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       if (!(await checkFigmaConnection())) {
         console.warn('[check-all] Соединение с Figma недоступно, ожидание восстановления...');
         figma.ui.postMessage({
-          type: 'error',
-          message: 'Соединение с Figma недоступно. Ожидание восстановления...'
+          type: 'connection-waiting',
+          message: 'Проблемы с соединением. Ожидание восстановления...'
         });
         
         // Ждем восстановления соединения до 30 секунд
@@ -242,9 +242,13 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         }
         
         console.log('[check-all] Соединение с Figma восстановлено.');
+        // Отправляем сообщение о начале анализа, чтобы UI переключился на счетчик
         figma.ui.postMessage({
-          type: 'error',
-          message: 'Соединение с Figma восстановлено. Начинаем анализ...'
+          type: 'progress-update',
+          processed: 0,
+          total: 0,
+          phase: 'analysis-start',
+          currentComponentName: 'Соединение восстановлено. Начинаем анализ...'
         });
       }
       
