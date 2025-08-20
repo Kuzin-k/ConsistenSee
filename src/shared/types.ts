@@ -62,6 +62,7 @@ export interface ComponentData {
   size: string | number;
   isNested: boolean;
   isLost: boolean;
+  isDeprecated: boolean;
   skipUpdate: boolean;
   pluginDataKey?: string;
   // Поля статуса обновления
@@ -81,11 +82,13 @@ export interface ComponentsResult {
   instances: ComponentData[];
   outdated?: ComponentData[];
   lost?: ComponentData[];
+  deprecated?: ComponentData[];
   counts: {
     components: number;
     icons: number;
     outdated?: number;
     lost?: number;
+    deprecated?: number;
   };
   executionTime?: number;
 }

@@ -86,7 +86,7 @@
       <div class="tabs">
         <div class="tab active" data-tab="instances">All instances</div>
         <div class="tab" data-tab="colors">Colors</div>
-        <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
+        <div class="tab" data-tab="deprecated">Deprecated</div>
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
         <div class="tab" data-tab="outdated">Outdated</div>
         <div class="tab" data-tab="lost">Lost</div>
@@ -119,6 +119,15 @@
         <ul id="lostResultsList"></ul>
       </div>
     </div>
+
+    <!-- Устаревшие компоненты -->
+    <div id="deprecated" class="tab-content">
+      <div id="deprecatedResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="deprecatedResultsList"></ul>
+      </div>
+    </div>
+
     <!-- Changelog --> 
     <div id="log" class="tab-content">
       <h3>ToDo</h3>
@@ -182,6 +191,7 @@
       <div class="search-container">
         <input type="text" id="debugSearchInput" placeholder="Поиск в отладочной информации...">
       </div>
+      <div id="searchResults"></div>
       <div id="debugContent" class="debug-tree"></div>
     </div>
   </div>
@@ -387,8 +397,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
             }
         });
     }
-    const searchInput = document.getElementById('searchInput');
-    const clearSearch = document.getElementById('clearSearch');
+    // const searchInput = document.getElementById('searchInput');
+    // const clearSearch = document.getElementById('clearSearch');
     const searchResults = document.getElementById('searchResults');
     const debugContent = document.getElementById('debug').querySelector('#debugContent');
     let allInstances = []; // Store all instances for searching
@@ -603,6 +613,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const lostResultsList = document.getElementById('lostResultsList');
             let allInstances = [];
             UIModules.processAndDisplayComponents(msg.components, allInstances, lostResultsList, null, 'lost');
+        }
+
+        // Process deprecated components if present
+        if (msg.components) {
+            const deprecatedResultsList = document.getElementById('deprecatedResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(msg.components, allInstances, deprecatedResultsList, null, 'deprecated');
         }
 
         // Process colors
@@ -904,33 +921,33 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
     // Functions moved to UIModules
 
-    // Search functionality
-    if (searchInput && clearSearch && searchResults) {
-      searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase();
-        clearSearch.style.display = searchTerm ? 'block' : 'none';
+    // Search functionality - temporarily disabled
+    // if (searchInput && clearSearch && searchResults) {
+    //   searchInput.addEventListener('input', () => {
+    //     const searchTerm = searchInput.value.toLowerCase();
+    //     clearSearch.style.display = searchTerm ? 'block' : 'none';
 
-        if (!searchTerm) {
-          searchResults.innerHTML = '';
-          return;
-        }
+    //     if (!searchTerm) {
+    //       searchResults.innerHTML = '';
+    //       return;
+    //     }
 
-        const results = allInstances.filter(instance => {
-          const name = instance.name.toLowerCase();
-          const description = (instance.description || '').toLowerCase();
-          return name.includes(searchTerm) || description.includes(searchTerm);
-        });
+    //     const results = allInstances.filter(instance => {
+    //       const name = instance.name.toLowerCase();
+    //       const description = (instance.description || '').toLowerCase();
+    //       return name.includes(searchTerm) || description.includes(searchTerm);
+    //     });
 
-        UIModules.displaySearchResults(results, searchTerm);
-      });
+    //     UIModules.displaySearchResults(results, searchTerm);
+    //   });
 
-      // Clear search
-      clearSearch.addEventListener('click', () => {
-        searchInput.value = '';
-        searchResults.innerHTML = '';
-        clearSearch.style.display = 'none';
-      });
-    }
+    //   // Clear search
+    //   clearSearch.addEventListener('click', () => {
+    //     searchInput.value = '';
+    //     searchResults.innerHTML = '';
+    //     clearSearch.style.display = 'none';
+    //   });
+    // }
 
     // Functions moved to UIModules
 

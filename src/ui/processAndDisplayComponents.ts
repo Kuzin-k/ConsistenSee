@@ -16,7 +16,7 @@ import { sortGroups } from "./sortGroups";
  * @param allInstances - Глобальный массив для хранения всех обработанных экземпляров
  * @param resultsList - DOM элемент для вывода обычных компонентов
  * @param iconResultsList - DOM элемент для вывода иконок
- * @param tabType - Тип вкладки: 'instances' | 'icons' | 'outdated' | 'lost'
+ * @param tabType - Тип вкладки: 'instances' | 'icons' | 'outdated' | 'lost' | 'deprecated'
  *
  * Функционал:
  * - Разделяет компоненты на обычные и иконки
@@ -54,6 +54,15 @@ export function processAndDisplayComponents(
         (instance: any) => instance.isLost === true
       );
     }
+  } else if (tabType === "deprecated") {
+    // Для вкладки deprecated используем deprecated массив или фильтруем instances по isDeprecated
+    if (componentsData.deprecated && componentsData.deprecated.length > 0) {
+      sourceInstances = componentsData.deprecated;
+    } else {
+      sourceInstances = componentsData.instances.filter(
+        (instance: any) => instance.isDeprecated === true
+      );
+    }
   } else {
     sourceInstances = componentsData.instances;
   }
@@ -87,6 +96,12 @@ export function processAndDisplayComponents(
       : componentsData.lost
       ? componentsData.lost.length
       : 0;
+  let deprecatedCount =
+    componentsData.counts && typeof componentsData.counts.deprecated === "number"
+      ? componentsData.counts.deprecated
+      : componentsData.deprecated
+      ? componentsData.deprecated.length
+      : 0;
 
   // Проходим по всем инстансам и распределяем их в соответствующие группы
   // - Пропускаем скрытые элементы, если пользователь отключил их показ
@@ -103,12 +118,15 @@ export function processAndDisplayComponents(
     if (tabType === "lost" && instance.isLost !== true) {
       return;
     }
+    if (tabType === "deprecated" && instance.isDeprecated !== true) {
+      return;
+    }
 
     const groupKey = instance.mainComponentSetKey
       ? instance.mainComponentSetKey
       : instance.mainComponentKey;
 
-    if (tabType === "outdated" || tabType === "lost") {
+    if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
       // Для специальных вкладок не разделяем на иконки и обычные, показываем все в одном списке
       if (!groupedInstances[groupKey]) {
         groupedInstances[groupKey] = [];
@@ -176,7 +194,7 @@ export function processAndDisplayComponents(
 
   // Сортируем элементы внутри каждой группы
   const sortFunction =
-    tabType === "outdated" || tabType === "lost"
+    tabType === "outdated" || tabType === "lost" || tabType === "deprecated"
       ? compareByName
       : compareByVersionThenName;
 
@@ -194,12 +212,16 @@ export function processAndDisplayComponents(
   if (tabType === "lost") {
     lostCount = nonIconCount;
   }
+  if (tabType === "deprecated") {
+    deprecatedCount = nonIconCount;
+  }
 
   // Обновляем тексты вкладок с количеством
   const componentsTab = document.querySelector('[data-tab="instances"]');
   const iconsTab = document.querySelector('[data-tab="icons"]');
   const outdatedTab = document.querySelector('[data-tab="outdated"]');
   const lostTab = document.querySelector('[data-tab="lost"]');
+  const deprecatedTab = document.querySelector('[data-tab="deprecated"]');
 
   // Обновляем только соответствующие вкладки для текущего типа
   if (tabType === "instances") {
@@ -210,12 +232,14 @@ export function processAndDisplayComponents(
     if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
   } else if (tabType === "lost") {
     if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+  } else if (tabType === "deprecated") {
+    if (deprecatedTab) deprecatedTab.textContent = `Deprecated (${deprecatedCount})`;
   }
 
   // Передаём сгруппированные и отсортированные данные в модуль рендера
-  const tabTitle = tabType === "outdated" || tabType === "lost";
+  const tabTitle = tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
 
-  if (tabType === "outdated" || tabType === "lost") {
+  if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
     // Для специальных вкладок показываем всё в одном списке (resultsList)
     displayGroups(sortGroups(groupedInstances), resultsList, tabTitle);
     if (iconResultsList) {

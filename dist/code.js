@@ -589,6 +589,9 @@ var compareVersions = (versionInstance, versionLatest, versionMinimal) => {
 };
 
 // src/js/update/updateAvailabilityCheck.ts
+var checkIsDeprecated = (componentName, setName = "") => {
+  return componentName.includes("Deprecated") || componentName.includes("DEPRECATED") || componentName.includes("\u274C") || setName.includes("Deprecated") || setName.includes("DEPRECATED") || setName.includes("\u274C");
+};
 var componentUpdateCache = /* @__PURE__ */ new Map();
 var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
   var _a2, _b;
@@ -605,7 +608,8 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       libraryComponentName: null,
       libraryComponentSetName: null,
       isLost: false,
-      isNotLatest: false
+      isNotLatest: false,
+      isDeprecated: false
     };
   }
   try {
@@ -622,11 +626,14 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       libraryVersionMinimal = cached.minimal;
       console.warn("DEBUG: \u0412\u0437\u044F\u043B\u0438 \u0438\u0437 \u043A\u044D\u0448\u0430 \u0434\u043B\u044F", cacheKey, { name: mainComponent.name, latest: libraryVersion, minimal: libraryVersionMinimal, lost: cached.lost });
       if (cached.lost) {
+        const componentName2 = mainComponent.name || "";
+        const isDeprecated2 = checkIsDeprecated(componentName2);
         const cachedLostResult = {
           isOutdated: false,
           isNotLatest: false,
           checkVersion: null,
           isLost: true,
+          isDeprecated: isDeprecated2,
           mainComponentId: mainComponent.id,
           importedId: null,
           importedMainComponentId: null,
@@ -638,7 +645,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
           version: instanceVersion != null ? instanceVersion : null,
           description: null
         };
-        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", { cacheKey, name: mainComponent.name });
+        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", { cacheKey, name: mainComponent.name, isDeprecated: isDeprecated2 });
         return cachedLostResult;
       }
     } else {
@@ -692,11 +699,15 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
         componentUpdateCache.set(cacheKey, { latest: null, minimal: null, lost: true });
       }
     }
+    const componentName = mainComponent.name || "";
+    const setName = libraryComponentSetName || "";
+    const isDeprecated = checkIsDeprecated(componentName, setName);
     const result = {
       isOutdated: false,
       isNotLatest: false,
       checkVersion: null,
       isLost: false,
+      isDeprecated,
       mainComponentId: mainComponent.id,
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
@@ -739,6 +750,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     const safeResult = {
       isOutdated: false,
       isNotLatest: false,
+      isDeprecated: false,
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
@@ -758,7 +770,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
 
 // src/js/update/checkComponentUpdates.ts
 var checkComponentUpdates = async (componentsResult2) => {
-  var _a2, _b;
+  var _a2, _b, _c;
   console.log("=== \u041D\u0430\u0447\u0430\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 ===");
   const totalComponentsToCheck = componentsResult2.instances.length;
   const updatedInstances = [];
@@ -797,6 +809,7 @@ var checkComponentUpdates = async (componentsResult2) => {
         checkVersion: updateInfo.checkVersion,
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
+        isDeprecated: Boolean(updateInfo.isDeprecated),
         libraryComponentName: updateInfo.libraryComponentName,
         libraryComponentSetName: updateInfo.libraryComponentSetName,
         libraryComponentId: updateInfo.libraryComponentId,
@@ -815,9 +828,11 @@ var checkComponentUpdates = async (componentsResult2) => {
   componentsResult2.instances = updatedInstances;
   componentsResult2.outdated = updatedInstances.filter((inst) => inst.isOutdated);
   componentsResult2.lost = updatedInstances.filter((inst) => inst.isLost);
+  componentsResult2.deprecated = updatedInstances.filter((inst) => inst.isDeprecated);
   if (componentsResult2.counts) {
     componentsResult2.counts.outdated = (_a2 = componentsResult2.outdated) == null ? void 0 : _a2.length;
     componentsResult2.counts.lost = (_b = componentsResult2.lost) == null ? void 0 : _b.length;
+    componentsResult2.counts.deprecated = (_c = componentsResult2.deprecated) == null ? void 0 : _c.length;
   }
 };
 

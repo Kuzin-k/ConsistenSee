@@ -58,6 +58,7 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
         checkVersion: updateInfo.checkVersion,
         isNotLatest: Boolean(updateInfo.isNotLatest),
         isLost: Boolean(updateInfo.isLost),
+        isDeprecated: Boolean(updateInfo.isDeprecated),
         libraryComponentName: updateInfo.libraryComponentName,
         libraryComponentSetName: updateInfo.libraryComponentSetName,
         libraryComponentId: updateInfo.libraryComponentId,
@@ -78,9 +79,11 @@ export const checkComponentUpdates = async (componentsResult: ComponentsResult):
   
   componentsResult.outdated = updatedInstances.filter((inst) => inst.isOutdated);
   componentsResult.lost = updatedInstances.filter((inst) => inst.isLost);
+  componentsResult.deprecated = updatedInstances.filter((inst) => inst.isDeprecated);
   if (componentsResult.counts) 
     {
       componentsResult.counts.outdated = componentsResult.outdated?.length;
       componentsResult.counts.lost = componentsResult.lost?.length;
+      componentsResult.counts.deprecated = componentsResult.deprecated?.length;
     }
 };

@@ -247,7 +247,7 @@ h3 {
 .tab-content.active {display: block;}
 
 /* Results and Icons */
-#results, #icons, #outdated, #colors, #log, #total, #lost {
+#results, #icons, #outdated, #colors, #log, #total, #lost, #deprecated {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   color: var(--color-text);
@@ -256,7 +256,7 @@ h3 {
   padding-bottom: 8px;
 }
 
-#results ul, #icons ul, #colors ul, #outdated ul,
+#results ul, #icons ul, #colors ul, #outdated ul, #deprecated ul,
 #lost ul, #log, #lost ul {
   gap: 2px;
   margin-top:0px;
@@ -264,7 +264,7 @@ h3 {
 }
 
 #results li, #icons li, #colors li, #outdated li,
-#lost li, #log li {
+#lost li, #deprecated li,#log li {
   margin:0px;
   padding: 4px 0 0 16px;
   list-style-type: none;
@@ -900,7 +900,7 @@ input:checked + .slider:before {
       <div class="tabs">
         <div class="tab active" data-tab="instances">All instances</div>
         <div class="tab" data-tab="colors">Colors</div>
-        <div class="tab_disabled" data-tab="deprecated">Deprecated (soon)</div>
+        <div class="tab" data-tab="deprecated">Deprecated</div>
         <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
         <div class="tab" data-tab="outdated">Outdated</div>
         <div class="tab" data-tab="lost">Lost</div>
@@ -933,6 +933,15 @@ input:checked + .slider:before {
         <ul id="lostResultsList"></ul>
       </div>
     </div>
+
+    <!-- Устаревшие компоненты -->
+    <div id="deprecated" class="tab-content">
+      <div id="deprecatedResults">
+        <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+        <ul id="deprecatedResultsList"></ul>
+      </div>
+    </div>
+
     <!-- Changelog --> 
     <div id="log" class="tab-content">
       <h3>ToDo</h3>
@@ -996,6 +1005,7 @@ input:checked + .slider:before {
       <div class="search-container">
         <input type="text" id="debugSearchInput" placeholder="Поиск в отладочной информации...">
       </div>
+      <div id="searchResults"></div>
       <div id="debugContent" class="debug-tree"></div>
     </div>
   </div>
@@ -1201,8 +1211,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
             }
         });
     }
-    const searchInput = document.getElementById('searchInput');
-    const clearSearch = document.getElementById('clearSearch');
+    // const searchInput = document.getElementById('searchInput');
+    // const clearSearch = document.getElementById('clearSearch');
     const searchResults = document.getElementById('searchResults');
     const debugContent = document.getElementById('debug').querySelector('#debugContent');
     let allInstances = []; // Store all instances for searching
@@ -1417,6 +1427,13 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const lostResultsList = document.getElementById('lostResultsList');
             let allInstances = [];
             UIModules.processAndDisplayComponents(msg.components, allInstances, lostResultsList, null, 'lost');
+        }
+
+        // Process deprecated components if present
+        if (msg.components) {
+            const deprecatedResultsList = document.getElementById('deprecatedResultsList');
+            let allInstances = [];
+            UIModules.processAndDisplayComponents(msg.components, allInstances, deprecatedResultsList, null, 'deprecated');
         }
 
         // Process colors
@@ -1718,33 +1735,33 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
     // Functions moved to UIModules
 
-    // Search functionality
-    if (searchInput && clearSearch && searchResults) {
-      searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase();
-        clearSearch.style.display = searchTerm ? 'block' : 'none';
+    // Search functionality - temporarily disabled
+    // if (searchInput && clearSearch && searchResults) {
+    //   searchInput.addEventListener('input', () => {
+    //     const searchTerm = searchInput.value.toLowerCase();
+    //     clearSearch.style.display = searchTerm ? 'block' : 'none';
 
-        if (!searchTerm) {
-          searchResults.innerHTML = '';
-          return;
-        }
+    //     if (!searchTerm) {
+    //       searchResults.innerHTML = '';
+    //       return;
+    //     }
 
-        const results = allInstances.filter(instance => {
-          const name = instance.name.toLowerCase();
-          const description = (instance.description || '').toLowerCase();
-          return name.includes(searchTerm) || description.includes(searchTerm);
-        });
+    //     const results = allInstances.filter(instance => {
+    //       const name = instance.name.toLowerCase();
+    //       const description = (instance.description || '').toLowerCase();
+    //       return name.includes(searchTerm) || description.includes(searchTerm);
+    //     });
 
-        UIModules.displaySearchResults(results, searchTerm);
-      });
+    //     UIModules.displaySearchResults(results, searchTerm);
+    //   });
 
-      // Clear search
-      clearSearch.addEventListener('click', () => {
-        searchInput.value = '';
-        searchResults.innerHTML = '';
-        clearSearch.style.display = 'none';
-      });
-    }
+    //   // Clear search
+    //   clearSearch.addEventListener('click', () => {
+    //     searchInput.value = '';
+    //     searchResults.innerHTML = '';
+    //     clearSearch.style.display = 'none';
+    //   });
+    // }
 
     // Functions moved to UIModules
 
@@ -3200,6 +3217,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
           (instance) => instance.isLost === true
         );
       }
+    } else if (tabType === "deprecated") {
+      if (componentsData.deprecated && componentsData.deprecated.length > 0) {
+        sourceInstances = componentsData.deprecated;
+      } else {
+        sourceInstances = componentsData.instances.filter(
+          (instance) => instance.isDeprecated === true
+        );
+      }
     } else {
       sourceInstances = componentsData.instances;
     }
@@ -3214,6 +3239,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
     let iconCount = 0;
     let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === "number" ? componentsData.counts.outdated : componentsData.outdated ? componentsData.outdated.length : 0;
     let lostCount = componentsData.counts && typeof componentsData.counts.lost === "number" ? componentsData.counts.lost : componentsData.lost ? componentsData.lost.length : 0;
+    let deprecatedCount = componentsData.counts && typeof componentsData.counts.deprecated === "number" ? componentsData.counts.deprecated : componentsData.deprecated ? componentsData.deprecated.length : 0;
     sourceInstances.forEach((instance) => {
       if (!showHidden && instance.hidden) {
         return;
@@ -3224,8 +3250,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (tabType === "lost" && instance.isLost !== true) {
         return;
       }
+      if (tabType === "deprecated" && instance.isDeprecated !== true) {
+        return;
+      }
       const groupKey = instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
-      if (tabType === "outdated" || tabType === "lost") {
+      if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
         if (!groupedInstances[groupKey]) {
           groupedInstances[groupKey] = [];
         }
@@ -3273,7 +3302,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
       const bName = b.name || "";
       return aName.localeCompare(bName);
     };
-    const sortFunction = tabType === "outdated" || tabType === "lost" ? compareByName : compareByVersionThenName;
+    const sortFunction = tabType === "outdated" || tabType === "lost" || tabType === "deprecated" ? compareByName : compareByVersionThenName;
     for (const key in groupedInstances) {
       groupedInstances[key].sort(sortFunction);
     }
@@ -3286,10 +3315,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
     if (tabType === "lost") {
       lostCount = nonIconCount;
     }
+    if (tabType === "deprecated") {
+      deprecatedCount = nonIconCount;
+    }
     const componentsTab = document.querySelector('[data-tab="instances"]');
     const iconsTab = document.querySelector('[data-tab="icons"]');
     const outdatedTab = document.querySelector('[data-tab="outdated"]');
     const lostTab = document.querySelector('[data-tab="lost"]');
+    const deprecatedTab = document.querySelector('[data-tab="deprecated"]');
     if (tabType === "instances") {
       if (componentsTab)
         componentsTab.textContent = `All instances (${nonIconCount})`;
@@ -3298,9 +3331,11 @@ document.getElementById('setComponentData').addEventListener('click', function()
       if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
     } else if (tabType === "lost") {
       if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+    } else if (tabType === "deprecated") {
+      if (deprecatedTab) deprecatedTab.textContent = `Deprecated (${deprecatedCount})`;
     }
-    const tabTitle = tabType === "outdated" || tabType === "lost";
-    if (tabType === "outdated" || tabType === "lost") {
+    const tabTitle = tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
+    if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
       displayGroups(sortGroups(groupedInstances), resultsList, tabTitle);
       if (iconResultsList) {
         iconResultsList.innerHTML = "";

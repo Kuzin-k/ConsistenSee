@@ -4,6 +4,21 @@ import { getComponentCacheKey } from '../component/getComponentCacheKey';
 import { compareVersions } from './compareVersions';
 
 /**
+ * Проверяет, является ли компонент deprecated на основе его названия и названия набора.
+ * @param componentName Название компонента
+ * @param setName Название набора компонентов (если есть)
+ * @returns true если компонент deprecated
+ */
+const checkIsDeprecated = (componentName: string, setName: string = ''): boolean => {
+  return componentName.includes('Deprecated') || 
+    componentName.includes('DEPRECATED') || 
+    componentName.includes('❌') ||
+    setName.includes('Deprecated') || 
+    setName.includes('DEPRECATED') || 
+    setName.includes('❌');
+};
+
+/**
  * Содержит подробную информацию об актуальности компонента.
  * Эта структура данных хранит результаты проверки версии компонента.
  */
@@ -34,6 +49,9 @@ export interface UpdateInfo {
   isLost: boolean;
   /** Указывает, что компонент соответствует minimal, но не latest (version >= minimal && version < latest). */
   isNotLatest: boolean;
+  /** Указывает, является ли компонент устаревшим/deprecated (содержит 'Deprecated', 'DEPRECATED' или '❌' в названии). */
+  isDeprecated: boolean;
+  /* Результат проверки версии */
   checkVersion: string | null;
 }
 
@@ -67,6 +85,7 @@ export const updateAvailabilityCheck = async (
       libraryComponentSetName: null,
       isLost: false,
       isNotLatest: false,
+      isDeprecated: false,
     };
   }
 
@@ -92,11 +111,16 @@ export const updateAvailabilityCheck = async (
 
       // Если ранее компонент не удалось найти в библиотеке — сразу возвращаем isLost=true
       if (cached.lost) {
+        // Проверяем deprecated статус даже для потерянных компонентов
+        const componentName = mainComponent.name || '';
+        const isDeprecated = checkIsDeprecated(componentName);
+        
         const cachedLostResult: UpdateInfo = {
           isOutdated: false,
           isNotLatest: false,
           checkVersion: null,
           isLost: true,
+          isDeprecated: isDeprecated,
           mainComponentId: mainComponent.id,
           importedId: null,
           importedMainComponentId: null,
@@ -108,9 +132,11 @@ export const updateAvailabilityCheck = async (
           version: instanceVersion ?? null,
           description: null,
         };
-        console.warn('DEBUG: Компонент помечен как потерянный (из кэша)', { cacheKey, name: mainComponent.name });
+        console.warn('DEBUG: Компонент помечен как потерянный (из кэша)', { cacheKey, name: mainComponent.name, isDeprecated });
         return cachedLostResult;
       }
+      // Для найденных в кеше компонентов также проверяем deprecated статус
+      // Это важно для корректной обработки идентичных экземпляров
     } else {
       // --- 4. Если в кэше нет — импортируем из библиотеки и читаем версии ---
       if (!mainComponent.key) {
@@ -170,11 +196,17 @@ export const updateAvailabilityCheck = async (
     }
 
     // --- 5. Формируем результат и сравниваем версии ---
+    // Проверяем, является ли компонент deprecated
+    const componentName = mainComponent.name || '';
+    const setName = libraryComponentSetName || '';
+    const isDeprecated = checkIsDeprecated(componentName, setName);
+
     const result: UpdateInfo = {
       isOutdated: false,
       isNotLatest: false,
       checkVersion: null,
       isLost: false,
+      isDeprecated: isDeprecated,
       mainComponentId: mainComponent.id,
       importedId: importedComponentIdForComparison,
       importedMainComponentId: importedComponentIdForComparison,
@@ -224,6 +256,7 @@ export const updateAvailabilityCheck = async (
     const safeResult: UpdateInfo = {
       isOutdated: false,
       isNotLatest: false,
+      isDeprecated: false,
       mainComponentId: mainComponent ? mainComponent.id : null,
       importedMainComponentId: null,
       importedId: null,
