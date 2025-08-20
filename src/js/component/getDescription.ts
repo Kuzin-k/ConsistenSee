@@ -1,3 +1,5 @@
+import { retryGetMainComponent } from '../utils/retryWithBackoff';
+
 /**
  * Извлекает описание и версию из описания узла или его главного компонента.
  * Если узел является INSTANCE, пытается получить описание из его mainComponent или родительского mainComponentSet.
@@ -33,15 +35,19 @@ export async function getDescription(node: SceneNode | ComponentNode | Component
     else if (node.type === 'INSTANCE') {
       // description = node.description || ''; // Это уже было сделано в п.1
       if (!description) { // Если у инстанса нет описания, идем к главному компоненту
-        const mainComponent = await node.getMainComponentAsync();
-        if (mainComponent) {
-          // nodeToParse = mainComponent; // Обновляем узел, из которого берем описание
-          description = mainComponent.description || '';
-          // Если у mainComponent нет описания, и он часть COMPONENT_SET, берем описание из SET
-          if (!description && mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET') {
-            // nodeToParse = mainComponent.parent; // Обновляем узел
-            description = mainComponent.parent.description || '';
+        try {
+          const mainComponent = await retryGetMainComponent(node, node.name);
+          if (mainComponent) {
+            // nodeToParse = mainComponent; // Обновляем узел, из которого берем описание
+            description = mainComponent.description || '';
+            // Если у mainComponent нет описания, и он часть COMPONENT_SET, берем описание из SET
+            if (!description && mainComponent.parent && mainComponent.parent.type === 'COMPONENT_SET') {
+              // nodeToParse = mainComponent.parent; // Обновляем узел
+              description = mainComponent.parent.description || '';
+            }
           }
+        } catch (retryError) {
+          console.error(`Не удалось получить mainComponent для ${node.name} после повторных попыток:`, retryError);
         }
       }
     }

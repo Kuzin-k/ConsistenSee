@@ -146,6 +146,11 @@ h3 {
   padding: 8px 16px;
 }
 
+.tabs.small {
+  padding: 0px;
+  gap: 2px;
+}
+
 .tab {
   padding: 4px 8px;
   border-radius: 12px;
@@ -155,7 +160,6 @@ h3 {
   font-weight: var(--font-weight-regular);
   border:  var(--color-border-brand) 1px solid;
   transition: all 0.2s ease;
-  
   white-space: nowrap;
 }
 
@@ -191,8 +195,45 @@ h3 {
   color: var(--color-text-onbrand);
 }
 
+/* Стили для дочерних вкладок без рамки */
+.tab_borderless {
+  padding: 4px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--color-text-brand);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-regular);
+  border: none;
+  background-color: transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab_borderless:hover {
+  background-color: var(--color-bg-brand-tertiary);
+  color: var(--color-text-brand);
+}
+
+.tab_borderless.active {
+  background-color: var(--color-bg-brand);
+  color: var(--color-text-onbrand);
+}
+
+.tab_borderless_disabled {
+  padding: 4px 8px;
+  border-radius: 12px;
+  cursor: default;
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-regular);
+  border: none;
+  background-color: transparent;
+  white-space: nowrap;
+}
+
 .tab_success.active {
   background-color:var(--color-bg-positive);}
+
 
 
 .footer .tabs {
@@ -240,7 +281,7 @@ h3 {
 .tab-content.active {display: block;}
 
 /* Results and Icons */
-#results, #icons, #outdated, #colors, #log, #total, #lost, #deprecated {
+#results, #icons, #outdated, #colors, #log, #total, #lost, #deprecated, #main-instances, #instances {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   color: var(--color-text);
@@ -250,14 +291,14 @@ h3 {
 }
 
 #results ul, #icons ul, #colors ul, #outdated ul, #deprecated ul,
-#lost ul, #log, #lost ul {
+#lost ul, #log, #lost ul, #main-instances ul {
   gap: 2px;
   margin-top:0px;
   padding-left: 0px;
 }
 
 #results li, #icons li, #colors li, #outdated li,
-#lost li, #deprecated li,#log li {
+#lost li, #deprecated li, #log li {
   margin:0px;
   padding: 4px 0 0 16px;
   list-style-type: none;

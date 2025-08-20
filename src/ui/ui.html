@@ -84,20 +84,32 @@
       </div>
       <!-- Tabs --> 
       <div class="tabs">
-        <div class="tab active" data-tab="instances">All instances</div>
+        <div class="tab active" data-tab="main-instances">Instances</div>
         <div class="tab" data-tab="colors">Colors</div>
-        <div class="tab" data-tab="deprecated">Deprecated</div>
-        <div class="tab_disabled" data-tab="detached">Detached (soon)</div>
-        <div class="tab" data-tab="outdated">Outdated</div>
-        <div class="tab" data-tab="lost">Lost</div>
-        <div class="tab" data-tab="icons">Icons</div>
         <div class="tab" data-tab="total">Total</div>
-      </div>
+        <!--<div class="tab" data-tab="icons">Icons</div>-->
+      </div>  
     </div>
     <!-- Контент --> 
     <div class="tabs-content"> 
+      <!-- Подвкладки для инстансов -->
+      <div id="subTabs" class="tabs small" style="display: flex;">
+        <div class="tab_borderless active" data-tab="instances">All</div>
+        <div class="tab_borderless" data-tab="outdated">Outdated</div>
+        <div class="tab_borderless" data-tab="lost">Lost</div>
+        <div class="tab_borderless" data-tab="deprecated">Deprecated</div>
+        <div class="tab_borderless_disabled" data-tab="detached">Detached (soon)</div>
+       
+        
+      </div>
+      
+      <!-- Главная вкладка инстансов --> 
+      <div id="main-instances" class="tab-content active">
+      </div>
       <!-- Все инстансы --> 
-      <div id="instances" class="tab-content active">
+      <div id="instances" class="tab-content">
+        <!-- Search Results -->
+        <div id="searchResults" style="display: none;"></div>
         <div id="results">
           <a href="#" class="toggle-groups" data-action="expand">expand all</a>
         <ul id="resultsList"></ul>
@@ -191,7 +203,6 @@
       <div class="search-container">
         <input type="text" id="debugSearchInput" placeholder="Поиск в отладочной информации...">
       </div>
-      <div id="searchResults"></div>
       <div id="debugContent" class="debug-tree"></div>
     </div>
   </div>
@@ -222,20 +233,111 @@ document.addEventListener('DOMContentLoaded', function() {
     
   // Инициализация вкладок
   const tabs = document.querySelectorAll('.tab[data-tab]'); // Выбираем только вкладки с атрибутом data-tab
+  const subTabs = document.getElementById('subTabs');
+  
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const tabId = tab.getAttribute('data-tab');
+      
+      // Проверяем, активен ли поиск
+       const searchInput = document.getElementById('searchInput');
+       const isSearchActive = searchInput && searchInput.value.trim() !== '';
             
       // Показываем соответствующий контент
       document.querySelectorAll('.tab-content').forEach(content => {
           content.style.display = content.id === tabId ? 'block' : 'none';
       });
+      
+      // Если поиск активен и выбрана вкладка instances, сохраняем отображение результатов поиска
+      if (isSearchActive && tabId === 'main-instances') {
+        const searchResults = document.getElementById('searchResults');
+        const resultsDiv = document.getElementById('results');
+        if (searchResults && resultsDiv) {
+          searchResults.style.display = 'block';
+          resultsDiv.style.display = 'none';
+        }
+      }
             
       // Обновляем активную вкладку
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
+      
+      // Показываем/скрываем дочерние вкладки в зависимости от выбранной вкладки
+      if (subTabs) {
+        const instancesRelatedTabs = ['main-instances', 'instances', 'outdated', 'lost', 'deprecated', 'icons'];
+        if (instancesRelatedTabs.includes(tabId)) {
+          subTabs.style.display = 'flex';
+          
+          // Если переходим на main-instances, автоматически активируем подвкладку All
+          if (tabId === 'main-instances') {
+            // Сбрасываем активность всех подвкладок
+            document.querySelectorAll('.tab_borderless').forEach(subTab => {
+              subTab.classList.remove('active');
+            });
+            // Активируем подвкладку All (instances)
+            const allSubTab = document.querySelector('.tab_borderless[data-tab="instances"]');
+            if (allSubTab) {
+              allSubTab.classList.add('active');
+            }
+            // Показываем контент вкладки instances
+            document.querySelectorAll('.tab-content').forEach(content => {
+              content.style.display = content.id === 'instances' ? 'block' : 'none';
+            });
+          }
+        } else {
+          subTabs.style.display = 'none';
+          // Сбрасываем активность дочерних вкладок
+          document.querySelectorAll('.tab_borderless').forEach(subTab => {
+            subTab.classList.remove('active');
+          });
+        }
+      }
       });
   });
+  
+  // Инициализация дочерних вкладок
+   const subTabElements = document.querySelectorAll('.tab_borderless[data-tab]');
+   subTabElements.forEach(subTab => {
+     subTab.addEventListener('click', () => {
+       const tabId = subTab.getAttribute('data-tab');
+       
+       // Проверяем, активен ли поиск
+       const searchInput = document.getElementById('searchInput');
+       const isSearchActive = searchInput && searchInput.value.trim() !== '';
+       
+       // Показываем соответствующий контент
+       document.querySelectorAll('.tab-content').forEach(content => {
+           content.style.display = content.id === tabId ? 'block' : 'none';
+       });
+       
+       // Если поиск активен и выбрана вкладка instances (All), сохраняем отображение результатов поиска
+       if (isSearchActive && tabId === 'instances') {
+         const searchResults = document.getElementById('searchResults');
+         const resultsDiv = document.getElementById('results');
+         if (searchResults && resultsDiv) {
+           searchResults.style.display = 'block';
+           resultsDiv.style.display = 'none';
+         }
+       }
+       
+       // Обновляем активную дочернюю вкладку
+       subTabElements.forEach(t => t.classList.remove('active'));
+       subTab.classList.add('active');
+       
+       // Убираем активность с основных вкладок, кроме main-instances
+       tabs.forEach(t => {
+         if (t.getAttribute('data-tab') !== 'main-instances') {
+           t.classList.remove('active');
+         }
+       });
+       
+       // Обеспечиваем, что основная вкладка main-instances остается активной
+       const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+       if (instancesTab) {
+         instancesTab.classList.add('active');
+       }
+     });
+   });
 
     
 
@@ -397,8 +499,8 @@ document.getElementById('setComponentData').addEventListener('click', function()
             }
         });
     }
-    // const searchInput = document.getElementById('searchInput');
-    // const clearSearch = document.getElementById('clearSearch');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearch = document.getElementById('clearSearch');
     const searchResults = document.getElementById('searchResults');
     const debugContent = document.getElementById('debug').querySelector('#debugContent');
     let allInstances = []; // Store all instances for searching
@@ -599,6 +701,33 @@ document.getElementById('setComponentData').addEventListener('click', function()
             const iconResultsList = document.getElementById('iconResultsList');
             let allInstances = [];
             UIModules.processAndDisplayComponents(msg.components, allInstances, resultsList, iconResultsList);
+            
+            // Показываем нижние вкладки после обработки результатов поиска
+            const subTabs = document.getElementById('subTabs');
+            if (subTabs) {
+                subTabs.style.display = 'flex';
+            }
+            
+            // Активируем вкладку Instances
+            const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+            if (instancesTab) {
+                // Убираем активность со всех основных вкладок
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                // Активируем вкладку Instances
+                instancesTab.classList.add('active');
+            }
+            
+            // Активируем подвкладку "All" по умолчанию и показываем её контент
+            const allSubTab = document.querySelector('.tab_borderless[data-tab="instances"]');
+            if (allSubTab) {
+                document.querySelectorAll('.tab_borderless').forEach(t => t.classList.remove('active'));
+                allSubTab.classList.add('active');
+                
+                // Показываем только контент подвкладки "All" (instances)
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = content.id === 'instances' ? 'block' : 'none';
+                });
+            }
         }
         
         // Process outdated components if present
@@ -921,33 +1050,90 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
     // Functions moved to UIModules
 
-    // Search functionality - temporarily disabled
-    // if (searchInput && clearSearch && searchResults) {
-    //   searchInput.addEventListener('input', () => {
-    //     const searchTerm = searchInput.value.toLowerCase();
-    //     clearSearch.style.display = searchTerm ? 'block' : 'none';
+    // Search functionality
+    if (searchInput && clearSearch && searchResults) {
+      searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        clearSearch.style.display = searchTerm ? 'block' : 'none';
 
-    //     if (!searchTerm) {
-    //       searchResults.innerHTML = '';
-    //       return;
-    //     }
+        if (!searchTerm) {
+          searchResults.innerHTML = '';
+          searchResults.style.display = 'none';
+          // Показываем обычный контент instances
+          const resultsDiv = document.getElementById('results');
+          if (resultsDiv) {
+            resultsDiv.style.display = 'block';
+          }
+          // Возвращаемся к активной вкладке
+          const activeTab = document.querySelector('.tab.active');
+          if (activeTab) {
+            const tabId = activeTab.getAttribute('data-tab');
+            document.querySelectorAll('.tab-content').forEach(content => {
+              content.style.display = content.id === tabId ? 'block' : 'none';
+            });
+          }
+          return;
+        }
 
-    //     const results = allInstances.filter(instance => {
-    //       const name = instance.name.toLowerCase();
-    //       const description = (instance.description || '').toLowerCase();
-    //       return name.includes(searchTerm) || description.includes(searchTerm);
-    //     });
+        const results = allInstances.filter(instance => {
+          const name = instance.name.toLowerCase();
+          const description = (instance.description || '').toLowerCase();
+          return name.includes(searchTerm) || description.includes(searchTerm);
+        });
 
-    //     UIModules.displaySearchResults(results, searchTerm);
-    //   });
+        // Показываем результаты поиска
+        searchResults.style.display = 'block';
+        
+        // Показываем вкладки main-instances и instances
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.style.display = (content.id === 'instances' || content.id === 'main-instances') ? 'block' : 'none';
+        });
 
-    //   // Clear search
-    //   clearSearch.addEventListener('click', () => {
-    //     searchInput.value = '';
-    //     searchResults.innerHTML = '';
-    //     clearSearch.style.display = 'none';
-    //   });
-    // }
+        // Переключаемся на вкладку Instances и показываем дочернюю вкладку All
+        tabs.forEach(t => t.classList.remove('active'));
+        const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+        if (instancesTab) {
+          instancesTab.classList.add('active');
+        }
+        
+        // Показываем дочерние вкладки и активируем All
+        const subTabs = document.getElementById('subTabs');
+        if (subTabs) {
+          subTabs.style.display = 'flex';
+          const subTabElements = subTabs.querySelectorAll('.tab_borderless');
+          subTabElements.forEach(t => t.classList.remove('active'));
+          const allSubTab = subTabs.querySelector('.tab_borderless[data-tab="instances"]');
+          if (allSubTab) {
+            allSubTab.classList.add('active');
+          }
+        }
+
+        UIModules.displaySearchResults(results, searchTerm);
+      });
+
+      // Clear search
+      clearSearch.addEventListener('click', () => {
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+        clearSearch.style.display = 'none';
+        
+        // Показываем обычный контент instances
+        const resultsDiv = document.getElementById('results');
+        if (resultsDiv) {
+          resultsDiv.style.display = 'block';
+        }
+        
+        // Возвращаемся к активной вкладке
+        const activeTab = document.querySelector('.tab.active');
+        if (activeTab) {
+          const tabId = activeTab.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = content.id === tabId ? 'block' : 'none';
+          });
+        }
+      });
+    }
 
     // Functions moved to UIModules
 

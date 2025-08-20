@@ -1,4 +1,5 @@
 import { SceneNode, ColorData } from '../../shared/types';
+import { retryWithBackoff } from '../utils/retryWithBackoff';
 
 // Constants for special values
 const COLLECTION_NOT_FOUND = 'Collection not found' as const;
@@ -21,11 +22,25 @@ export const processVariableBindings = async (node: SceneNode, nodeData: Partial
         const binding = boundVariables[propertyType][0];
         if (binding && binding.id) {
             try {
-                const variable = await figma.variables.getVariableByIdAsync(binding.id);
+                const variable = await retryWithBackoff(
+                    () => figma.variables.getVariableByIdAsync(binding.id),
+                    {
+                        onRetry: (attempt, error) => {
+                            console.warn(`Retry ${attempt} for getting variable by ID ${binding.id}:`, error.message);
+                        }
+                    }
+                );
                 if (variable) {
                     (nodeData as any)[`${prefix}_variable_name`] = variable.name;
                     try {
-                        const collection = await figma.variables.getVariableCollectionByIdAsync(variable.variableCollectionId);
+                        const collection = await retryWithBackoff(
+                            () => figma.variables.getVariableCollectionByIdAsync(variable.variableCollectionId),
+                            {
+                                onRetry: (attempt, error) => {
+                                    console.warn(`Retry ${attempt} for getting variable collection by ID ${variable.variableCollectionId}:`, error.message);
+                                }
+                            }
+                        );
                         (nodeData as any)[`${prefix}_collection_name`] = collection ? collection.name : COLLECTION_NOT_FOUND;
                         (nodeData as any)[`${prefix}_collection_id`] = collection ? collection.id : null;
                     } catch (collectionError) {

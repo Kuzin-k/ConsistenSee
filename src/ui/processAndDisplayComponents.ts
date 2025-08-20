@@ -97,7 +97,8 @@ export function processAndDisplayComponents(
       ? componentsData.lost.length
       : 0;
   let deprecatedCount =
-    componentsData.counts && typeof componentsData.counts.deprecated === "number"
+    componentsData.counts &&
+    typeof componentsData.counts.deprecated === "number"
       ? componentsData.counts.deprecated
       : componentsData.deprecated
       ? componentsData.deprecated.length
@@ -126,7 +127,11 @@ export function processAndDisplayComponents(
       ? instance.mainComponentSetKey
       : instance.mainComponentKey;
 
-    if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
+    if (
+      tabType === "outdated" ||
+      tabType === "lost" ||
+      tabType === "deprecated"
+    ) {
       // Для специальных вкладок не разделяем на иконки и обычные, показываем все в одном списке
       if (!groupedInstances[groupKey]) {
         groupedInstances[groupKey] = [];
@@ -217,7 +222,10 @@ export function processAndDisplayComponents(
   }
 
   // Обновляем тексты вкладок с количеством
-  const componentsTab = document.querySelector('[data-tab="instances"]');
+  const componentsTab = document.querySelector('[data-tab="main-instances"]');
+  const allSubTab = document.querySelector(
+    '.tab_borderless[data-tab="instances"]'
+  );
   const iconsTab = document.querySelector('[data-tab="icons"]');
   const outdatedTab = document.querySelector('[data-tab="outdated"]');
   const lostTab = document.querySelector('[data-tab="lost"]');
@@ -225,21 +233,88 @@ export function processAndDisplayComponents(
 
   // Обновляем только соответствующие вкладки для текущего типа
   if (tabType === "instances") {
-    if (componentsTab)
-      componentsTab.textContent = `All instances (${nonIconCount})`;
-    if (iconsTab) iconsTab.textContent = `Icons (${iconCount})`;
+    // Не обновляем текст верхней вкладки Instances, оставляем как есть
+    // Верхняя вкладка Instances всегда остается активной и не блокируется
+    // Также блокируем дочернюю вкладку "All"
+    if (allSubTab) {
+      allSubTab.textContent = `All (${nonIconCount + iconCount})`;
+      // Блокируем вкладку если 0 элементов
+      if (nonIconCount + iconCount === 0) {
+        allSubTab.classList.remove("tab_borderless");
+        allSubTab.classList.add("tab_borderless_disabled");
+        (allSubTab as HTMLElement).style.pointerEvents = "none";
+      } else {
+        allSubTab.classList.remove("tab_borderless_disabled");
+        allSubTab.classList.add("tab_borderless");
+        (allSubTab as HTMLElement).style.pointerEvents = "auto";
+      }
+    }
+    if (iconsTab) {
+      iconsTab.textContent = `Icons (${iconCount})`;
+      // Блокируем вкладку если 0 элементов
+      if (iconCount === 0) {
+        iconsTab.classList.remove("tab_borderless");
+        iconsTab.classList.add("tab_borderless_disabled");
+        (iconsTab as HTMLElement).style.pointerEvents = "none";
+      } else {
+        iconsTab.classList.remove("tab_borderless_disabled");
+        iconsTab.classList.add("tab_borderless");
+        (iconsTab as HTMLElement).style.pointerEvents = "auto";
+      }
+    }
   } else if (tabType === "outdated") {
-    if (outdatedTab) outdatedTab.textContent = `Outdated (${outdatedCount})`;
+    if (outdatedTab) {
+      outdatedTab.textContent = `Outdated (${outdatedCount})`;
+      // Блокируем вкладку если 0 элементов
+      if (outdatedCount === 0) {
+        outdatedTab.classList.remove("tab_borderless");
+        outdatedTab.classList.add("tab_borderless_disabled");
+        (outdatedTab as HTMLElement).style.pointerEvents = "none";
+      } else {
+        outdatedTab.classList.remove("tab_borderless_disabled");
+        outdatedTab.classList.add("tab_borderless");
+        (outdatedTab as HTMLElement).style.pointerEvents = "auto";
+      }
+    }
   } else if (tabType === "lost") {
-    if (lostTab) lostTab.textContent = `Lost (${lostCount})`;
+    if (lostTab) {
+      lostTab.textContent = `Lost (${lostCount})`;
+      // Блокируем вкладку если 0 элементов
+      if (lostCount === 0) {
+        lostTab.classList.remove("tab_borderless");
+        lostTab.classList.add("tab_borderless_disabled");
+        (lostTab as HTMLElement).style.pointerEvents = "none";
+      } else {
+        lostTab.classList.remove("tab_borderless_disabled");
+        lostTab.classList.add("tab_borderless");
+        (lostTab as HTMLElement).style.pointerEvents = "auto";
+      }
+    }
   } else if (tabType === "deprecated") {
-    if (deprecatedTab) deprecatedTab.textContent = `Deprecated (${deprecatedCount})`;
+    if (deprecatedTab) {
+      deprecatedTab.textContent = `Deprecated (${deprecatedCount})`;
+      // Блокируем вкладку если 0 элементов
+      if (deprecatedCount === 0) {
+        deprecatedTab.classList.remove("tab_borderless");
+        deprecatedTab.classList.add("tab_borderless_disabled");
+        (deprecatedTab as HTMLElement).style.pointerEvents = "none";
+      } else {
+        deprecatedTab.classList.remove("tab_borderless_disabled");
+        deprecatedTab.classList.add("tab_borderless");
+        (deprecatedTab as HTMLElement).style.pointerEvents = "auto";
+      }
+    }
   }
 
   // Передаём сгруппированные и отсортированные данные в модуль рендера
-  const tabTitle = tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
+  const tabTitle =
+    tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
 
-  if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
+  if (
+    tabType === "outdated" ||
+    tabType === "lost" ||
+    tabType === "deprecated"
+  ) {
     // Для специальных вкладок показываем всё в одном списке (resultsList)
     displayGroups(sortGroups(groupedInstances), resultsList, tabTitle);
     if (iconResultsList) {

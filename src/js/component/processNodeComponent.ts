@@ -1,7 +1,8 @@
 import { getDescription } from './getDescription';
 import { checkIsNodeOrParentHidden } from '../utils/checkIsNodeOrParentHidden';
 import { getParentComponentName } from './getParentComponentName';
-import { SceneNode, InstanceNode, ComponentNode, ComponentSetNode, ComponentData, ComponentsResult } from '../../shared/types';
+import { retryGetMainComponent } from '../utils/retryWithBackoff';
+import { SceneNode, ComponentNode, ComponentSetNode, ComponentData, ComponentsResult } from '../../shared/types';
 
 /**
  * Обрабатывает компонент или инстанс узла, собирает информацию о нем, его главном компоненте и статусе актуальности.
@@ -24,13 +25,13 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
       if (node.type === 'INSTANCE') {
         try {
           //console.log(`[processNodeComponent] Получаем mainComponent для инстанса:`, node.name);
-          mainComponent = await node.getMainComponentAsync(); // Асинхронно получаем главный компонент
+          mainComponent = await retryGetMainComponent(node as InstanceNode, node.name); // Используем утилиту с повторными попытками
         } catch (error: unknown) {
           // Обработка ошибок при получении главного компонента
-          console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name}:`, error);
+          console.error(`[processNodeComponent] Ошибка при получении mainComponent для ${node.name} после всех попыток:`, error);
           figma.ui.postMessage({
             type: 'error' as const,
-            message: `Ошибка при получении mainComponent для ${node.name}: ${(error as Error).message}`
+            message: `Не удалось получить mainComponent для ${node.name} после нескольких попыток: ${(error as Error).message}`
           });
           return null;
         }
@@ -155,6 +156,11 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
 
         // Формируем объект с данными компонента/инстанса
         const componentData: ComponentData = {
+          isLost: false,
+          isDeprecated: false, 
+          isOutdated: false,
+          isNotLatest: false,
+          checkVersion: 'false',
           type: node.type, // Тип узла
           name: name.trim(), // Имя узла (без лишних пробелов)
           nodeId: node.id, // ID узла
@@ -172,7 +178,7 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
           mainComponentSetName: mainComponentSetName ? mainComponentSetName : null, // Имя набора компонентов (если есть)
           mainComponentSetId: mainComponentSetId ? mainComponentSetId : null, // Имя набора компонентов (если есть)
           
-          fileKey: figma.fileKey, // Ключ текущего файла Figma
+          
           isIcon: isIcon, // Является ли иконкой
           size: isIcon ? width : `${width}x${height}`, // Размер (для иконок - одна сторона, для других - ШxВ)
           isNested: isNested, // Является ли вложенным инстансом
@@ -232,7 +238,6 @@ export const processComponentSetNode = async (node: ComponentSetNode, parentSet:
       //mainComponentName: name, // Имя главного компонента (для набора это его собственное имя)
       //mainComponentKey: node.key, // Для COMPONENT_SET используем его собственный ключ
       //mainComponentId: node.id, // ID самого набора
-      fileKey: figma.fileKey, // Ключ текущего файла Figma
       isIcon: false, // COMPONENT_SET сам по себе не является иконкой
       size: `${Math.round(node.width)}x${Math.round(node.height)}`, // Размеры COMPONENT_SET
       isNested: false, // COMPONENT_SET не может быть вложенным в инстанс
