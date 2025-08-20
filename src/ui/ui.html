@@ -653,7 +653,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (resultsList) {
           resultsList.innerHTML = '';
           
-          if (msg.instances && msg.instances.length > 0) {UIModules.displayGroups(msg.instances, resultsList, msg.counts);
+          if (msg.instances && msg.instances.length > 0) {UIModules.displayGroups(msg.instances, resultsList, false, 'colors');
           } else {resultsList.innerHTML = '<p>Цвета не найдены</p>';}} 
           else {
           //console.error('Не найден элемент colorResultsList');

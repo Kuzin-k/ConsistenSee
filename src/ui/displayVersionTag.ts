@@ -5,94 +5,130 @@ export interface VersionDisplayOptions {
   isGroupHeader?: boolean;
   uniqueVersions?: string[];
   checkVersion?: string;
+  groupItems?: any[]; // Массив элементов группы для подсчета статусов
+  tabType?: string; // Тип вкладки для определения логики отображения
 }
 
 /**
  * Создает и возвращает HTML-элемент с информацией о версии компонента
- * 
+ *
  * Функция поддерживает два режима работы:
  * 1. Для заголовков групп - единая логика на всех вкладках
  * 2. Для отдельных элементов - различная логика в зависимости от вкладки
- * 
+ *
  * @param options - Объект с параметрами отображения версии
  * @returns HTML-элемент (span или div) с информацией о версии
  */
 export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   const {
-    instanceVersion = 'none',
-    libraryVersion = 'none', 
-    isOutdated = '',
-    checkVersion = '',
+    instanceVersion = "      ",
+    libraryVersion = "      ",
+    isOutdated = "",
+    checkVersion = "",
     isGroupHeader = false,
-    uniqueVersions = []
+    uniqueVersions = [],
+    groupItems = [],
+    tabType = "",
   } = options;
 
-  let versionText = '';
+  // Не отображаем теги версий на вкладке deprecated
+  if (tabType === "deprecated") {
+    const emptyContainer = document.createElement("span");
+    emptyContainer.classList.add("version-group");
+    return emptyContainer;
+  }
+
+  let versionText = "";
 
   // Создаем контейнер для версионного тега
-  const versionGroup = document.createElement('span');
-  versionGroup.classList.add('version-group');
+  const versionGroup = document.createElement("span");
+  versionGroup.classList.add("version-group");
 
   // Создаем сам тег с версией
-  const versionBadge = document.createElement('span');
-  versionBadge.classList.add('version-tag');
+  const versionBadge = document.createElement("span");
+  versionBadge.classList.add("version-tag");
 
-  // Обрабатываем заголовки групп - единая логика для всех вкладок
-  if (isGroupHeader) {
-    // Проверяем, есть ли версии у элементов группы
-    const hasVersions = uniqueVersions.some(version => version && version !== 'none');
-    const hasLibraryVersion = libraryVersion && libraryVersion !== 'none';
-    
-    // Если у всех элементов группы нет версии и у библиотеки нет версии, тег не отображается
-    if (!hasVersions && !hasLibraryVersion) {return versionGroup;} // Возвращаем пустой контейнер
-    
-    // Определяем текст версии
-    if (uniqueVersions.length === 1 && uniqueVersions[0] && uniqueVersions[0] !== 'none') {
-      // Если у всех элементов группы номер версии одинаковый
-      versionText = uniqueVersions[0];
-    } else if (hasVersions) {
-      // Если у элементов группы номер версии разный
-      versionText = '* * *';
-      versionBadge.classList.add("version-tag-notlatest");
+  // Обрабатываем заголовки групп - показываем три тега с количеством элементов по статусам
+  if (isGroupHeader && groupItems) {
+    // Подсчитываем количество элементов для каждого статуса
+    const latestCount = groupItems.filter(
+      (item: any) => item.checkVersion === "Latest"
+    ).length;
+    const notLatestCount = groupItems.filter(
+      (item: any) => item.checkVersion === "NotLatest"
+    ).length;
+    const outdatedCount = groupItems.filter(
+      (item: any) => item.checkVersion === "Outdated"
+    ).length;
+
+    // Если нет элементов с версиями, не показываем теги
+    if (latestCount === 0 && notLatestCount === 0 && outdatedCount === 0) {
+      return versionGroup;
     }
-    
-    // Если присутствует libraryVersion и isOutdated=true
-    if (hasLibraryVersion && isOutdated) {
-      versionBadge.textContent = `${versionText || '* * *'} → ${libraryVersion}`;
-      versionBadge.classList.add('version-tag-outdated');
-    } else if (versionText) {
-      versionBadge.textContent = versionText;
-    } else {
-      return versionGroup; // Возвращаем пустой контейнер если нет текста
+
+    // Создаем тег для Outdated (красный)
+    if (outdatedCount > 0) {
+      const outdatedBadge = document.createElement("span");
+      outdatedBadge.classList.add("version-tag", "version-tag-outdated");
+      outdatedBadge.textContent = outdatedCount.toString();
+      versionGroup.appendChild(outdatedBadge);
     }
+
+    // Создаем тег для NotLatest (желтый)
+    if (notLatestCount > 0) {
+      const notLatestBadge = document.createElement("span");
+      notLatestBadge.classList.add("version-tag", "version-tag-notlatest");
+      notLatestBadge.textContent = notLatestCount.toString();
+      versionGroup.appendChild(notLatestBadge);
+    }
+
+    // Создаем тег для Latest (зеленый)
+    if (latestCount > 0) {
+      const latestBadge = document.createElement("span");
+      latestBadge.classList.add("version-tag", "version-tag-latest");
+      latestBadge.textContent = latestCount.toString();
+      versionGroup.appendChild(latestBadge);
+    }
+
+    return versionGroup;
   } else {
     // Обрабатываем отдельные элементы (не заголовки групп)
-    const hasInstanceVersion = instanceVersion && instanceVersion !== 'none';
-    const hasLibraryVersion = libraryVersion && libraryVersion !== 'none';
-    
+    const hasInstanceVersion = instanceVersion && instanceVersion !== "none";
+    const hasLibraryVersion = libraryVersion && libraryVersion !== "none";
+
     // Если у элемента нет версии и у компонента библиотеки нет версии, тег не отображается
     if (!hasInstanceVersion && !hasLibraryVersion) {
       return versionGroup; // Возвращаем пустой контейнер
     }
-    
+
     // Если присутствует libraryVersion
-    if (hasLibraryVersion && checkVersion !=="Latest") {
-      versionBadge.textContent = `${instanceVersion || 'none'} → ${libraryVersion}`;
-      if (checkVersion==="NotLatest") {versionBadge.classList.add('version-tag-notlatest');}
-      if (checkVersion==="Outdated") {versionBadge.classList.add('version-tag-outdated');}
+    if (hasLibraryVersion && checkVersion !== "Latest") {
+      versionBadge.textContent = `${
+        instanceVersion || "none"
+      } → ${libraryVersion}`;
+      if (checkVersion === "NotLatest") {
+        versionBadge.classList.add("version-tag-notlatest");
+      }
+      if (checkVersion === "Outdated") {
+        versionBadge.classList.add("version-tag-outdated");
+      }
     } else if (hasInstanceVersion) {
       // Показываем только версию элемента если она есть
       versionBadge.textContent = instanceVersion;
       // Если есть версия и она не просрочена помечаем зеленым
-      if (checkVersion==="Latest") {versionBadge.classList.add('version-tag-latest');}
+      if (checkVersion === "Latest") {
+        versionBadge.classList.add("version-tag-latest");
+      }
     } else {
       // Если нет версии элемента, но есть версия библиотеки (без isOutdated)
       return versionGroup; // Возвращаем пустой контейнер
     }
   }
 
-  // Добавляем тег в контейнер только если есть текст для отображения
-  if (versionBadge.textContent) {versionGroup.appendChild(versionBadge);}
+  // Добавляем тег в контейнер только если есть текст для отображения (только для отдельных элементов)
+  if (!isGroupHeader && versionBadge.textContent) {
+    versionGroup.appendChild(versionBadge);
+  }
 
   return versionGroup;
 }

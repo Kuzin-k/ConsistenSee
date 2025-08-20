@@ -316,15 +316,15 @@ export function processAndDisplayComponents(
     tabType === "deprecated"
   ) {
     // Для специальных вкладок показываем всё в одном списке (resultsList)
-    displayGroups(sortGroups(groupedInstances), resultsList, tabTitle);
+    displayGroups(sortGroups(groupedInstances), resultsList, tabTitle, tabType);
     if (iconResultsList) {
       iconResultsList.innerHTML = ""; // Очищаем список иконок для специальных вкладок
     }
   } else {
     // Для обычных вкладок показываем и компоненты, и иконки
-    displayGroups(sortGroups(groupedInstances), resultsList, false);
+    displayGroups(sortGroups(groupedInstances), resultsList, false, tabType);
     if (iconResultsList) {
-      displayGroups(sortGroups(groupedIcons), iconResultsList, false);
+      displayGroups(sortGroups(groupedIcons), iconResultsList, false, tabType);
     }
   }
 }
