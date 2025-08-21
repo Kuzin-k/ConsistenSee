@@ -238,35 +238,11 @@ export const updateAvailabilityCheck = async (
 
       // Если удалось получить источник версий — читаем latest/minimal и кладём в кэш
       if (libraryVersionSourceNode) {
-        console.log(
-          `[updateAvailabilityCheck] LIBRARY SOURCE NODE FOUND for ${mainComponent.name}:`,
-          {
-            sourceNodeType: libraryVersionSourceNode.type,
-            sourceNodeName: libraryVersionSourceNode.name,
-            sourceNodeDescription: libraryVersionSourceNode.description,
-          }
-        );
 
         const libraryDescData = await getDescription(libraryVersionSourceNode);
-        console.log(
-          `[updateAvailabilityCheck] GET DESCRIPTION RESULT for ${mainComponent.name}:`,
-          {
-            description: libraryDescData.description,
-            nodeVersion: libraryDescData.nodeVersion,
-            nodeVersionMinimal: libraryDescData.nodeVersionMinimal,
-          }
-        );
 
         libraryVersion = libraryDescData.nodeVersion;
         libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
-
-        console.log(
-          `[updateAvailabilityCheck] ASSIGNED VERSIONS for ${mainComponent.name}:`,
-          {
-            libraryVersion,
-            libraryVersionMinimal,
-          }
-        );
 
         // Кладём в кэш версии и помечаем, что компонент найден (lost=false)
         componentUpdateCache.set(cacheKey, {
@@ -296,18 +272,6 @@ export const updateAvailabilityCheck = async (
     const setName = libraryComponentSetName || "";
     const isDeprecated = checkIsDeprecated(componentName, setName);
 
-    console.log(
-      `[updateAvailabilityCheck] CREATING RESULT for ${mainComponent.name}:`,
-      {
-        libraryVersion,
-        libraryVersionMinimal,
-        willAssignToResult: {
-          libraryComponentVersion: libraryVersion,
-          libraryComponentVersionMinimal: libraryVersionMinimal,
-        },
-      }
-    );
-
     const result: UpdateInfo = {
       isOutdated: false,
       isNotLatest: false,
@@ -325,15 +289,6 @@ export const updateAvailabilityCheck = async (
       version: instanceVersion ?? null,
       description: null,
     };
-
-    console.log(
-      `[updateAvailabilityCheck] RESULT CREATED for ${mainComponent.name}:`,
-      {
-        resultLibraryComponentVersion: result.libraryComponentVersion,
-        resultLibraryComponentVersionMinimal:
-          result.libraryComponentVersionMinimal,
-      }
-    );
 
     if (libraryVersion || libraryVersionMinimal) {
       const compareResult = compareVersions(
@@ -354,7 +309,7 @@ export const updateAvailabilityCheck = async (
     }
 
     // Логируем итоговый результат для отладки.
-    console.log(
+    console.warn(
       `[updateAvailabilityCheck] FINAL RESULT for ${mainComponent.name}:`,
       {
         name: mainComponent.name,

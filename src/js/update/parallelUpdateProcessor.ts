@@ -62,20 +62,11 @@ export class ParallelUpdateProcessor {
       const status = updateQueue.getStatus();
       this.totalCount = status.total;
 
-      if (this.totalCount === 0) {
-        return {
-          instances: [],
-          counts: {
-            components: 0,
-            icons: 0
-          }
-        };
-      }
-
-      // Set up queue callbacks
+      // Не выходим, даже если totalCount === 0 — ждём наполнение очереди и автостарт
       return new Promise<ComponentsResult>((resolve, reject) => {
         updateQueue.onProgress(async (processed: number, total: number, component?: ComponentData) => {
           this.processedCount = processed;
+          this.totalCount = total;
           if (this.onProgressCallback) {
             await this.onProgressCallback(processed, total, component?.name);
           }
@@ -83,14 +74,25 @@ export class ParallelUpdateProcessor {
 
         updateQueue.onComplete((results: ComponentsResult) => {
           this.isProcessing = false;
-          if (this.onCompleteCallback) {
-            this.onCompleteCallback(results);
+          try {
+            if (this.onCompleteCallback) {
+              if (typeof this.onCompleteCallback !== "function") {
+                console.warn("[ParallelUpdateProcessor] onCompleteCallback задан, но это не функция");
+              } else {
+                this.onCompleteCallback(results);
+              }
+            } else {
+              console.warn("[ParallelUpdateProcessor] onCompleteCallback не установлен");
+            }
+          } catch (err) {
+            console.error("[ParallelUpdateProcessor] Ошибка внутри onCompleteCallback:", err);
+          } finally {
+            resolve(results);
           }
-          resolve(results);
         });
 
-        // Запускаем обработку очереди вручную
-        updateQueue.startProcessingManually();
+        // Не запускаем вручную — автостарт произойдёт при первом добавлении элемента
+        // updateQueue.startProcessingManually();
       });
     } catch (error) {
       this.isProcessing = false;

@@ -614,32 +614,9 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
         }
       }
       if (libraryVersionSourceNode) {
-        console.log(
-          `[updateAvailabilityCheck] LIBRARY SOURCE NODE FOUND for ${mainComponent.name}:`,
-          {
-            sourceNodeType: libraryVersionSourceNode.type,
-            sourceNodeName: libraryVersionSourceNode.name,
-            sourceNodeDescription: libraryVersionSourceNode.description
-          }
-        );
         const libraryDescData = await getDescription(libraryVersionSourceNode);
-        console.log(
-          `[updateAvailabilityCheck] GET DESCRIPTION RESULT for ${mainComponent.name}:`,
-          {
-            description: libraryDescData.description,
-            nodeVersion: libraryDescData.nodeVersion,
-            nodeVersionMinimal: libraryDescData.nodeVersionMinimal
-          }
-        );
         libraryVersion = libraryDescData.nodeVersion;
         libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
-        console.log(
-          `[updateAvailabilityCheck] ASSIGNED VERSIONS for ${mainComponent.name}:`,
-          {
-            libraryVersion,
-            libraryVersionMinimal
-          }
-        );
         componentUpdateCache.set(cacheKey, {
           latest: libraryVersion,
           minimal: libraryVersionMinimal,
@@ -662,17 +639,6 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     const componentName = mainComponent.name || "";
     const setName = libraryComponentSetName || "";
     const isDeprecated = checkIsDeprecated(componentName, setName);
-    console.log(
-      `[updateAvailabilityCheck] CREATING RESULT for ${mainComponent.name}:`,
-      {
-        libraryVersion,
-        libraryVersionMinimal,
-        willAssignToResult: {
-          libraryComponentVersion: libraryVersion,
-          libraryComponentVersionMinimal: libraryVersionMinimal
-        }
-      }
-    );
     const result = {
       isOutdated: false,
       isNotLatest: false,
@@ -690,13 +656,6 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
       version: instanceVersion != null ? instanceVersion : null,
       description: null
     };
-    console.log(
-      `[updateAvailabilityCheck] RESULT CREATED for ${mainComponent.name}:`,
-      {
-        resultLibraryComponentVersion: result.libraryComponentVersion,
-        resultLibraryComponentVersionMinimal: result.libraryComponentVersionMinimal
-      }
-    );
     if (libraryVersion || libraryVersionMinimal) {
       const compareResult = compareVersions(
         instanceVersion,
@@ -712,7 +671,7 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     } else {
       result.isLost = true;
     }
-    console.log(
+    console.warn(
       `[updateAvailabilityCheck] FINAL RESULT for ${mainComponent.name}:`,
       {
         name: mainComponent.name,
@@ -774,11 +733,21 @@ var UpdateQueue = class {
     this.totalComponents = 0;
     this.processedCount = 0;
     this.activeBatchesCount = 0;
+    this.producerDone = false;
     this.config = __spreadValues({
       batchSize: 5,
-      maxConcurrent: 3,
-      progressUpdateInterval: 1e3
+      maxConcurrent: 2,
+      progressUpdateInterval: 1e3,
+      autoStart: true
     }, config);
+  }
+  /**
+   * Запускает обработку, если включён autoStart и очередь ещё не работает
+   */
+  maybeStartProcessing() {
+    if (this.config.autoStart && !this.isRunning) {
+      void this.startProcessing();
+    }
   }
   /**
    * Add component to the update queue
@@ -793,10 +762,11 @@ var UpdateQueue = class {
     }
     const dedupeKey = `${component.mainComponentKey || "unknown"}_$$${component.nodeId || "no-node"}`;
     if (this.seenIds.has(dedupeKey)) {
-      console.warn(
-        "[UpdateQueue] Duplicate component detected and skipped:",
-        { name: component.name, nodeId: component.nodeId, mainKey: component.mainComponentKey }
-      );
+      console.warn("[UpdateQueue] Duplicate component detected and skipped:", {
+        name: component.name,
+        nodeId: component.nodeId,
+        mainKey: component.mainComponentKey
+      });
       return;
     }
     this.seenIds.add(dedupeKey);
@@ -807,10 +777,7 @@ var UpdateQueue = class {
     };
     this.queue.push(queueItem);
     this.totalComponents++;
-    console.log(
-      "[UpdateQueue] Added component to queue:",
-      { name: component.name, nodeId: component.nodeId, mainKey: component.mainComponentKey, totalComponents: this.totalComponents, queueLength: this.queue.length }
-    );
+    this.maybeStartProcessing();
   }
   /**
    * Add multiple components to the queue
@@ -839,26 +806,26 @@ var UpdateQueue = class {
     this.onCompleteCallback = callback;
   }
   /**
+   * Пометить, что продюсер (сканирование) завершён
+   */
+  markProducerDone() {
+    this.producerDone = true;
+    console.log("[UpdateQueue] Producer marked as done");
+  }
+  /**
    * Start processing the queue
    */
   async startProcessing() {
     if (this.isRunning) {
-      console.log("[UpdateQueue] startProcessing called but already running, skipping");
+      console.log(
+        "[UpdateQueue] startProcessing called but already running, skipping"
+      );
       return;
     }
     this.isRunning = true;
     console.log("[UpdateQueue] Starting parallel update check processing");
-    console.log(
-      "[UpdateQueue] Initial status:",
-      {
-        queueLength: this.queue.length,
-        totalComponents: this.totalComponents,
-        batchSize: this.config.batchSize,
-        maxConcurrent: this.config.maxConcurrent
-      }
-    );
     const activeBatches = [];
-    while (this.queue.length > 0 || activeBatches.length > 0) {
+    while (true) {
       while (activeBatches.length < this.config.maxConcurrent && this.queue.length > 0) {
         const batch = this.queue.splice(0, this.config.batchSize);
         const batchPromise = this.processBatch(batch);
@@ -872,215 +839,20 @@ var UpdateQueue = class {
           }
         });
       }
+      if (this.queue.length === 0 && activeBatches.length === 0) {
+        if (this.producerDone) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        continue;
+      }
       if (activeBatches.length >= this.config.maxConcurrent) {
         await Promise.race(activeBatches);
       }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     this.isRunning = false;
-    console.log("[UpdateQueue] Processing completed, calling notifyCompletion");
     this.notifyCompletion();
-  }
-  /**
-   * Process a batch of components
-   */
-  async processBatch(batch) {
-    try {
-      const promises = batch.map((item) => this.processComponent(item));
-      await Promise.all(promises);
-    } catch (error) {
-      console.error("[UpdateQueue] Error processing batch:", error);
-    }
-  }
-  /**
-   * Process a single component
-   */
-  async processComponent(item) {
-    var _a2;
-    const { component } = item;
-    const componentId = `${component.mainComponentKey || "unknown"}_$${component.nodeId || "no-node"}`;
-    this.processing.add(componentId);
-    console.log(
-      `[UpdateQueue] Enqueued for processing: ${component.name}. In-flight now: ${this.processing.size}`
-    );
-    try {
-      console.log(`[UpdateQueue] Processing component: ${component.name}`);
-      const mainComponent = component.mainComponentId ? await figma.getNodeByIdAsync(
-        component.mainComponentId
-      ) : null;
-      if (!mainComponent) {
-        console.warn(`Main component not found for: ${component.name}`);
-        let finalId2 = componentId;
-        if (this.completed.has(finalId2)) {
-          console.warn(
-            `[UpdateQueue] Duplicate componentId detected (no main): ${finalId2}. Resolving with suffix`
-          );
-          let counter = 1;
-          while (this.completed.has(`${componentId}__dup_${counter}`)) {
-            counter++;
-          }
-          finalId2 = `${componentId}__dup_${counter}`;
-        }
-        const fallbackComponent = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
-        this.completed.set(finalId2, fallbackComponent);
-        this.processedCount++;
-        return;
-      }
-      const updateInfo = await updateAvailabilityCheck(
-        mainComponent,
-        component.nodeVersion
-      );
-      console.log(
-        `[UpdateQueue] updateAvailabilityCheck result for ${component.name}:`,
-        {
-          checkVersion: updateInfo.checkVersion,
-          libraryComponentVersion: updateInfo.libraryComponentVersion,
-          libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
-          libraryComponentId: updateInfo.libraryComponentId,
-          libraryComponentName: updateInfo.libraryComponentName,
-          libraryComponentSetName: updateInfo.libraryComponentSetName,
-          hasVersionData: !!(updateInfo.libraryComponentVersion || updateInfo.libraryComponentVersionMinimal)
-        }
-      );
-      const updatedComponent = __spreadProps(__spreadValues({}, component), {
-        isOutdated: updateInfo.isOutdated,
-        isLost: Boolean(updateInfo.isLost),
-        isDeprecated: Boolean(updateInfo.isDeprecated),
-        isNotLatest: Boolean(updateInfo.isNotLatest),
-        checkVersion: updateInfo.checkVersion,
-        libraryComponentVersion: updateInfo.libraryComponentVersion,
-        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
-        libraryComponentName: updateInfo.libraryComponentName,
-        libraryComponentSetName: updateInfo.libraryComponentSetName,
-        libraryComponentId: updateInfo.libraryComponentId,
-        updateStatus: "checked"
-      });
-      console.log(
-        `[UpdateQueue] Final updatedComponent for ${component.name}:`,
-        {
-          libraryComponentVersion: updatedComponent.libraryComponentVersion,
-          libraryComponentVersionMinimal: updatedComponent.libraryComponentVersionMinimal,
-          libraryComponentId: updatedComponent.libraryComponentId,
-          libraryComponentName: updatedComponent.libraryComponentName,
-          libraryComponentSetName: updatedComponent.libraryComponentSetName,
-          hasVersionData: !!(updatedComponent.libraryComponentVersion || updatedComponent.libraryComponentVersionMinimal)
-        }
-      );
-      let finalId = componentId;
-      if (this.completed.has(finalId)) {
-        console.warn(
-          `[UpdateQueue] Duplicate componentId detected: ${finalId}. Resolving with suffix`
-        );
-        console.warn(`[UpdateQueue] Existing component: ${(_a2 = this.completed.get(finalId)) == null ? void 0 : _a2.name}, New component: ${updatedComponent.name}`);
-        let counter = 1;
-        while (this.completed.has(`${componentId}__dup_${counter}`)) {
-          counter++;
-        }
-        finalId = `${componentId}__dup_${counter}`;
-        console.log(`[UpdateQueue] Resolved duplicate with key: ${finalId}`);
-      }
-      this.completed.set(finalId, updatedComponent);
-      this.processedCount++;
-      console.log(
-        `[UpdateQueue] Component ${updatedComponent.name} processed successfully. ComponentId: ${finalId}`
-      );
-      console.log(
-        `[UpdateQueue] Completed map size: ${this.completed.size}, keys:`,
-        Array.from(this.completed.keys())
-      );
-      console.log(
-        `[UpdateQueue] Component ${updatedComponent.name} stored in completed map:`,
-        this.completed.has(finalId)
-      );
-      console.log(`[UpdateQueue] ALL COMPLETED COMPONENTS (${this.completed.size}):`);
-      Array.from(this.completed.entries()).forEach(([key, comp]) => {
-        console.log(`  [${key}]: ${comp.name} - hasLibraryVersion: ${!!comp.libraryComponentVersion}`);
-      });
-      if (this.onProgressCallback) {
-        this.onProgressCallback(
-          this.processedCount,
-          this.totalComponents,
-          updatedComponent
-        );
-      }
-    } catch (error) {
-      console.error(
-        `[UpdateQueue] Error processing component ${component.name}:`,
-        error
-      );
-      let finalId = componentId;
-      if (this.completed.has(finalId)) {
-        console.warn(
-          `[UpdateQueue] Duplicate componentId detected (error path): ${finalId}. Resolving with suffix`
-        );
-        let counter = 1;
-        while (this.completed.has(`${componentId}__dup_${counter}`)) {
-          counter++;
-        }
-        finalId = `${componentId}__dup_${counter}`;
-      }
-      const fallbackComponent = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
-      this.completed.set(finalId, fallbackComponent);
-      this.processedCount++;
-      console.error(
-        `[UpdateQueue] Component ${component.name} processed with error. Progress: ${this.processedCount}/${this.totalComponents}`
-      );
-    } finally {
-      this.processing.delete(componentId);
-    }
-  }
-  /**
-   * Notify completion and return results
-   */
-  notifyCompletion() {
-    const buttonCount = Array.from(this.completed.values()).filter((c) => (c.name || "").toLowerCase().includes("button")).length;
-    if (this.completed.size !== this.totalComponents || this.processedCount !== this.totalComponents) {
-      console.error(
-        `[UpdateQueue] INTEGRITY MISMATCH: completed (${this.completed.size}) or processed (${this.processedCount}) != total (${this.totalComponents})`
-      );
-    } else {
-      console.log("[UpdateQueue] INTEGRITY OK: counts are consistent");
-    }
-    const completedComponents = Array.from(this.completed.values()).map(
-      (component) => __spreadProps(__spreadValues({}, component), {
-        // Ensure all properties are copied explicitly
-        libraryComponentVersion: component.libraryComponentVersion,
-        libraryComponentVersionMinimal: component.libraryComponentVersionMinimal,
-        libraryComponentId: component.libraryComponentId,
-        libraryComponentName: component.libraryComponentName,
-        libraryComponentSetName: component.libraryComponentSetName,
-        isOutdated: component.isOutdated,
-        isNotLatest: component.isNotLatest,
-        isLost: component.isLost,
-        isDeprecated: component.isDeprecated
-      })
-    );
-    console.log(`[UpdateQueue] COMPLETED COMPONENTS BEFORE CALLBACK (${completedComponents.length}):`);
-    completedComponents.forEach((comp, index) => {
-      console.log(`  [${index}]: ${comp.name} - hasLibraryVersion: ${!!comp.libraryComponentVersion}, libraryVersion: ${comp.libraryComponentVersion}`);
-    });
-    const results = {
-      instances: completedComponents,
-      counts: {
-        components: completedComponents.length,
-        icons: completedComponents.filter((c) => c.isIcon).length
-      }
-    };
-    const componentsWithVersions = results.instances.filter(
-      (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
-    );
-    if (componentsWithVersions.length > 0) {
-      console.log(`[UpdateQueue] Sample component with versions:`, {
-        name: componentsWithVersions[0].name,
-        libraryComponentVersion: componentsWithVersions[0].libraryComponentVersion,
-        libraryComponentVersionMinimal: componentsWithVersions[0].libraryComponentVersionMinimal
-      });
-    }
-    const callbackToCall = this.onCompleteCallback;
-    this.reset();
-    if (callbackToCall) {
-      callbackToCall(results);
-    }
   }
   /**
    * Reset queue state
@@ -1094,28 +866,7 @@ var UpdateQueue = class {
     this.processedCount = 0;
     this.activeBatchesCount = 0;
     this.isRunning = false;
-  }
-  /**
-   * Get current queue status
-   */
-  getStatus() {
-    return {
-      queueLength: this.queue.length,
-      processing: this.processing.size,
-      completed: this.completed.size,
-      total: this.totalComponents,
-      isRunning: this.isRunning
-    };
-  }
-  /**
-   * Stop processing (graceful shutdown)
-   */
-  async stop() {
-    this.isRunning = false;
-    while (this.processing.size > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    this.reset();
+    this.producerDone = false;
   }
   /**
    * Clear queue state without stopping processing
@@ -1130,6 +881,110 @@ var UpdateQueue = class {
     this.processedCount = 0;
     this.activeBatchesCount = 0;
     this.isRunning = false;
+    this.producerDone = false;
+  }
+  // Возвращает текущий статус очереди
+  getStatus() {
+    return {
+      queueLength: this.queue.length,
+      total: this.totalComponents,
+      processing: this.processing.size,
+      completed: this.completed.size,
+      isRunning: this.isRunning
+    };
+  }
+  // Обработка батча компонентов
+  async processBatch(batch) {
+    for (const item of batch) {
+      const component = item.component;
+      const dedupeKey = `${component.mainComponentKey || "unknown"}_$$$${component.nodeId || "no-node"}`;
+      this.processing.add(dedupeKey);
+      let updated = component;
+      try {
+        if (!component.mainComponentId || component.remote === false) {
+          updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+        } else {
+          const trimmedName = (component.name || "").trim();
+          const skipByName = component.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
+          if (component.isIcon === true || skipByName) {
+            updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+          } else {
+            const mainComponent = await figma.getNodeByIdAsync(component.mainComponentId);
+            if (!mainComponent) {
+              console.warn(`[UpdateQueue] Main component not found by id: ${component.mainComponentId}`);
+              updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+            } else {
+              const info = await updateAvailabilityCheck(mainComponent, component.nodeVersion);
+              updated = __spreadProps(__spreadValues({}, component), {
+                isOutdated: info.isOutdated,
+                checkVersion: info.checkVersion,
+                isNotLatest: Boolean(info.isNotLatest),
+                isLost: Boolean(info.isLost),
+                isDeprecated: Boolean(info.isDeprecated),
+                libraryComponentName: info.libraryComponentName,
+                libraryComponentSetName: info.libraryComponentSetName,
+                libraryComponentId: info.libraryComponentId,
+                libraryComponentVersion: info.libraryComponentVersion,
+                libraryComponentVersionMinimal: info.libraryComponentVersionMinimal,
+                updateStatus: "checked"
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[UpdateQueue] Error processing component "${component.name}":`, err);
+        updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+      } finally {
+        this.completed.set(dedupeKey, updated);
+        this.processing.delete(dedupeKey);
+        this.processedCount++;
+        if (this.onProgressCallback) {
+          try {
+            this.onProgressCallback(this.processedCount, this.totalComponents, updated);
+          } catch (cbErr) {
+            console.error("[UpdateQueue] onProgress callback error:", cbErr);
+          }
+        }
+      }
+    }
+  }
+  // Финализирует и отдает результаты
+  notifyCompletion() {
+    const instances = Array.from(this.completed.values());
+    const outdated = instances.filter((i) => i.isOutdated);
+    const lost = instances.filter((i) => i.isLost);
+    const deprecated = instances.filter((i) => i.isDeprecated);
+    const iconsCount = instances.filter((i) => i.isIcon).length;
+    const componentsCount = instances.length - iconsCount;
+    const results = {
+      instances,
+      outdated,
+      lost,
+      deprecated,
+      counts: {
+        components: componentsCount,
+        icons: iconsCount,
+        outdated: outdated.length,
+        lost: lost.length,
+        deprecated: deprecated.length
+      }
+    };
+    if (this.onCompleteCallback) {
+      try {
+        this.onCompleteCallback(results);
+      } catch (err) {
+        console.error("[UpdateQueue] onComplete callback error:", err);
+      }
+    }
+  }
+  // Мягкая остановка: помечаем как завершение продюсера и ждем активные батчи
+  async stop() {
+    this.producerDone = true;
+    const deadline = Date.now() + 2e3;
+    while (this.activeBatchesCount > 0 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    this.isRunning = false;
   }
 };
 var globalUpdateQueue = null;
@@ -1138,7 +993,9 @@ var getUpdateQueue = () => {
     globalUpdateQueue = new UpdateQueue({
       batchSize: 5,
       maxConcurrent: 3,
-      progressUpdateInterval: 1e3
+      progressUpdateInterval: 1e3,
+      autoStart: true
+      // запускаем обработку автоматически при добавлении первого элемента
     });
   }
   return globalUpdateQueue;
@@ -1153,20 +1010,18 @@ var resetUpdateQueue = () => {
 // src/js/component/processNodeComponent.ts
 var processNodeComponent = async (node, componentsResult2) => {
   const isButtonComponent = node.name.toLowerCase().includes("button");
-  if (isButtonComponent) {
-    console.log(`[processNodeComponent] BUTTON COMPONENT - \u041D\u0430\u0447\u0430\u043B\u043E \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:`, {
-      id: node.id,
-      type: node.type,
-      name: node.name,
-      hasParent: !!node.parent
-    });
-  }
   let mainComponent = null;
   if (node.type === "INSTANCE") {
     try {
-      mainComponent = await retryGetMainComponent(node, node.name);
+      mainComponent = await retryGetMainComponent(
+        node,
+        node.name
+      );
     } catch (error) {
-      console.error(`[processNodeComponent] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`, error);
+      console.error(
+        `[processNodeComponent] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`,
+        error
+      );
       figma.ui.postMessage({
         type: "error",
         message: `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A: ${error.message}`
@@ -1186,7 +1041,10 @@ var processNodeComponent = async (node, componentsResult2) => {
     }
     if ("children" in node) {
       for (const child of node.children) {
-        const childResults = await processNodeComponent(child, componentsResult2);
+        const childResults = await processNodeComponent(
+          child,
+          componentsResult2
+        );
         if (childResults) {
           if (Array.isArray(childResults)) {
             results.push(...childResults);
@@ -1196,7 +1054,6 @@ var processNodeComponent = async (node, componentsResult2) => {
         }
       }
     }
-    console.log("COMPONENT_SET recursive results:", results);
     return results;
   }
   let mainComponentName = mainComponent ? mainComponent.name : null;
@@ -1243,7 +1100,9 @@ var processNodeComponent = async (node, componentsResult2) => {
     }
     let parent2 = node.parent;
     if (!mainComponent) {
-      console.warn(`[processNodeComponent] mainComponent is null for node ${node.name}, skipping.`);
+      console.warn(
+        `[processNodeComponent] mainComponent is null for node ${node.name}, skipping.`
+      );
       return null;
     }
     const componentData = {
@@ -1303,28 +1162,22 @@ var processNodeComponent = async (node, componentsResult2) => {
       libraryComponentId: null
     };
     const updateQueue = getUpdateQueue();
-    console.log(`[processNodeComponent] \u041F\u043E\u043F\u044B\u0442\u043A\u0430 \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u043E\u0447\u0435\u0440\u0435\u0434\u044C:`, {
-      name: componentData.name,
-      type: componentData.type,
-      mainComponentKey: componentData.mainComponentKey,
-      mainComponentName: componentData.mainComponentName,
-      skipUpdate: componentData.skipUpdate,
-      isNested: componentData.isNested
-    });
     if (!componentData.mainComponentKey) {
-      console.warn(`[processNodeComponent] \u041F\u0420\u041E\u041F\u0423\u0429\u0415\u041D - \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 mainComponentKey \u0434\u043B\u044F:`, {
-        name: componentData.name,
-        type: componentData.type,
-        nodeId: componentData.nodeId,
-        mainComponent: mainComponent ? {
-          name: mainComponent.name,
-          key: mainComponent.key,
-          id: mainComponent.id
-        } : "null"
-      });
+      console.warn(
+        `[processNodeComponent] \u041F\u0420\u041E\u041F\u0423\u0429\u0415\u041D - \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 mainComponentKey \u0434\u043B\u044F:`,
+        {
+          name: componentData.name,
+          type: componentData.type,
+          nodeId: componentData.nodeId,
+          mainComponent: mainComponent ? {
+            name: mainComponent.name,
+            key: mainComponent.key,
+            id: mainComponent.id
+          } : "null"
+        }
+      );
     }
     updateQueue.addComponent(componentData);
-    console.log(`[processNodeComponent] \u0421\u0442\u0430\u0442\u0443\u0441 \u043E\u0447\u0435\u0440\u0435\u0434\u0438 \u043F\u043E\u0441\u043B\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u044F:`, updateQueue.getStatus());
     if (componentData && (node.type === "INSTANCE" || node.type === "COMPONENT")) {
       if (Array.isArray(componentsResult2.instances)) {
         componentsResult2.instances.push(componentData);
@@ -1332,17 +1185,11 @@ var processNodeComponent = async (node, componentsResult2) => {
         if (componentData.isIcon) {
           componentsResult2.counts.icons = (componentsResult2.counts.icons || 0) + 1;
         }
-        if (isButtonComponent) {
-          console.log(`[processNodeComponent] BUTTON COMPONENT - \u0423\u0441\u043F\u0435\u0448\u043D\u043E \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442:`, {
-            name: componentData.name,
-            type: componentData.type,
-            nodeId: componentData.nodeId,
-            mainComponentName: componentData.mainComponentName,
-            totalInstancesNow: componentsResult2.instances.length
-          });
-        }
       } else {
-        console.error("componentsResult.instances is not an array:", componentsResult2.instances);
+        console.error(
+          "componentsResult.instances is not an array:",
+          componentsResult2.instances
+        );
       }
     }
     return componentData;
@@ -1456,30 +1303,32 @@ var ParallelUpdateProcessor = class {
       const updateQueue = getUpdateQueue();
       const status = updateQueue.getStatus();
       this.totalCount = status.total;
-      if (this.totalCount === 0) {
-        return {
-          instances: [],
-          counts: {
-            components: 0,
-            icons: 0
-          }
-        };
-      }
       return new Promise((resolve, reject) => {
         updateQueue.onProgress(async (processed, total, component) => {
           this.processedCount = processed;
+          this.totalCount = total;
           if (this.onProgressCallback) {
             await this.onProgressCallback(processed, total, component == null ? void 0 : component.name);
           }
         });
         updateQueue.onComplete((results) => {
           this.isProcessing = false;
-          if (this.onCompleteCallback) {
-            this.onCompleteCallback(results);
+          try {
+            if (this.onCompleteCallback) {
+              if (typeof this.onCompleteCallback !== "function") {
+                console.warn("[ParallelUpdateProcessor] onCompleteCallback \u0437\u0430\u0434\u0430\u043D, \u043D\u043E \u044D\u0442\u043E \u043D\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u044F");
+              } else {
+                this.onCompleteCallback(results);
+              }
+            } else {
+              console.warn("[ParallelUpdateProcessor] onCompleteCallback \u043D\u0435 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D");
+            }
+          } catch (err) {
+            console.error("[ParallelUpdateProcessor] \u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u043D\u0443\u0442\u0440\u0438 onCompleteCallback:", err);
+          } finally {
+            resolve(results);
           }
-          resolve(results);
         });
-        updateQueue.startProcessingManually();
       });
     } catch (error) {
       this.isProcessing = false;
@@ -1587,7 +1436,7 @@ if (currentUser) {
 }
 var splashScreenCombinations = [
   {
-    imageUrl: "https://downloader.disk.yandex.ru/preview/9f312e965a5cb62de3b834fbdbec01be8981c981359610a3e7c562f55be0f4ee/68686aa6/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=0&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&size=2048x2048",
+    imageUrl: "https://4.downloader.disk.yandex.ru/preview/89878b59d39343329dc44c8003191698e2face0b889acc78648296b8337967f4/inf/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=47857770&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=47857770&tknv=v3&size=3456x1916",
     titleText: "\u0414\u0438\u0437\u0430\u0439\u043D\u0435\u0440, \u043A \u0431\u043E\u0440\u044C\u0431\u0435 \u0437\u0430 \u043F\u043E\u0431\u0435\u0434\u0443 \u0432\u0441\u0435\u043E\u0431\u0449\u0435\u0439 \u043A\u043E\u043D\u0441\u0438\u0441\u0442\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u0438 \u0431\u0443\u0434\u044C \u0433\u043E\u0442\u043E\u0432!",
     buttonText: "\u0412\u0441\u0435\u0433\u0434\u0430 \u0433\u043E\u0442\u043E\u0432!"
   },
@@ -1683,7 +1532,7 @@ figma.ui.onmessage = async (msg) => {
     clearUpdateCache();
     clearRgbToHexCache();
     publishStatusCache.clear();
-    console.log("\u0412\u0441\u0435 \u043A\u044D\u0448\u0438 \u043E\u0447\u0438\u0449\u0435\u043D\u044B \u043F\u0435\u0440\u0435\u0434 \u043D\u043E\u0432\u044B\u043C \u043F\u043E\u0438\u0441\u043A\u043E\u043C.");
+    console.log("[INDEX] \u0412\u0441\u0435 \u043A\u044D\u0448\u0438 \u043E\u0447\u0438\u0449\u0435\u043D\u044B \u043F\u0435\u0440\u0435\u0434 \u043D\u043E\u0432\u044B\u043C \u043F\u043E\u0438\u0441\u043A\u043E\u043C.");
     const startTime = Date.now();
     const selection = figma.currentPage.selection;
     if (!selection || selection.length === 0) {
@@ -1747,6 +1596,24 @@ figma.ui.onmessage = async (msg) => {
     };
     const updateQueue = getUpdateQueue();
     updateQueue.clear();
+    const processor = getParallelUpdateProcessor();
+    processor.onProgress(
+      async (processed, total, componentName) => {
+        await updateProgress(
+          "processing",
+          processed,
+          total,
+          "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432",
+          componentName
+        );
+      }
+    );
+    processor.onComplete((results) => {
+      console.log("[INDEX] ParallelUpdateProcessor complete (check-all):", {
+        total: results.instances.length
+      });
+    });
+    const resultsPromise = processor.processAll();
     try {
       let buildComponentTree2 = function(node) {
         return {
@@ -1789,17 +1656,8 @@ figma.ui.onmessage = async (msg) => {
             }
           }
           if (node.type === "INSTANCE" || node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
-            console.log(`[processNodeSafely] \u041E\u0431\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u0435\u043C \u0443\u0437\u0435\u043B \u0442\u0438\u043F\u0430 ${node.type}:`, {
-              name: node.name,
-              id: node.id,
-              type: node.type,
-              index: index + 1
-            });
             try {
-              await processNodeComponent(
-                node,
-                componentsResult
-              );
+              await processNodeComponent(node, componentsResult);
             } catch (err) {
               console.error(
                 `[${index + 1}] ERROR in processNodeComponent:`,
@@ -1807,12 +1665,6 @@ figma.ui.onmessage = async (msg) => {
               );
             }
           } else {
-            console.log(`[processNodeSafely] \u041F\u0440\u043E\u043F\u0443\u0449\u0435\u043D \u0443\u0437\u0435\u043B \u0442\u0438\u043F\u0430 ${node.type}:`, {
-              name: node.name,
-              id: node.id,
-              type: node.type,
-              index: index + 1
-            });
           }
         } catch (error) {
           console.error(`[${index + 1}] \u041E\u0448\u0438\u0431\u043A\u0430 \u043D\u0430 \u044D\u0442\u0430\u043F\u0435 \u043B\u043E\u0433\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F:`, error);
@@ -1822,7 +1674,7 @@ figma.ui.onmessage = async (msg) => {
         stats[node.type] = (stats[node.type] || 0) + 1;
         return stats;
       }, {});
-      console.log(`[DEBUG] \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0443\u0437\u043B\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:`, {
+      console.log(`[INDEX] \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0443\u0437\u043B\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:`, {
         total: nodesToProcess.length,
         byType: nodeTypeStats
       });
@@ -1841,31 +1693,44 @@ figma.ui.onmessage = async (msg) => {
       }
       const finalUpdateQueue = getUpdateQueue();
       const finalQueueStatus = finalUpdateQueue.getStatus();
-      console.log(`[DEBUG] \u0424\u0438\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u043E\u0447\u0435\u0440\u0435\u0434\u0438 \u043F\u043E\u0441\u043B\u0435 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u0432\u0441\u0435\u0445 \u0443\u0437\u043B\u043E\u0432:`, {
-        queueLength: finalQueueStatus.queueLength,
-        total: finalQueueStatus.total,
-        processing: finalQueueStatus.processing,
-        completed: finalQueueStatus.completed,
-        isRunning: finalQueueStatus.isRunning,
-        componentsResultCount: componentsResult.instances.length
-      });
+      console.log(
+        `[INDEX] \u0424\u0438\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u043E\u0447\u0435\u0440\u0435\u0434\u0438 \u043F\u043E\u0441\u043B\u0435 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u0432\u0441\u0435\u0445 \u0443\u0437\u043B\u043E\u0432:`,
+        {
+          queueLength: finalQueueStatus.queueLength,
+          total: finalQueueStatus.total,
+          processing: finalQueueStatus.processing,
+          completed: finalQueueStatus.completed,
+          isRunning: finalQueueStatus.isRunning,
+          componentsResultCount: componentsResult.instances.length
+        }
+      );
       const queueTotalComponents = finalQueueStatus.total;
       const instancesCount = componentsResult.instances.length;
-      console.log(`[CRITICAL DEBUG] \u0410\u041D\u0410\u041B\u0418\u0417 \u041F\u041E\u0422\u0415\u0420\u0418 \u0414\u0410\u041D\u041D\u042B\u0425:`, {
+      console.warn(`[INDEX] \u0410\u041D\u0410\u041B\u0418\u0417 \u041F\u041E\u0422\u0415\u0420\u0418 \u0414\u0410\u041D\u041D\u042B\u0425:`, {
         totalProcessedNodes: nodesToProcess.length,
         queueTotalComponents,
         componentsInResult: instancesCount,
-        buttonComponentsInResult: componentsResult.instances.filter((comp) => comp.name.toLowerCase().includes("button")).length,
+        buttonComponentsInResult: componentsResult.instances.filter(
+          (comp) => comp.name.toLowerCase().includes("button")
+        ).length,
         queueSize: finalQueueStatus.queueLength,
         // Потери считаем относительно общего количества компонентов, попавших в очередь, а не относительно всех узлов страницы
         lossPercentageByQueue: queueTotalComponents > 0 ? ((queueTotalComponents - instancesCount) / queueTotalComponents * 100).toFixed(2) + "%" : "0%"
       });
-      const componentTypeAnalysis = componentsResult.instances.reduce((acc, comp) => {
-        acc[comp.type] = (acc[comp.type] || 0) + 1;
-        return acc;
-      }, {});
-      console.log(`[CRITICAL DEBUG] \u0422\u0438\u043F\u044B \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435:`, componentTypeAnalysis);
-      const buttonComponents = componentsResult.instances.filter((comp) => comp.name.toLowerCase().includes("button"));
+      const componentTypeAnalysis = componentsResult.instances.reduce(
+        (acc, comp) => {
+          acc[comp.type] = (acc[comp.type] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+      console.log(
+        `[CRITICAL DEBUG] \u0422\u0438\u043F\u044B \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435:`,
+        componentTypeAnalysis
+      );
+      const buttonComponents = componentsResult.instances.filter(
+        (comp) => comp.name.toLowerCase().includes("button")
+      );
       if (buttonComponents.length > 0) {
         console.log(
           `[CRITICAL DEBUG] \u041D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0435 button \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B:`,
@@ -1877,7 +1742,9 @@ figma.ui.onmessage = async (msg) => {
           }))
         );
       } else {
-        console.log(`[CRITICAL DEBUG] \u041F\u0420\u041E\u0411\u041B\u0415\u041C\u0410: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B button \u041D\u0415 \u041D\u0410\u0419\u0414\u0415\u041D\u042B \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435!`);
+        console.log(
+          `[CRITICAL DEBUG] \u041F\u0420\u041E\u0411\u041B\u0415\u041C\u0410: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B button \u041D\u0415 \u041D\u0410\u0419\u0414\u0415\u041D\u042B \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435!`
+        );
       }
       componentsResult.instances.sort((a, b) => {
         const aName = a.mainComponentName || a.name;
@@ -1900,103 +1767,90 @@ figma.ui.onmessage = async (msg) => {
       const queueStatus = updateQueue2.getStatus();
       console.log("[INDEX] Queue status:", queueStatus);
       console.log("[INDEX] Components in queue:", queueStatus.total);
-      if (queueStatus.total > 0) {
-        await updateProgress(
-          "processing",
-          0,
-          queueStatus.total,
-          "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432"
-        );
-        const processor = getParallelUpdateProcessor();
-        const updateQueue3 = getUpdateQueue();
-        processor.onProgress(
-          async (processed, total, componentName) => {
-            await updateProgress(
-              "processing",
-              processed,
-              total,
-              "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432",
-              componentName
-            );
-          }
-        );
-        const results = await processor.processAll();
-        const updatedComponentsMap = /* @__PURE__ */ new Map();
-        results.instances.forEach((updatedComponent) => {
-          const key = `${updatedComponent.mainComponentKey || "unknown"}_$$${updatedComponent.nodeId || "no-node"}`;
-          updatedComponentsMap.set(key, updatedComponent);
-        });
-        console.log("[INDEX] Updated components map keys:", Array.from(updatedComponentsMap.keys()));
-        let matchedCount = 0;
-        let unmatchedKeys = [];
-        componentsResult.instances = componentsResult.instances.map((existingComponent) => {
-          const key = `${existingComponent.mainComponentKey || "unknown"}_$$${existingComponent.nodeId || "no-node"}`;
+      updateQueue2.markProducerDone();
+      const results = await resultsPromise;
+      const updatedComponentsMap = /* @__PURE__ */ new Map();
+      results.instances.forEach((updatedComponent) => {
+        const key = `${updatedComponent.mainComponentKey || "unknown"}_$${updatedComponent.nodeId || "no-node"}`;
+        updatedComponentsMap.set(key, updatedComponent);
+      });
+      let matchedCount = 0;
+      let unmatchedKeys = [];
+      componentsResult.instances = componentsResult.instances.map(
+        (existingComponent) => {
+          var _a3, _b2, _c2, _d, _e, _f, _g, _h, _i, _j, _k;
+          const key = `${existingComponent.mainComponentKey || "unknown"}_$${existingComponent.nodeId || "no-node"}`;
           const updatedComponent = updatedComponentsMap.get(key);
           if (updatedComponent) {
             matchedCount++;
-            console.log(`[INDEX] MATCHED: ${existingComponent.name} with key: ${key}`);
             return __spreadProps(__spreadValues({}, existingComponent), {
-              isOutdated: updatedComponent.isOutdated,
-              isLost: updatedComponent.isLost,
-              isDeprecated: updatedComponent.isDeprecated,
-              isNotLatest: updatedComponent.isNotLatest,
-              checkVersion: updatedComponent.checkVersion,
-              libraryComponentVersion: updatedComponent.libraryComponentVersion,
-              libraryComponentVersionMinimal: updatedComponent.libraryComponentVersionMinimal,
-              libraryComponentName: updatedComponent.libraryComponentName,
-              libraryComponentSetName: updatedComponent.libraryComponentSetName,
-              libraryComponentId: updatedComponent.libraryComponentId,
-              updateStatus: updatedComponent.updateStatus
+              isOutdated: (_a3 = updatedComponent.isOutdated) != null ? _a3 : existingComponent.isOutdated,
+              isLost: (_b2 = updatedComponent.isLost) != null ? _b2 : existingComponent.isLost,
+              isDeprecated: (_c2 = updatedComponent.isDeprecated) != null ? _c2 : existingComponent.isDeprecated,
+              isNotLatest: (_d = updatedComponent.isNotLatest) != null ? _d : existingComponent.isNotLatest,
+              checkVersion: (_e = updatedComponent.checkVersion) != null ? _e : existingComponent.checkVersion,
+              libraryComponentVersion: (_f = updatedComponent.libraryComponentVersion) != null ? _f : existingComponent.libraryComponentVersion,
+              libraryComponentVersionMinimal: (_g = updatedComponent.libraryComponentVersionMinimal) != null ? _g : existingComponent.libraryComponentVersionMinimal,
+              libraryComponentName: (_h = updatedComponent.libraryComponentName) != null ? _h : existingComponent.libraryComponentName,
+              libraryComponentSetName: (_i = updatedComponent.libraryComponentSetName) != null ? _i : existingComponent.libraryComponentSetName,
+              libraryComponentId: (_j = updatedComponent.libraryComponentId) != null ? _j : existingComponent.libraryComponentId,
+              updateStatus: (_k = updatedComponent.updateStatus) != null ? _k : existingComponent.updateStatus
             });
           } else {
             unmatchedKeys.push(key);
-            console.log(`[INDEX] NO MATCH: ${existingComponent.name} with key: ${key}`);
+            console.log(
+              `[INDEX] NO MATCH: ${existingComponent.name} with key: ${key}`
+            );
           }
           return existingComponent;
-        });
-        console.log(`[INDEX] Unmatched keys (${unmatchedKeys.length}):`, unmatchedKeys.slice(0, 10));
-        console.log("[INDEX] After updating components:", {
-          originalCount: results.instances.length,
-          finalCount: componentsResult.instances.length,
-          updatedComponentsCount: updatedComponentsMap.size,
-          matchedCount,
-          componentsWithLibraryVersions: componentsResult.instances.filter(
-            (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
-          ).length
-        });
-        console.log("[INDEX] Received results from processor:", results);
-        console.log(
-          "[INDEX] Results instances count:",
-          results.instances.length
-        );
-        if (results.instances.length > 0) {
-          console.log("[INDEX] First instance data:", results.instances[0]);
-          console.log(
-            "[INDEX] First instance libraryComponentVersion:",
-            results.instances[0].libraryComponentVersion
-          );
-          console.log(
-            "[INDEX] First instance isOutdated:",
-            results.instances[0].isOutdated
-          );
-          console.log(
-            "[INDEX] First instance updateStatus:",
-            results.instances[0].updateStatus
-          );
         }
-        const statusAfter = updateQueue3.getStatus();
-        console.log("[INTEGRITY] Queue status after processing:", statusAfter);
-        const expectedTotal = statusAfter.total;
-        const received = results.instances.length;
-        if (expectedTotal !== received) {
-          console.warn("[INTEGRITY] \u041D\u0435\u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u043C\u0435\u0436\u0434\u0443 \u043E\u0447\u0435\u0440\u0435\u0434\u044C\u044E \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C", {
+      );
+      const existingKeys = new Set(
+        componentsResult.instances.map(
+          (c) => `${c.mainComponentKey || "unknown"}_$$${c.nodeId || "no-node"}`
+        )
+      );
+      results.instances.forEach((updatedComponent) => {
+        const key = `${updatedComponent.mainComponentKey || "unknown"}_$${updatedComponent.nodeId || "no-node"}`;
+        if (!existingKeys.has(key)) {
+          componentsResult.instances.push(updatedComponent);
+        }
+      });
+      console.log(
+        `[INDEX] Unmatched keys (${unmatchedKeys.length}):`,
+        unmatchedKeys.slice(0, 10)
+      );
+      console.log("[INDEX] After updating components:", {
+        originalCount: results.instances.length,
+        finalCount: componentsResult.instances.length,
+        updatedComponentsCount: updatedComponentsMap.size,
+        matchedCount,
+        componentsWithLibraryVersions: componentsResult.instances.filter(
+          (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
+        ).length
+      });
+      console.log(
+        "[INDEX] Received results from processor:",
+        results,
+        results.instances.length
+      );
+      const statusAfter = updateQueue2.getStatus();
+      console.log("[INTEGRITY] Queue status after processing:", statusAfter);
+      const expectedTotal = statusAfter.total;
+      const received = results.instances.length;
+      if (expectedTotal !== received) {
+        console.warn(
+          "[INTEGRITY] \u041D\u0435\u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u043C\u0435\u0436\u0434\u0443 \u043E\u0447\u0435\u0440\u0435\u0434\u044C\u044E \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C",
+          {
             expectedTotal,
             received,
             delta: expectedTotal - received
-          });
-        } else {
-          console.log("[INTEGRITY] \u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u043E \u043C\u0435\u0436\u0434\u0443 \u043E\u0447\u0435\u0440\u0435\u0434\u044C\u044E \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C");
-        }
+          }
+        );
+      } else {
+        console.log(
+          "[INTEGRITY] \u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u043E \u043C\u0435\u0436\u0434\u0443 \u043E\u0447\u0435\u0440\u0435\u0434\u044C\u044E \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C"
+        );
       }
       console.log("Final components result:", {
         total: componentsResult.instances.length,
@@ -2404,9 +2258,6 @@ figma.ui.onmessage = async (msg) => {
       const processor = getParallelUpdateProcessor();
       const updateQueue = getUpdateQueue();
       updateQueue.clear();
-      for (const component of componentsToCheck.instances) {
-        updateQueue.addComponent(component);
-      }
       processor.onProgress(
         async (processed, total, componentName) => {
           await updateProgress(
@@ -2418,7 +2269,12 @@ figma.ui.onmessage = async (msg) => {
           );
         }
       );
-      const results = await processor.processAll();
+      const resultsPromise = processor.processAll();
+      for (const component of componentsToCheck.instances) {
+        updateQueue.addComponent(component);
+      }
+      updateQueue.markProducerDone();
+      const results = await resultsPromise;
       componentsToCheck.instances = results.instances;
       componentsToCheck.outdated = results.instances.filter(
         (inst) => inst.isOutdated

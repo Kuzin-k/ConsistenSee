@@ -22,6 +22,8 @@ interface UpdateQueueConfig {
   batchSize: number;
   maxConcurrent: number;
   progressUpdateInterval: number;
+  /** Запускать обработку автоматически при первом добавлении */
+  autoStart: boolean;
 }
 
 /**
@@ -43,14 +45,26 @@ export class UpdateQueue {
     component?: ComponentData
   ) => void;
   private onCompleteCallback?: (results: ComponentsResult) => void;
+  private producerDone: boolean = false;
 
   constructor(config: Partial<UpdateQueueConfig> = {}) {
     this.config = {
       batchSize: 5,
-      maxConcurrent: 3,
+      maxConcurrent: 2,
       progressUpdateInterval: 1000,
+      autoStart: true,
       ...config,
     };
+  }
+
+  /**
+   * Запускает обработку, если включён autoStart и очередь ещё не работает
+   */
+  private maybeStartProcessing(): void {
+    if (this.config.autoStart && !this.isRunning) {
+      // Не await, чтобы не блокировать поток добавления
+      void this.startProcessing();
+    }
   }
 
   /**
@@ -65,12 +79,15 @@ export class UpdateQueue {
       return;
     }
 
-    const dedupeKey = `${component.mainComponentKey || "unknown"}_$$${component.nodeId || "no-node"}`;
+    const dedupeKey = `${component.mainComponentKey || "unknown"}_$$${
+      component.nodeId || "no-node"
+    }`;
     if (this.seenIds.has(dedupeKey)) {
-      console.warn(
-        "[UpdateQueue] Duplicate component detected and skipped:",
-        { name: component.name, nodeId: component.nodeId, mainKey: component.mainComponentKey }
-      );
+      console.warn("[UpdateQueue] Duplicate component detected and skipped:", {
+        name: component.name,
+        nodeId: component.nodeId,
+        mainKey: component.mainComponentKey,
+      });
       return;
     }
     this.seenIds.add(dedupeKey);
@@ -84,15 +101,8 @@ export class UpdateQueue {
     this.queue.push(queueItem);
     this.totalComponents++;
 
-    console.log(
-      "[UpdateQueue] Added component to queue:",
-      { name: component.name, nodeId: component.nodeId, mainKey: component.mainComponentKey, totalComponents: this.totalComponents, queueLength: this.queue.length }
-    );
-
-    // Убираем автоматический запуск startProcessing - он будет вызван вручную
-    // if (!this.isRunning) {
-    //   this.startProcessing();
-    // }
+    // Авто-запуск обработки
+    this.maybeStartProcessing();
   }
 
   /**
@@ -100,6 +110,7 @@ export class UpdateQueue {
    */
   public addComponents(components: ComponentData[]): void {
     components.forEach((component) => this.addComponent(component));
+    // addComponent уже вызовет maybeStartProcessing
   }
 
   /**
@@ -132,31 +143,32 @@ export class UpdateQueue {
   }
 
   /**
+   * Пометить, что продюсер (сканирование) завершён
+   */
+  public markProducerDone(): void {
+    this.producerDone = true;
+    console.log("[UpdateQueue] Producer marked as done");
+  }
+
+  /**
    * Start processing the queue
    */
   private async startProcessing(): Promise<void> {
     if (this.isRunning) {
-      console.log("[UpdateQueue] startProcessing called but already running, skipping");
+      console.log(
+        "[UpdateQueue] startProcessing called but already running, skipping"
+      );
       return;
     }
 
     this.isRunning = true;
     console.log("[UpdateQueue] Starting parallel update check processing");
-    console.log(
-      "[UpdateQueue] Initial status:",
-      {
-        queueLength: this.queue.length,
-        totalComponents: this.totalComponents,
-        batchSize: this.config.batchSize,
-        maxConcurrent: this.config.maxConcurrent,
-      }
-    );
 
     const activeBatches: Promise<void>[] = [];
 
-    // Process items in batches
-    while (this.queue.length > 0 || activeBatches.length > 0) {
-      // Start new batch if we have capacity
+    // Ждём до тех пор, пока либо есть работа, либо продюсер не завершён
+    while (true) {
+      // Стартуем новые батчи по мере возможности
       while (
         activeBatches.length < this.config.maxConcurrent &&
         this.queue.length > 0
@@ -166,7 +178,7 @@ export class UpdateQueue {
         activeBatches.push(batchPromise);
         this.activeBatchesCount++;
 
-        // Remove completed batches
+        // Удаляем завершённые батчи
         batchPromise.finally(() => {
           const index = activeBatches.indexOf(batchPromise);
           if (index > -1) {
@@ -176,302 +188,28 @@ export class UpdateQueue {
         });
       }
 
-      // Wait for at least one batch to complete if we're at capacity
+      // Если нет очереди и нет активных батчей — возможное завершение
+      if (this.queue.length === 0 && activeBatches.length === 0) {
+        if (this.producerDone) {
+          // Продюсер закончил добавление — выходим и завершаем
+          break;
+        }
+        // Продюсер ещё работает — ждём появления новых задач
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        continue;
+      }
+
+      // Если достигли лимита — ждём первый завершившийся батч
       if (activeBatches.length >= this.config.maxConcurrent) {
         await Promise.race(activeBatches);
       }
 
-      // Small delay to prevent busy waiting
+      // Маленькая пауза, чтобы не жечь цикл
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
     this.isRunning = false;
-    console.log("[UpdateQueue] Processing completed, calling notifyCompletion");
     this.notifyCompletion();
-  }
-
-  /**
-   * Process a batch of components
-   */
-  private async processBatch(batch: UpdateQueueItem[]): Promise<void> {
-    try {
-      // Process all items in the batch concurrently
-      const promises = batch.map((item) => this.processComponent(item));
-      await Promise.all(promises);
-    } catch (error) {
-      console.error("[UpdateQueue] Error processing batch:", error);
-    }
-  }
-
-  /**
-   * Process a single component
-   */
-  private async processComponent(item: UpdateQueueItem): Promise<void> {
-    const { component } = item;
-    // Create unique component ID to avoid collisions - используем тот же формат, что и в index.ts
-    const componentId = `${component.mainComponentKey || "unknown"}_$${component.nodeId || "no-node"}`;
-
-    // Track in-flight processing for graceful stop and diagnostics
-    this.processing.add(componentId);
-    console.log(
-      `[UpdateQueue] Enqueued for processing: ${component.name}. In-flight now: ${this.processing.size}`
-    );
-
-    try {
-      console.log(`[UpdateQueue] Processing component: ${component.name}`);
-
-      // Get main component node for update check
-      const mainComponent = component.mainComponentId
-        ? ((await figma.getNodeByIdAsync(
-            component.mainComponentId
-          )) as ComponentNode | null)
-        : null;
-
-      if (!mainComponent) {
-        console.warn(`Main component not found for: ${component.name}`);
-        // Mark as completed without changes
-        let finalId = componentId;
-        if (this.completed.has(finalId)) {
-          console.warn(
-            `[UpdateQueue] Duplicate componentId detected (no main): ${finalId}. Resolving with suffix`
-          );
-          let counter = 1;
-          while (this.completed.has(`${componentId}__dup_${counter}`)) {
-            counter++;
-          }
-          finalId = `${componentId}__dup_${counter}`;
-        }
-        const fallbackComponent: ComponentData = { ...component, updateStatus: "checked" } as ComponentData;
-        this.completed.set(finalId, fallbackComponent);
-        this.processedCount++;
-        return;
-      }
-
-      // Check for updates using the correct function signature
-      const updateInfo = await updateAvailabilityCheck(
-        mainComponent,
-        component.nodeVersion
-      );
-
-      // Debug: Log what updateAvailabilityCheck returns
-      console.log(
-        `[UpdateQueue] updateAvailabilityCheck result for ${component.name}:`,
-        {
-          checkVersion: updateInfo.checkVersion,
-          libraryComponentVersion: updateInfo.libraryComponentVersion,
-          libraryComponentVersionMinimal:
-            updateInfo.libraryComponentVersionMinimal,
-          libraryComponentId: updateInfo.libraryComponentId,
-          libraryComponentName: updateInfo.libraryComponentName,
-          libraryComponentSetName: updateInfo.libraryComponentSetName,
-          hasVersionData: !!(
-            updateInfo.libraryComponentVersion ||
-            updateInfo.libraryComponentVersionMinimal
-          ),
-        }
-      );
-
-      // Update component with new information
-      const updatedComponent: ComponentData = {
-        ...component,
-        isOutdated: updateInfo.isOutdated,
-        isLost: Boolean(updateInfo.isLost),
-        isDeprecated: Boolean(updateInfo.isDeprecated),
-        isNotLatest: Boolean(updateInfo.isNotLatest),
-        checkVersion: updateInfo.checkVersion,
-        libraryComponentVersion: updateInfo.libraryComponentVersion,
-        libraryComponentVersionMinimal:
-          updateInfo.libraryComponentVersionMinimal,
-        libraryComponentName: updateInfo.libraryComponentName,
-        libraryComponentSetName: updateInfo.libraryComponentSetName,
-        libraryComponentId: updateInfo.libraryComponentId,
-        updateStatus: "checked" as const,
-      };
-
-      // Debug: Log the final updatedComponent
-      console.log(
-        `[UpdateQueue] Final updatedComponent for ${component.name}:`,
-        {
-          libraryComponentVersion: updatedComponent.libraryComponentVersion,
-          libraryComponentVersionMinimal:
-            updatedComponent.libraryComponentVersionMinimal,
-          libraryComponentId: updatedComponent.libraryComponentId,
-          libraryComponentName: updatedComponent.libraryComponentName,
-          libraryComponentSetName: updatedComponent.libraryComponentSetName,
-          hasVersionData: !!(
-            updatedComponent.libraryComponentVersion ||
-            updatedComponent.libraryComponentVersionMinimal
-          ),
-        }
-      );
-
-      // Store completed result (with collision-safe key)
-      let finalId = componentId;
-      if (this.completed.has(finalId)) {
-        console.warn(
-          `[UpdateQueue] Duplicate componentId detected: ${finalId}. Resolving with suffix`
-        );
-        console.warn(`[UpdateQueue] Existing component: ${this.completed.get(finalId)?.name}, New component: ${updatedComponent.name}`);
-        let counter = 1;
-        while (this.completed.has(`${componentId}__dup_${counter}`)) {
-          counter++;
-        }
-        finalId = `${componentId}__dup_${counter}`;
-        console.log(`[UpdateQueue] Resolved duplicate with key: ${finalId}`);
-      }
-      this.completed.set(finalId, updatedComponent);
-      this.processedCount++;
-
-      console.log(
-        `[UpdateQueue] Component ${updatedComponent.name} processed successfully. ComponentId: ${finalId}`
-      );
-      console.log(
-        `[UpdateQueue] Completed map size: ${this.completed.size}, keys:`, 
-        Array.from(this.completed.keys())
-      );
-      console.log(
-        `[UpdateQueue] Component ${updatedComponent.name} stored in completed map:`,
-        this.completed.has(finalId)
-      );
-      
-      // Детальная отладка: выводим все компоненты в completed Map
-      console.log(`[UpdateQueue] ALL COMPLETED COMPONENTS (${this.completed.size}):`);
-      Array.from(this.completed.entries()).forEach(([key, comp]) => {
-        console.log(`  [${key}]: ${comp.name} - hasLibraryVersion: ${!!comp.libraryComponentVersion}`);
-      });
-
-      // Notify progress
-      if (this.onProgressCallback) {
-        this.onProgressCallback(
-          this.processedCount,
-          this.totalComponents,
-          updatedComponent
-        );
-      }
-
-      // Update UI progress
-      /*
-      if (this.processedCount % 3 === 0) {
-        await updateProgress(
-          'check-updates',
-          this.processedCount,
-          this.totalComponents,
-          `Проверка обновлений: ${component.name}`,
-          component.name
-        );
-      }
-*/
-    } catch (error) {
-      console.error(
-        `[UpdateQueue] Error processing component ${component.name}:`,
-        error
-      );
-
-      // Store component without update info on error (with collision-safe key)
-      let finalId = componentId;
-      if (this.completed.has(finalId)) {
-        console.warn(
-          `[UpdateQueue] Duplicate componentId detected (error path): ${finalId}. Resolving with suffix`
-        );
-        let counter = 1;
-        while (this.completed.has(`${componentId}__dup_${counter}`)) {
-          counter++;
-        }
-        finalId = `${componentId}__dup_${counter}`;
-      }
-      const fallbackComponent: ComponentData = { ...component, updateStatus: "checked" } as ComponentData;
-      this.completed.set(finalId, fallbackComponent);
-      this.processedCount++;
-
-      console.error(
-        `[UpdateQueue] Component ${component.name} processed with error. Progress: ${this.processedCount}/${this.totalComponents}`
-      );
-    } finally {
-      // Always remove from in-flight set
-      this.processing.delete(componentId);
-      
-    }
-  }
-
-  /**
-   * Notify completion and return results
-   */
-  private notifyCompletion(): void {
-    
-    
-    
-    const buttonCount = Array.from(this.completed.values()).filter(c => (c.name || '').toLowerCase().includes('button')).length;
-    
-    // Integrity checks before forming results
-    
-    if (
-      this.completed.size !== this.totalComponents ||
-      this.processedCount !== this.totalComponents
-    ) {
-      console.error(
-        `[UpdateQueue] INTEGRITY MISMATCH: completed (${this.completed.size}) or processed (${this.processedCount}) != total (${this.totalComponents})`
-      );
-    } else {
-      console.log("[UpdateQueue] INTEGRITY OK: counts are consistent");
-    }
-
-    // Create deep copy of completed components to avoid reference issues
-    const completedComponents = Array.from(this.completed.values()).map(
-      (component) => ({
-        ...component,
-        // Ensure all properties are copied explicitly
-        libraryComponentVersion: component.libraryComponentVersion,
-        libraryComponentVersionMinimal:
-          component.libraryComponentVersionMinimal,
-        libraryComponentId: component.libraryComponentId,
-        libraryComponentName: component.libraryComponentName,
-        libraryComponentSetName: component.libraryComponentSetName,
-        isOutdated: component.isOutdated,
-        isNotLatest: component.isNotLatest,
-        isLost: component.isLost,
-        isDeprecated: component.isDeprecated,
-      })
-    );
-
-    console.log(`[UpdateQueue] COMPLETED COMPONENTS BEFORE CALLBACK (${completedComponents.length}):`);
-    completedComponents.forEach((comp, index) => {
-      console.log(`  [${index}]: ${comp.name} - hasLibraryVersion: ${!!comp.libraryComponentVersion}, libraryVersion: ${comp.libraryComponentVersion}`);
-    });
-
-    // Create results object with deep copied data
-    const results: ComponentsResult = {
-      instances: completedComponents,
-      counts: {
-        components: completedComponents.length,
-        icons: completedComponents.filter((c) => c.isIcon).length,
-      },
-    };
-
-    // Debug: Check if libraryComponentVersion data is present
-    const componentsWithVersions = results.instances.filter(
-      (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
-    );
-    
-    if (componentsWithVersions.length > 0) {
-      console.log(`[UpdateQueue] Sample component with versions:`, {
-        name: componentsWithVersions[0].name,
-        libraryComponentVersion:
-          componentsWithVersions[0].libraryComponentVersion,
-        libraryComponentVersionMinimal:
-          componentsWithVersions[0].libraryComponentVersionMinimal,
-      });
-    }
-
-    
-
-    // Reset state BEFORE calling callback to avoid any interference
-    const callbackToCall = this.onCompleteCallback;
-    this.reset();
-
-    // Notify completion with safe data
-    if (callbackToCall) {
-      callbackToCall(results);
-    }
   }
 
   /**
@@ -486,40 +224,7 @@ export class UpdateQueue {
     this.processedCount = 0;
     this.activeBatchesCount = 0;
     this.isRunning = false;
-  }
-
-  /**
-   * Get current queue status
-   */
-  public getStatus(): {
-    queueLength: number;
-    processing: number;
-    completed: number;
-    total: number;
-    isRunning: boolean;
-  } {
-    return {
-      queueLength: this.queue.length,
-      processing: this.processing.size,
-      completed: this.completed.size,
-      total: this.totalComponents,
-      isRunning: this.isRunning,
-    };
-  }
-
-  /**
-   * Stop processing (graceful shutdown)
-   */
-  public async stop(): Promise<void> {
-    
-    this.isRunning = false;
-
-    // Wait for current processing to complete
-    while (this.processing.size > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    this.reset();
+    this.producerDone = false;
   }
 
   /**
@@ -534,6 +239,128 @@ export class UpdateQueue {
     this.totalComponents = 0;
     this.processedCount = 0;
     this.activeBatchesCount = 0;
+    this.isRunning = false;
+    this.producerDone = false;
+  }
+
+  // Возвращает текущий статус очереди
+  public getStatus(): {
+    queueLength: number;
+    total: number;
+    processing: number;
+    completed: number;
+    isRunning: boolean;
+  } {
+    return {
+      queueLength: this.queue.length,
+      total: this.totalComponents,
+      processing: this.processing.size,
+      completed: this.completed.size,
+      isRunning: this.isRunning,
+    };
+  }
+
+  // Обработка батча компонентов
+  private async processBatch(batch: UpdateQueueItem[]): Promise<void> {
+    for (const item of batch) {
+      const component = item.component;
+      const dedupeKey = `${component.mainComponentKey || "unknown"}_$$$${component.nodeId || "no-node"}`;
+      this.processing.add(dedupeKey);
+
+      let updated: ComponentData = component;
+
+      try {
+        if (!component.mainComponentId || component.remote === false) {
+          // Нет mainComponentId или локальный — просто помечаем как проверенный
+          updated = { ...component, updateStatus: "checked" };
+        } else {
+          // Пропуск иконок и имён, начинающихся с '_' или '.'
+          const trimmedName = (component.name || "").trim();
+          const skipByName = component.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
+          if (component.isIcon === true || skipByName) {
+            updated = { ...component, updateStatus: "checked" };
+          } else {
+            const mainComponent = (await figma.getNodeByIdAsync(component.mainComponentId)) as ComponentNode | null;
+            if (!mainComponent) {
+              console.warn(`[UpdateQueue] Main component not found by id: ${component.mainComponentId}`);
+              updated = { ...component, updateStatus: "checked" };
+            } else {
+              const info = await updateAvailabilityCheck(mainComponent, component.nodeVersion);
+              updated = {
+                ...component,
+                isOutdated: info.isOutdated,
+                checkVersion: info.checkVersion,
+                isNotLatest: Boolean(info.isNotLatest),
+                isLost: Boolean(info.isLost),
+                isDeprecated: Boolean(info.isDeprecated),
+                libraryComponentName: info.libraryComponentName,
+                libraryComponentSetName: info.libraryComponentSetName,
+                libraryComponentId: info.libraryComponentId,
+                libraryComponentVersion: info.libraryComponentVersion,
+                libraryComponentVersionMinimal: info.libraryComponentVersionMinimal,
+                updateStatus: "checked",
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[UpdateQueue] Error processing component "${component.name}":`, err);
+        updated = { ...component, updateStatus: "checked" };
+      } finally {
+        this.completed.set(dedupeKey, updated);
+        this.processing.delete(dedupeKey);
+        this.processedCount++;
+
+        if (this.onProgressCallback) {
+          try {
+            this.onProgressCallback(this.processedCount, this.totalComponents, updated);
+          } catch (cbErr) {
+            console.error("[UpdateQueue] onProgress callback error:", cbErr);
+          }
+        }
+      }
+    }
+  }
+
+  // Финализирует и отдает результаты
+  private notifyCompletion(): void {
+    const instances = Array.from(this.completed.values());
+    const outdated = instances.filter((i) => i.isOutdated);
+    const lost = instances.filter((i) => i.isLost);
+    const deprecated = instances.filter((i) => i.isDeprecated);
+    const iconsCount = instances.filter((i) => i.isIcon).length;
+    const componentsCount = instances.length - iconsCount;
+
+    const results: ComponentsResult = {
+      instances,
+      outdated,
+      lost,
+      deprecated,
+      counts: {
+        components: componentsCount,
+        icons: iconsCount,
+        outdated: outdated.length,
+        lost: lost.length,
+        deprecated: deprecated.length,
+      },
+    };
+
+    if (this.onCompleteCallback) {
+      try {
+        this.onCompleteCallback(results);
+      } catch (err) {
+        console.error("[UpdateQueue] onComplete callback error:", err);
+      }
+    }
+  }
+
+  // Мягкая остановка: помечаем как завершение продюсера и ждем активные батчи
+  public async stop(): Promise<void> {
+    this.producerDone = true;
+    const deadline = Date.now() + 2000;
+    while (this.activeBatchesCount > 0 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
     this.isRunning = false;
   }
 }
@@ -550,6 +377,7 @@ export const getUpdateQueue = (): UpdateQueue => {
       batchSize: 5,
       maxConcurrent: 3,
       progressUpdateInterval: 1000,
+      autoStart: true, // запускаем обработку автоматически при добавлении первого элемента
     });
   }
   return globalUpdateQueue;
