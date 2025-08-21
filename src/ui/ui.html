@@ -25,7 +25,7 @@
   >
   <div class="splash-content">
     <h1 class="splash-title"></h1>
-    <button id="startCheck" class="button-main"></button>
+    <button id="startCheck" class="start-button">Начать проверку</button>
   </div>
 </div>
 
@@ -74,7 +74,6 @@
     <!-- Кнопка --> 
       <div class="button-wrapper">
         <button id="checkAll" class="button-main">New search</button>
-        <button id="check-updates" class="button-main">Updates</button>
         <div class="switch-container">
           <label for="showHiddenToggle" class="switch" style="text-decoration: none; cursor: pointer;">
             <input type="checkbox" id="showHiddenToggle" class="checkbox" checked>
@@ -226,7 +225,6 @@ const loaderContainer = document.querySelector('.loader-container');
 const processedCount = document.getElementById('processedCount');
 const totalCount = document.getElementById('totalCount');
 const progressBarFill = document.querySelector('.progress-bar-fill');
-const checkUpdatesButton = document.getElementById('check-updates');
 
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -341,42 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
 
-    if (checkUpdatesButton) {
-      checkUpdatesButton.addEventListener('click', () => {
-        // Check if we have component data
-        if (!window.lastDebugData?.components?.instances?.length) {
-          // Show error message if no components data available
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'error-message';
-          const errorText = document.createElement('p');
-          errorText.textContent = 'Пожалуйста, сначала выполните поиск компонентов';
-          errorDiv.appendChild(errorText);
-          document.body.appendChild(errorDiv);
-          
-          setTimeout(() => {errorDiv.remove();}, 3000);
-          return;
-        }
 
-        // Show loader
-        loaderContainer.style.display = 'flex';
-        
-        // Reset progress
-        processedCount.textContent = '0';
-        totalCount.textContent = '0';
-        progressBarFill.style.width = '0%';
-        
-        // Show phase
-        document.getElementById('progressPhase').textContent = 'Проверка обновлений...';
-        
-        // Send message to backend
-        parent.postMessage({ 
-          pluginMessage: { 
-            type: 'check-updates',
-            components: window.lastDebugData.components // Send cached component data
-          } 
-        }, '*');
-      });
-    }
 });
       
       
@@ -1068,11 +1031,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
     });
       
     document.addEventListener('mouseup', () => {isResizing = false;}); 
-    
-    
-
-
-    // Functions moved to UIModules
+  
 
     // Search functionality
     if (searchInput && clearSearch && searchResults) {
