@@ -26,7 +26,7 @@ import { clearRgbToHexCache } from "./color/clearRgbToHexCache";
 import { processNodeComponent } from "./component/processNodeComponent";
 import { processNodeStatistics } from "./component/processNodeStatistics";
 
-import { checkComponentUpdates } from "./update/checkComponentUpdates";
+
 import { clearUpdateCache } from "./update/updateAvailabilityCheck";
 import { getUpdateQueue, resetUpdateQueue } from "./update/updateQueue";
 import { getParallelUpdateProcessor } from "./update/parallelUpdateProcessor";
@@ -399,6 +399,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
     // Инициализируем параллельный процессор и запускаем ожидание результатов ДО сканирования
     const processor = getParallelUpdateProcessor();
+
     processor.onProgress(
       async (processed: number, total: number, componentName?: string) => {
         await updateProgress(
@@ -419,12 +420,13 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
     try {
       // Отправляем начальное сообщение о прогрессе в UI
+      /*
       await updateProgress(
         "processing",
         0,
         nodesToProcess.length,
-        "Обработка элементов"
-      );
+        "Waiting for connection"
+      );*/
 
       // Асинхронно обрабатываем каждый узел из списка
       const processNodeSafely = async (node: SceneNode, index: number) => {
@@ -516,7 +518,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         // Обновляем прогресс после каждого узла
         // Даем браузеру "подышать" после каждого 10 узла, чтобы UI не зависал
 
-        if (i % 5 === 0) {
+        /*if (i % 5 === 0) {
           await new Promise((resolve) => setTimeout(resolve, 0));
           await updateProgress(
             "processing",
@@ -525,78 +527,12 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             "Обработка элементов",
             (nodesToProcess[i] as InstanceNode).name
           );
-        }
+        }*/
       }
 
       // Логируем финальную статистику после обработки всех узлов
       const finalUpdateQueue = getUpdateQueue();
       const finalQueueStatus = finalUpdateQueue.getStatus();
-      console.log(
-        `[INDEX] Финальная статистика очереди после обработки всех узлов:`,
-        {
-          queueLength: finalQueueStatus.queueLength,
-          total: finalQueueStatus.total,
-          processing: finalQueueStatus.processing,
-          completed: finalQueueStatus.completed,
-          isRunning: finalQueueStatus.isRunning,
-          componentsResultCount: componentsResult.instances.length,
-        }
-      );
-
-      // КРИТИЧЕСКИЙ АНАЛИЗ: Детальная проверка потери данных
-      const queueTotalComponents = finalQueueStatus.total;
-      const instancesCount = componentsResult.instances.length;
-      console.warn(`[INDEX] АНАЛИЗ ПОТЕРИ ДАННЫХ:`, {
-        totalProcessedNodes: nodesToProcess.length,
-        queueTotalComponents,
-        componentsInResult: instancesCount,
-        buttonComponentsInResult: componentsResult.instances.filter((comp) =>
-          comp.name.toLowerCase().includes("button")
-        ).length,
-        queueSize: finalQueueStatus.queueLength,
-        // Потери считаем относительно общего количества компонентов, попавших в очередь, а не относительно всех узлов страницы
-        lossPercentageByQueue:
-          queueTotalComponents > 0
-            ? (
-                ((queueTotalComponents - instancesCount) /
-                  queueTotalComponents) *
-                100
-              ).toFixed(2) + "%"
-            : "0%",
-      });
-
-      // Анализ типов компонентов в результате
-      const componentTypeAnalysis = componentsResult.instances.reduce(
-        (acc, comp) => {
-          acc[comp.type] = (acc[comp.type] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-      console.log(
-        `[CRITICAL DEBUG] Типы компонентов в результате:`,
-        componentTypeAnalysis
-      );
-
-      // Показываем примеры компонентов button если они есть
-      const buttonComponents = componentsResult.instances.filter((comp) =>
-        comp.name.toLowerCase().includes("button")
-      );
-      if (buttonComponents.length > 0) {
-        console.log(
-          `[CRITICAL DEBUG] Найденные button компоненты:`,
-          buttonComponents.slice(0, 5).map((comp) => ({
-            name: comp.name,
-            type: comp.type,
-            nodeId: comp.nodeId,
-            mainComponentName: comp.mainComponentName,
-          }))
-        );
-      } else {
-        console.log(
-          `[CRITICAL DEBUG] ПРОБЛЕМА: Компоненты button НЕ НАЙДЕНЫ в результате!`
-        );
-      }
 
       // Сортируем результаты компонентов по имени (с учетом специальных символов и эмодзи)
       componentsResult.instances.sort((a, b) => {
@@ -634,10 +570,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
       // Запрашиваем текущий статус очереди (для логов/диагностики)
       const updateQueue = getUpdateQueue();
-      const queueStatus = updateQueue.getStatus();
-
-      console.log("[INDEX] Queue status:", queueStatus);
-      console.log("[INDEX] Components in queue:", queueStatus.total);
+      //const queueStatus = updateQueue.getStatus();
 
       // Получаем результаты из уже запущенного процессора
       // Сигнализируем, что продюсер закончил добавлять элементы
@@ -698,9 +631,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             };
           } else {
             unmatchedKeys.push(key);
-            console.log(
-              `[INDEX] NO MATCH: ${existingComponent.name} with key: ${key}`
-            );
           }
 
           // Если компонент не был в результатах проверки обновлений, оставляем как есть
@@ -724,22 +654,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       });
 
       console.log(
-        `[INDEX] Unmatched keys (${unmatchedKeys.length}):`,
-        unmatchedKeys.slice(0, 10)
-      ); // Показываем первые 10
-
-      // Отладочная информация после обновления
-      console.log("[INDEX] After updating components:", {
-        originalCount: results.instances.length,
-        finalCount: componentsResult.instances.length,
-        updatedComponentsCount: updatedComponentsMap.size,
-        matchedCount: matchedCount,
-        componentsWithLibraryVersions: componentsResult.instances.filter(
-          (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
-        ).length,
-      });
-
-      console.log(
         "[INDEX] Received results from processor:",
         results,
         results.instances.length
@@ -747,7 +661,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
       // Инвариант: количество элементов, с которыми завершила очередь, должно совпадать с количеством в results.instances
       const statusAfter = updateQueue.getStatus();
-      console.log("[INTEGRITY] Queue status after processing:", statusAfter);
       const expectedTotal = statusAfter.total; // это должно быть равно количеству добавленных в очереди
       const received = results.instances.length;
       if (expectedTotal !== received) {
@@ -758,10 +671,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             received,
             delta: expectedTotal - received,
           }
-        );
-      } else {
-        console.log(
-          "[INTEGRITY] Количество компонентов согласовано между очередью и результатом"
         );
       }
 
@@ -816,40 +725,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         },
       });
 
-      // Затем отправляем остальные результаты
-      console.log(
-        "[INDEX] Sending all-results to UI with components:",
-        componentsResult.instances.length
-      );
-      if (componentsResult.instances.length > 0) {
-        console.log(
-          "[INDEX] Final libraryComponentVersion:",
-          componentsResult.instances.map((item) => item.libraryComponentVersion)
-        );
-        console.log(
-          "[INDEX] Final first instance isOutdated:",
-          componentsResult.instances[0].isOutdated
-        );
-        console.log(
-          "[INDEX] Final first instance updateStatus:",
-          componentsResult.instances[0].updateStatus
-        );
-      }
-
-      // Детальная проверка данных перед отправкой в UI
-      console.log("[INDEX] BEFORE UI SEND - componentsResult structure:", {
-        instancesCount: componentsResult.instances.length,
-        firstInstanceKeys:
-          componentsResult.instances.length > 0
-            ? Object.keys(componentsResult.instances[0])
-            : [],
-        firstInstanceLibraryVersion:
-          componentsResult.instances.length > 0
-            ? componentsResult.instances[0].libraryComponentVersion
-            : "NO_INSTANCES",
-        componentsResultReference: componentsResult,
-      });
-
       figma.ui.postMessage({
         type: "all-results",
         components: componentsResult,
@@ -857,15 +732,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         colorsStroke: colorsResultStroke,
         componentTree: componentTree,
         totalStats: totalStats, // Включаем статистику и в этом сообщении для синхронизации
-      });
-
-      // Проверяем данные сразу после отправки
-      console.log("[INDEX] AFTER UI SEND - data still intact:", {
-        instancesCount: componentsResult.instances.length,
-        firstInstanceLibraryVersion:
-          componentsResult.instances.length > 0
-            ? componentsResult.instances[0].libraryComponentVersion
-            : "NO_INSTANCES",
       });
     } catch (error) {
       // Обработка ошибок в процессе анализа
@@ -899,7 +765,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           figma.notify("Ошибка доступа к элементу: " + errorMessage);
           return;
         }
-        console.log("[PLUGIN] Node found:", !!node, node);
+        //console.log("[PLUGIN] Node found:", !!node, node);
         // Проверяем, что узел найден и является SceneNode (имеет тип и свойство visible)
         if (
           node &&
@@ -1360,7 +1226,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       updateQueue.clear();
 
       // Настраиваем обработчик прогресса ДО старта
-      processor.onProgress(
+      /*processor.onProgress(
         async (processed: number, total: number, componentName?: string) => {
           await updateProgress(
             "check-updates",
@@ -1370,7 +1236,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             componentName
           );
         }
-      );
+      );*/
 
       // Запускаем ожидание результатов ДО добавления компонентов, чтобы callbacks уже были привязаны
       const resultsPromise = processor.processAll();

@@ -239,6 +239,30 @@ export const processNodeComponent = async (
       );
     }
 
+    // Фильтрация иконок и компонентов с именами, начинающимися с '_' или '.'
+    const trimmedMainComponentName = (componentData.mainComponentName || "").trim();
+    const trimmedMainComponentSetName = (
+      componentData.mainComponentSetName || ""
+    ).trim();
+    const skipByName =
+      componentData.type === "INSTANCE" && (
+        trimmedMainComponentName.startsWith("_") || trimmedMainComponentName.startsWith(".") ||
+        trimmedMainComponentSetName.startsWith("_") || trimmedMainComponentSetName.startsWith(".")
+      );
+    
+    if (componentData.isIcon === true || skipByName) {
+      console.log(
+        `[processNodeComponent] ИСКЛЮЧЕН из результатов - иконка или имя начинается с '_'/'.' для:`,
+        {
+          name: componentData.name,
+          mainComponentName: componentData.mainComponentName,
+          isIcon: componentData.isIcon,
+          skipByName: skipByName,
+        }
+      );
+      return null; // Полностью исключаем из результатов
+    }
+
     updateQueue.addComponent(componentData);
 
     // Если объект данных компонента создан и узел является INSTANCE или COMPONENT

@@ -74,7 +74,7 @@ export interface ComponentData {
   libraryComponentId?: string | null;
   libraryComponentVersion?: string | null;
   libraryComponentVersionMinimal?: string | null;
-  updateStatus?: "checking" | "checked" | null;
+  updateStatus?: "checking" | "checked" | "skipped" | null;
 }
 
 /** Результат анализа компонентов */
