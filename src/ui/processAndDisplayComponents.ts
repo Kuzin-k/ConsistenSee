@@ -342,16 +342,6 @@ export function processAndDisplayComponents(
   const tabTitle =
     tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
 
-  // Логируем финальные группы перед отображением
-  console.log(`[UI processAndDisplayComponents] Final groups for ${tabType}:`, {
-    groupedInstancesKeys: Object.keys(groupedInstances),
-    groupedInstancesCount: Object.keys(groupedInstances).length,
-    buttonGroups: Object.keys(groupedInstances).filter(key => 
-      groupedInstances[key].some((inst: any) => inst.name === 'button')
-    ),
-    totalInstances: Object.values(groupedInstances).reduce((sum: number, group: any) => sum + group.length, 0)
-  });
-
   if (
     tabType === "outdated" ||
     tabType === "lost" ||

@@ -217,7 +217,7 @@
   </div></div>
 
 <script>
-console.log('Script started'); // Added log
+
 
 // Проверяем наличие элементов
 const splashScreen = document.getElementById('splashScreen');
@@ -680,15 +680,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
       } 
       if (msg.type === 'all-results') {
-        // Детальная проверка данных, полученных в UI
-        console.log('[UI] RECEIVED all-results message:', {
-          messageType: msg.type,
-          componentsExists: !!msg.components,
-          componentsInstancesCount: msg.components ? msg.components.instances.length : 0,
-          firstInstanceKeys: msg.components && msg.components.instances.length > 0 ? Object.keys(msg.components.instances[0]) : [],
-          firstInstanceLibraryVersion: msg.components && msg.components.instances.length > 0 ? msg.components.instances[0].libraryComponentVersion : 'NO_INSTANCES',
-          fullMessage: msg
-        });
         
         // Save data for search
         window.lastDebugData = {
@@ -702,8 +693,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
         // Hide loader
         const loaderContainer = document.querySelector('.loader-container');
         if (loaderContainer) {loaderContainer.style.display = 'none';}
-
-        console.log('Received all-results:', msg);
 
         // Process components
         if (msg.components) {
@@ -871,7 +860,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
 // Выполняем после загрузки страницы
     window.addEventListener('DOMContentLoaded', function() {
-      console.log('Инициализация функций для работы с компонентами');
 
       // Определяем глобальную функцию displayComponentData
       window.displayComponentData = function(data) {
@@ -960,7 +948,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
         switch (msg.type) {
           case 'component-data-result':
             if (msg.data) {
-              console.log('Отображение данных компонента:', msg.data);
               const outputElement = document.getElementById('componentDataOutput');
               if (!outputElement) {
                 console.error('Элемент вывода не найден');
@@ -1031,7 +1018,7 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
       });
 
-      console.log('Инициализация завершена');
+      
     });
     
     };

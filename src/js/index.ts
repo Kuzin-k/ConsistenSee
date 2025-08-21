@@ -118,7 +118,7 @@ if (currentUser) {
 const splashScreenCombinations: SplashScreenData[] = [
   {
     imageUrl:
-      "https://downloader.disk.yandex.ru/preview/9f312e965a5cb62de3b834fbdbec01be8981c981359610a3e7c562f55be0f4ee/68686aa6/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=0&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&size=2048x2048",
+      "https://4.downloader.disk.yandex.ru/preview/89878b59d39343329dc44c8003191698e2face0b889acc78648296b8337967f4/inf/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=47857770&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=47857770&tknv=v3&size=3456x1916",
     titleText:
       "Дизайнер, к борьбе за победу всеобщей консистентности будь готов!",
     buttonText: "Всегда готов!",
@@ -301,7 +301,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
     clearUpdateCache();
     clearRgbToHexCache();
     publishStatusCache.clear();
-    console.log("Все кэши очищены перед новым поиском.");
+    console.log("[INDEX] Все кэши очищены перед новым поиском.");
 
     const startTime = Date.now();
 
@@ -397,9 +397,25 @@ figma.ui.onmessage = async (msg: UIMessage) => {
     const updateQueue = getUpdateQueue();
     updateQueue.clear();
 
-    //let executionTime = Date.now() - startTime;
-    //console.log(`Первый этап выполнен: ${executionTime}ms`);
-    //console.log(`Результат: ${nodesToProcess}`);
+    // Инициализируем параллельный процессор и запускаем ожидание результатов ДО сканирования
+    const processor = getParallelUpdateProcessor();
+    processor.onProgress(
+      async (processed: number, total: number, componentName?: string) => {
+        await updateProgress(
+          "processing",
+          processed,
+          total,
+          "Проверка обновлений компонентов",
+          componentName
+        );
+      }
+    );
+    processor.onComplete((results) => {
+      console.log("[INDEX] ParallelUpdateProcessor complete (check-all):", {
+        total: results.instances.length,
+      });
+    });
+    const resultsPromise = processor.processAll();
 
     try {
       // Отправляем начальное сообщение о прогрессе в UI
@@ -443,18 +459,23 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           }
 
           // Если узел является инстансом, компонентом или набором компонентов, обрабатываем его
-          if (node.type === "INSTANCE" || node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
-            console.log(`[processNodeSafely] Обрабатываем узел типа ${node.type}:`, {
-              name: node.name,
-              id: node.id,
-              type: node.type,
-              index: index + 1
-            });
+          if (
+            node.type === "INSTANCE" ||
+            node.type === "COMPONENT" ||
+            node.type === "COMPONENT_SET"
+          ) {
+            /*
+            console.log(
+              `[processNodeSafely] Обрабатываем узел типа ${node.type}:`,
+              {
+                name: node.name,
+                id: node.id,
+                type: node.type,
+                index: index + 1,
+              }
+            );*/
             try {
-              await processNodeComponent(
-                node,
-                componentsResult
-              );
+              await processNodeComponent(node, componentsResult);
             } catch (err) {
               console.error(
                 `[${index + 1}] ERROR in processNodeComponent:`,
@@ -462,12 +483,16 @@ figma.ui.onmessage = async (msg: UIMessage) => {
               );
             }
           } else {
-            console.log(`[processNodeSafely] Пропущен узел типа ${node.type}:`, {
-              name: node.name,
-              id: node.id,
-              type: node.type,
-              index: index + 1
-            });
+            /*
+            console.log(
+              `[processNodeSafely] Пропущен узел типа ${node.type}:`,
+              {
+                name: node.name,
+                id: node.id,
+                type: node.type,
+                index: index + 1,
+              }
+            );*/
           }
         } catch (error) {
           console.error(`[${index + 1}] Ошибка на этапе логирования:`, error);
@@ -479,12 +504,12 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         stats[node.type] = (stats[node.type] || 0) + 1;
         return stats;
       }, {} as Record<string, number>);
-      
-      console.log(`[DEBUG] Статистика узлов для обработки:`, {
+
+      console.log(`[INDEX] Статистика узлов для обработки:`, {
         total: nodesToProcess.length,
-        byType: nodeTypeStats
+        byType: nodeTypeStats,
       });
-      
+
       // Запускаем цикл обработки узлов с асинхронной задержкой
       for (let i = 0; i < nodesToProcess.length; i++) {
         await processNodeSafely(nodesToProcess[i], i);
@@ -502,52 +527,75 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           );
         }
       }
-      
+
       // Логируем финальную статистику после обработки всех узлов
-       const finalUpdateQueue = getUpdateQueue();
-       const finalQueueStatus = finalUpdateQueue.getStatus();
-      console.log(`[DEBUG] Финальная статистика очереди после обработки всех узлов:`, {
-        queueLength: finalQueueStatus.queueLength,
-        total: finalQueueStatus.total,
-        processing: finalQueueStatus.processing,
-        completed: finalQueueStatus.completed,
-        isRunning: finalQueueStatus.isRunning,
-        componentsResultCount: componentsResult.instances.length
-      });
+      const finalUpdateQueue = getUpdateQueue();
+      const finalQueueStatus = finalUpdateQueue.getStatus();
+      console.log(
+        `[INDEX] Финальная статистика очереди после обработки всех узлов:`,
+        {
+          queueLength: finalQueueStatus.queueLength,
+          total: finalQueueStatus.total,
+          processing: finalQueueStatus.processing,
+          completed: finalQueueStatus.completed,
+          isRunning: finalQueueStatus.isRunning,
+          componentsResultCount: componentsResult.instances.length,
+        }
+      );
 
       // КРИТИЧЕСКИЙ АНАЛИЗ: Детальная проверка потери данных
       const queueTotalComponents = finalQueueStatus.total;
       const instancesCount = componentsResult.instances.length;
-      console.log(`[CRITICAL DEBUG] АНАЛИЗ ПОТЕРИ ДАННЫХ:`, {
+      console.warn(`[INDEX] АНАЛИЗ ПОТЕРИ ДАННЫХ:`, {
         totalProcessedNodes: nodesToProcess.length,
         queueTotalComponents,
         componentsInResult: instancesCount,
-        buttonComponentsInResult: componentsResult.instances.filter(comp => comp.name.toLowerCase().includes('button')).length,
+        buttonComponentsInResult: componentsResult.instances.filter((comp) =>
+          comp.name.toLowerCase().includes("button")
+        ).length,
         queueSize: finalQueueStatus.queueLength,
         // Потери считаем относительно общего количества компонентов, попавших в очередь, а не относительно всех узлов страницы
-        lossPercentageByQueue: queueTotalComponents > 0 ? (((queueTotalComponents - instancesCount) / queueTotalComponents) * 100).toFixed(2) + '%' : '0%'
+        lossPercentageByQueue:
+          queueTotalComponents > 0
+            ? (
+                ((queueTotalComponents - instancesCount) /
+                  queueTotalComponents) *
+                100
+              ).toFixed(2) + "%"
+            : "0%",
       });
 
       // Анализ типов компонентов в результате
-      const componentTypeAnalysis = componentsResult.instances.reduce((acc, comp) => {
-        acc[comp.type] = (acc[comp.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      console.log(`[CRITICAL DEBUG] Типы компонентов в результате:`, componentTypeAnalysis);
+      const componentTypeAnalysis = componentsResult.instances.reduce(
+        (acc, comp) => {
+          acc[comp.type] = (acc[comp.type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+      console.log(
+        `[CRITICAL DEBUG] Типы компонентов в результате:`,
+        componentTypeAnalysis
+      );
 
       // Показываем примеры компонентов button если они есть
-      const buttonComponents = componentsResult.instances.filter(comp => comp.name.toLowerCase().includes('button'));
+      const buttonComponents = componentsResult.instances.filter((comp) =>
+        comp.name.toLowerCase().includes("button")
+      );
       if (buttonComponents.length > 0) {
-        console.log(`[CRITICAL DEBUG] Найденные button компоненты:`, 
-          buttonComponents.slice(0, 5).map(comp => ({
+        console.log(
+          `[CRITICAL DEBUG] Найденные button компоненты:`,
+          buttonComponents.slice(0, 5).map((comp) => ({
             name: comp.name,
             type: comp.type,
             nodeId: comp.nodeId,
-            mainComponentName: comp.mainComponentName
+            mainComponentName: comp.mainComponentName,
           }))
         );
       } else {
-        console.log(`[CRITICAL DEBUG] ПРОБЛЕМА: Компоненты button НЕ НАЙДЕНЫ в результате!`);
+        console.log(
+          `[CRITICAL DEBUG] ПРОБЛЕМА: Компоненты button НЕ НАЙДЕНЫ в результате!`
+        );
       }
 
       // Сортируем результаты компонентов по имени (с учетом специальных символов и эмодзи)
@@ -584,135 +632,137 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       // Сохраняем данные о цветах в глобальную переменную
       lastColorsData = colorsResult;
 
-      // Запускаем параллельную проверку обновлений для всех компонентов в очереди
+      // Запрашиваем текущий статус очереди (для логов/диагностики)
       const updateQueue = getUpdateQueue();
       const queueStatus = updateQueue.getStatus();
-      
+
       console.log("[INDEX] Queue status:", queueStatus);
       console.log("[INDEX] Components in queue:", queueStatus.total);
 
-      if (queueStatus.total > 0) {
-        await updateProgress(
-          "processing",
-          0,
-          queueStatus.total,
-          "Проверка обновлений компонентов"
-        );
+      // Получаем результаты из уже запущенного процессора
+      // Сигнализируем, что продюсер закончил добавлять элементы
+      updateQueue.markProducerDone();
+      const results = await resultsPromise;
 
-        // Используем parallelUpdateProcessor для получения результатов
-        const processor = getParallelUpdateProcessor();
-        
-        // Получаем экземпляр очереди (уже очищен в начале)
-        const updateQueue = getUpdateQueue();
+      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Обновляем существующие компоненты данными из результатов проверки обновлений
+      // Создаем Map для быстрого поиска обновленных компонентов по ключу
+      const updatedComponentsMap = new Map<string, ComponentData>();
+      results.instances.forEach((updatedComponent) => {
+        const key = `${updatedComponent.mainComponentKey || "unknown"}_$${
+          updatedComponent.nodeId || "no-node"
+        }`;
+        updatedComponentsMap.set(key, updatedComponent);
+      });
 
-        // Настраиваем callback для обновления прогресса
-        processor.onProgress(
-          async (processed: number, total: number, componentName?: string) => {
-            await updateProgress(
-              "processing",
-              processed,
-              total,
-              "Проверка обновлений компонентов",
-              componentName
-            );
-          }
-        );
-
-        // Получаем результаты через processor
-        const results = await processor.processAll();
-
-        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Обновляем существующие компоненты данными из результатов проверки обновлений
-        // Создаем Map для быстрого поиска обновленных компонентов по ключу
-        const updatedComponentsMap = new Map<string, ComponentData>();
-        results.instances.forEach(updatedComponent => {
-          const key = `${updatedComponent.mainComponentKey || 'unknown'}_$$${updatedComponent.nodeId || 'no-node'}`;
-          updatedComponentsMap.set(key, updatedComponent);
-        });
-
-        console.log("[INDEX] Updated components map keys:", Array.from(updatedComponentsMap.keys()));
-
-        // Обновляем существующие компоненты в componentsResult.instances
-        let matchedCount = 0;
-        let unmatchedKeys: string[] = [];
-        componentsResult.instances = componentsResult.instances.map(existingComponent => {
-          const key = `${existingComponent.mainComponentKey || 'unknown'}_$$${existingComponent.nodeId || 'no-node'}`;
+      // Обновляем существующие компоненты в componentsResult.instances
+      let matchedCount = 0;
+      let unmatchedKeys: string[] = [];
+      componentsResult.instances = componentsResult.instances.map(
+        (existingComponent) => {
+          const key = `${existingComponent.mainComponentKey || "unknown"}_$${
+            existingComponent.nodeId || "no-node"
+          }`;
           const updatedComponent = updatedComponentsMap.get(key);
-          
+
           if (updatedComponent) {
             matchedCount++;
-            console.log(`[INDEX] MATCHED: ${existingComponent.name} with key: ${key}`);
-            // Объединяем существующие данные с обновленными данными из проверки обновлений
+            // Обновляем данные, НЕ затирая уже полученные версии
             return {
               ...existingComponent,
-              isOutdated: updatedComponent.isOutdated,
-              isLost: updatedComponent.isLost,
-              isDeprecated: updatedComponent.isDeprecated,
-              isNotLatest: updatedComponent.isNotLatest,
-              checkVersion: updatedComponent.checkVersion,
-              libraryComponentVersion: updatedComponent.libraryComponentVersion,
-              libraryComponentVersionMinimal: updatedComponent.libraryComponentVersionMinimal,
-              libraryComponentName: updatedComponent.libraryComponentName,
-              libraryComponentSetName: updatedComponent.libraryComponentSetName,
-              libraryComponentId: updatedComponent.libraryComponentId,
-              updateStatus: updatedComponent.updateStatus,
+              isOutdated:
+                updatedComponent.isOutdated ?? existingComponent.isOutdated,
+              isLost: updatedComponent.isLost ?? existingComponent.isLost,
+              isDeprecated:
+                updatedComponent.isDeprecated ?? existingComponent.isDeprecated,
+              isNotLatest:
+                updatedComponent.isNotLatest ?? existingComponent.isNotLatest,
+              checkVersion:
+                updatedComponent.checkVersion ?? existingComponent.checkVersion,
+              libraryComponentVersion:
+                updatedComponent.libraryComponentVersion ??
+                existingComponent.libraryComponentVersion,
+              libraryComponentVersionMinimal:
+                updatedComponent.libraryComponentVersionMinimal ??
+                existingComponent.libraryComponentVersionMinimal,
+              libraryComponentName:
+                updatedComponent.libraryComponentName ??
+                existingComponent.libraryComponentName,
+              libraryComponentSetName:
+                updatedComponent.libraryComponentSetName ??
+                existingComponent.libraryComponentSetName,
+              libraryComponentId:
+                updatedComponent.libraryComponentId ??
+                existingComponent.libraryComponentId,
+              updateStatus:
+                updatedComponent.updateStatus ?? existingComponent.updateStatus,
             };
           } else {
             unmatchedKeys.push(key);
-            console.log(`[INDEX] NO MATCH: ${existingComponent.name} with key: ${key}`);
+            console.log(
+              `[INDEX] NO MATCH: ${existingComponent.name} with key: ${key}`
+            );
           }
-          
+
           // Если компонент не был в результатах проверки обновлений, оставляем как есть
           return existingComponent;
-        });
-
-        console.log(`[INDEX] Unmatched keys (${unmatchedKeys.length}):`, unmatchedKeys.slice(0, 10)); // Показываем первые 10
-
-        // Отладочная информация после обновления
-        console.log("[INDEX] After updating components:", {
-          originalCount: results.instances.length,
-          finalCount: componentsResult.instances.length,
-          updatedComponentsCount: updatedComponentsMap.size,
-          matchedCount: matchedCount,
-          componentsWithLibraryVersions: componentsResult.instances.filter(c => 
-            c.libraryComponentVersion || c.libraryComponentVersionMinimal
-          ).length
-        });
-
-        console.log("[INDEX] Received results from processor:", results);
-        console.log(
-          "[INDEX] Results instances count:",
-          results.instances.length
-        );
-        if (results.instances.length > 0) {
-          console.log("[INDEX] First instance data:", results.instances[0]);
-          console.log(
-            "[INDEX] First instance libraryComponentVersion:",
-            results.instances[0].libraryComponentVersion
-          );
-          console.log(
-            "[INDEX] First instance isOutdated:",
-            results.instances[0].isOutdated
-          );
-          console.log(
-            "[INDEX] First instance updateStatus:",
-            results.instances[0].updateStatus
-          );
         }
+      );
 
-        // Инвариант: количество элементов, с которыми завершила очередь, должно совпадать с количеством в results.instances
-        const statusAfter = updateQueue.getStatus();
-        console.log("[INTEGRITY] Queue status after processing:", statusAfter);
-        const expectedTotal = statusAfter.total; // это должно быть равно количеству добавленных в очереди
-        const received = results.instances.length;
-        if (expectedTotal !== received) {
-          console.warn("[INTEGRITY] Несовпадение количества компонентов между очередью и результатом", {
+      // Добавляем все компоненты, которые не сопоставились с существующими
+      const existingKeys = new Set(
+        componentsResult.instances.map(
+          (c) => `${c.mainComponentKey || "unknown"}_$$${c.nodeId || "no-node"}`
+        )
+      );
+      results.instances.forEach((updatedComponent) => {
+        const key = `${updatedComponent.mainComponentKey || "unknown"}_$${
+          updatedComponent.nodeId || "no-node"
+        }`;
+        if (!existingKeys.has(key)) {
+          componentsResult.instances.push(updatedComponent);
+        }
+      });
+
+      console.log(
+        `[INDEX] Unmatched keys (${unmatchedKeys.length}):`,
+        unmatchedKeys.slice(0, 10)
+      ); // Показываем первые 10
+
+      // Отладочная информация после обновления
+      console.log("[INDEX] After updating components:", {
+        originalCount: results.instances.length,
+        finalCount: componentsResult.instances.length,
+        updatedComponentsCount: updatedComponentsMap.size,
+        matchedCount: matchedCount,
+        componentsWithLibraryVersions: componentsResult.instances.filter(
+          (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
+        ).length,
+      });
+
+      console.log(
+        "[INDEX] Received results from processor:",
+        results,
+        results.instances.length
+      );
+
+      // Инвариант: количество элементов, с которыми завершила очередь, должно совпадать с количеством в results.instances
+      const statusAfter = updateQueue.getStatus();
+      console.log("[INTEGRITY] Queue status after processing:", statusAfter);
+      const expectedTotal = statusAfter.total; // это должно быть равно количеству добавленных в очереди
+      const received = results.instances.length;
+      if (expectedTotal !== received) {
+        console.warn(
+          "[INTEGRITY] Несовпадение количества компонентов между очередью и результатом",
+          {
             expectedTotal,
             received,
             delta: expectedTotal - received,
-          });
-        } else {
-          console.log("[INTEGRITY] Количество компонентов согласовано между очередью и результатом");
-        }
+          }
+        );
+      } else {
+        console.log(
+          "[INTEGRITY] Количество компонентов согласовано между очередью и результатом"
+        );
       }
 
       // Финальный результат после всех обработок
@@ -1300,22 +1350,16 @@ figma.ui.onmessage = async (msg: UIMessage) => {
     }
 
     try {
-      // Используем параллельную обработку вместо старой последовательной функции
+      // Используем параллельную обработку
       const processor = getParallelUpdateProcessor();
-      
+
       // Получаем экземпляр очереди
       const updateQueue = getUpdateQueue();
-      
-      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Очищаем состояние очереди
-      // чтобы избежать накопления данных от предыдущих вызовов
+
+      // Очищаем состояние очереди
       updateQueue.clear();
 
-      // Добавляем все компоненты в очередь для проверки
-      for (const component of componentsToCheck.instances) {
-        updateQueue.addComponent(component);
-      }
-
-      // Настраиваем обработчик прогресса
+      // Настраиваем обработчик прогресса ДО старта
       processor.onProgress(
         async (processed: number, total: number, componentName?: string) => {
           await updateProgress(
@@ -1328,8 +1372,17 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         }
       );
 
-      // Запускаем параллельную обработку
-      const results = await processor.processAll();
+      // Запускаем ожидание результатов ДО добавления компонентов, чтобы callbacks уже были привязаны
+      const resultsPromise = processor.processAll();
+
+      // Добавляем все компоненты в очередь для проверки
+      for (const component of componentsToCheck.instances) {
+        updateQueue.addComponent(component);
+      }
+
+      // Ждём готовые результаты
+      updateQueue.markProducerDone();
+      const results = await resultsPromise;
 
       // Обновляем componentsToCheck с результатами проверки
       componentsToCheck.instances = results.instances;
