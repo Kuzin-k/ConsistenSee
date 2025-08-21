@@ -1526,7 +1526,6 @@ var colorsResultStroke = {
   totalUsage: 0
 };
 figma.ui.onmessage = async (msg) => {
-  var _a2, _b, _c;
   console.log("\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u043E \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u043E\u0442 UI:", msg.type);
   if (msg.type === "resize") {
     figma.ui.resize(msg.width, msg.height);
@@ -1736,15 +1735,15 @@ figma.ui.onmessage = async (msg) => {
       let unmatchedKeys = [];
       componentsResult.instances = componentsResult.instances.map(
         (existingComponent) => {
-          var _a3, _b2, _c2, _d, _e, _f, _g, _h, _i, _j, _k;
+          var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
           const key = `${existingComponent.mainComponentKey || "unknown"}_$${existingComponent.nodeId || "no-node"}`;
           const updatedComponent = updatedComponentsMap.get(key);
           if (updatedComponent) {
             matchedCount++;
             return __spreadProps(__spreadValues({}, existingComponent), {
-              isOutdated: (_a3 = updatedComponent.isOutdated) != null ? _a3 : existingComponent.isOutdated,
-              isLost: (_b2 = updatedComponent.isLost) != null ? _b2 : existingComponent.isLost,
-              isDeprecated: (_c2 = updatedComponent.isDeprecated) != null ? _c2 : existingComponent.isDeprecated,
+              isOutdated: (_a2 = updatedComponent.isOutdated) != null ? _a2 : existingComponent.isOutdated,
+              isLost: (_b = updatedComponent.isLost) != null ? _b : existingComponent.isLost,
+              isDeprecated: (_c = updatedComponent.isDeprecated) != null ? _c : existingComponent.isDeprecated,
               isNotLatest: (_d = updatedComponent.isNotLatest) != null ? _d : existingComponent.isNotLatest,
               checkVersion: (_e = updatedComponent.checkVersion) != null ? _e : existingComponent.checkVersion,
               libraryComponentVersion: (_f = updatedComponent.libraryComponentVersion) != null ? _f : existingComponent.libraryComponentVersion,
@@ -2144,73 +2143,6 @@ figma.ui.onmessage = async (msg) => {
         type: "component-data-cleared",
         message: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432.",
         isError: true
-      });
-    }
-  } else if (msg.type === "check-updates") {
-    console.log("[INDEX] Received update check request");
-    console.log("[INDEX] Message data:", msg);
-    clearUpdateCache();
-    console.log("[INDEX] \u041A\u0435\u0448 \u043E\u0447\u0438\u0449\u0435\u043D \u043F\u0435\u0440\u0435\u0434 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u043E\u0439 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439.");
-    let componentsToCheck = null;
-    if (msg.components && msg.components.instances) {
-      componentsToCheck = msg.components;
-    }
-    if (!componentsToCheck || !componentsToCheck.instances || !componentsToCheck.instances.length) {
-      figma.ui.postMessage({
-        type: "error",
-        message: "No components to check for updates. Please run a search first."
-      });
-      return;
-    }
-    try {
-      const processor = getParallelUpdateProcessor();
-      const updateQueue = getUpdateQueue();
-      updateQueue.clear();
-      const resultsPromise = processor.processAll();
-      for (const component of componentsToCheck.instances) {
-        updateQueue.addComponent(component);
-      }
-      updateQueue.markProducerDone();
-      const results = await resultsPromise;
-      componentsToCheck.instances = results.instances;
-      componentsToCheck.outdated = results.instances.filter(
-        (inst) => inst.isOutdated
-      );
-      componentsToCheck.lost = results.instances.filter((inst) => inst.isLost);
-      componentsToCheck.deprecated = results.instances.filter(
-        (inst) => inst.isDeprecated
-      );
-      if (componentsToCheck.counts) {
-        componentsToCheck.counts.outdated = (_a2 = componentsToCheck.outdated) == null ? void 0 : _a2.length;
-        componentsToCheck.counts.lost = (_b = componentsToCheck.lost) == null ? void 0 : _b.length;
-        componentsToCheck.counts.deprecated = (_c = componentsToCheck.deprecated) == null ? void 0 : _c.length;
-      }
-      const componentsWithVersions = componentsToCheck.instances.filter(
-        (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
-      );
-      console.log(
-        `[Index] Components with library versions before sending to UI: ${componentsWithVersions.length}`
-      );
-      if (componentsWithVersions.length > 0) {
-        console.log(`[Index] Sample component with versions before UI:`, {
-          name: componentsWithVersions[0].name,
-          libraryComponentVersion: componentsWithVersions[0].libraryComponentVersion,
-          libraryComponentVersionMinimal: componentsWithVersions[0].libraryComponentVersionMinimal
-        });
-      }
-      figma.ui.postMessage({
-        type: "all-results",
-        components: componentsToCheck,
-        colors: lastColorsData || colorsResult,
-        colorsStroke: colorsResultStroke,
-        componentTree: [],
-        totalStats: { nodeTypeCounts: {}, totalNodes: 0, nodeName: "" }
-      });
-    } catch (error) {
-      console.error("Error during update check:", error);
-      figma.ui.postMessage({
-        type: "error",
-        message: `Error checking for updates: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   }
