@@ -422,14 +422,606 @@ async function getDescription(node) {
   return { description: description || "", nodeVersion, nodeVersionMinimal };
 }
 
+// src/js/component/getComponentCacheKey.ts
+var getComponentCacheKey = (component) => {
+  if (!component) {
+    return "unknown_component_no_id";
+  }
+  try {
+    if (!component.key) {
+      return `local_component_${component.id || "no_id"}`;
+    }
+    return component.key;
+  } catch (error) {
+    console.error("Error in getComponentCacheKey:", error);
+    return `error_processing_component_${component.id || "no_id"}`;
+  }
+};
+
+// src/js/update/compareVersions.ts
+var compareVersions = (versionInstance, versionLatest, versionMinimal) => {
+  const extractNumeric = (v) => {
+    if (!v) return [];
+    const m = String(v).match(/^(\d+(?:\.\d+)*)/);
+    if (!m) return [];
+    return m[1].split(".").map((s) => Number(s));
+  };
+  const cmpParts = (a, b) => {
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const p1 = a[i] || 0;
+      const p2 = b[i] || 0;
+      if (p1 < p2) return -1;
+      if (p1 > p2) return 1;
+    }
+    return 0;
+  };
+  if (!versionLatest && !versionInstance) return "Latest";
+  if (!versionLatest) return "Latest";
+  if (!versionInstance) return "Outdated";
+  const instParts = extractNumeric(versionInstance);
+  const latestParts = extractNumeric(versionLatest);
+  const minimalParts = versionMinimal ? extractNumeric(versionMinimal) : null;
+  if (minimalParts) {
+    const cmpToMinimal = cmpParts(instParts, minimalParts);
+    if (cmpToMinimal < 0) return "Outdated";
+    const cmpToLatest = cmpParts(instParts, latestParts);
+    if (cmpToLatest < 0) return "NotLatest";
+    return "Latest";
+  }
+  const cmp = cmpParts(instParts, latestParts);
+  if (cmp < 0) return "Outdated";
+  return "Latest";
+};
+
+// src/js/update/updateAvailabilityCheck.ts
+var checkIsDeprecated = (componentName, setName = "") => {
+  return componentName.includes("Deprecated") || componentName.includes("DEPRECATED") || componentName.includes("\u274C") || setName.includes("Deprecated") || setName.includes("DEPRECATED") || setName.includes("\u274C");
+};
+var componentUpdateCache = /* @__PURE__ */ new Map();
+var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
+  var _a2, _b;
+  if (!mainComponent) {
+    console.error("updateAvailabilityCheck: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
+    return {
+      isOutdated: false,
+      importedId: null,
+      version: instanceVersion != null ? instanceVersion : null,
+      checkVersion: null,
+      description: null,
+      mainComponentId: null,
+      importedMainComponentId: null,
+      libraryComponentName: null,
+      libraryComponentSetName: null,
+      isLost: false,
+      isNotLatest: false,
+      isDeprecated: false
+    };
+  }
+  try {
+    const cacheKey = getComponentCacheKey(mainComponent);
+    const isPartOfSet = ((_a2 = mainComponent.parent) == null ? void 0 : _a2.type) === "COMPONENT_SET";
+    let libraryVersionSourceNode = null;
+    let importedComponentIdForComparison = null;
+    let libraryComponentSetName = null;
+    let libraryComponentName = null;
+    let libraryVersion = null;
+    let libraryVersionMinimal = null;
+    const cached = componentUpdateCache.get(cacheKey);
+    if (cached) {
+      libraryVersion = cached.latest;
+      libraryVersionMinimal = cached.minimal;
+      libraryComponentSetName = cached.libraryComponentSetName;
+      importedComponentIdForComparison = cached.libraryComponentId;
+      libraryComponentName = cached.libraryComponentName;
+      console.log(
+        `[updateAvailabilityCheck] GET FROM CACHE \u2014 ${mainComponent.name}`,
+        {
+          latest: libraryVersion,
+          minimal: libraryVersionMinimal,
+          lost: cached.lost,
+          cacheKey,
+          rawCachedData: cached
+        }
+      );
+      if (cached.lost) {
+        const componentName2 = mainComponent.name || "";
+        const isDeprecated2 = checkIsDeprecated(componentName2);
+        const cachedLostResult = {
+          isOutdated: false,
+          isNotLatest: false,
+          checkVersion: null,
+          isLost: true,
+          isDeprecated: isDeprecated2,
+          mainComponentId: mainComponent.id,
+          importedId: cached.libraryComponentId,
+          importedMainComponentId: cached.libraryComponentId,
+          libraryComponentName: cached.libraryComponentName,
+          libraryComponentSetName: cached.libraryComponentSetName,
+          libraryComponentId: cached.libraryComponentId,
+          libraryComponentVersion: null,
+          libraryComponentVersionMinimal: null,
+          version: instanceVersion != null ? instanceVersion : null,
+          description: null
+        };
+        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", {
+          cacheKey,
+          name: mainComponent.name,
+          isDeprecated: isDeprecated2
+        });
+        return cachedLostResult;
+      }
+    } else {
+      if (!mainComponent.key) {
+        console.error("\u0423 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043A\u043B\u044E\u0447:", mainComponent.name);
+      } else if (isPartOfSet && ((_b = mainComponent.parent) == null ? void 0 : _b.key)) {
+        try {
+          const importedSet = await figma.importComponentSetByKeyAsync(
+            mainComponent.parent.key
+          );
+          if (importedSet) {
+            libraryVersionSourceNode = importedSet;
+            libraryComponentSetName = importedSet.name;
+            const importedComponentInSet = importedSet.findChild(
+              (comp) => comp.type === "COMPONENT" && comp.key === mainComponent.key
+            );
+            if (importedComponentInSet) {
+              if (!importedComponentInSet.id) {
+                console.error(
+                  `\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponentInSet.name}" \u0432 \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`
+                );
+              } else {
+                importedComponentIdForComparison = importedComponentInSet.id;
+                libraryComponentName = importedComponentInSet.name;
+              }
+            } else {
+              console.error(
+                `\u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${mainComponent.name}" (key: ${mainComponent.key}) \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u043C \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}"`
+              );
+            }
+          } else {
+            console.error(
+              `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043D\u0430\u0431\u043E\u0440 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}" (parent key: ${mainComponent.parent.key})`
+            );
+          }
+        } catch (setError) {
+          console.error(
+            `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043D\u0430\u0431\u043E\u0440\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}":`,
+            setError
+          );
+        }
+      } else {
+        try {
+          const importedComponent = await figma.importComponentByKeyAsync(
+            mainComponent.key
+          );
+          if (importedComponent) {
+            if (!importedComponent.id) {
+              console.error(
+                `\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponent.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`
+              );
+            } else {
+              libraryVersionSourceNode = importedComponent;
+              importedComponentIdForComparison = importedComponent.id;
+              libraryComponentName = importedComponent.name;
+            }
+          }
+        } catch (componentError) {
+          console.error(
+            `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent.name}":`,
+            componentError
+          );
+        }
+      }
+      if (libraryVersionSourceNode) {
+        const libraryDescData = await getDescription(libraryVersionSourceNode);
+        libraryVersion = libraryDescData.nodeVersion;
+        libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
+        componentUpdateCache.set(cacheKey, {
+          latest: libraryVersion,
+          minimal: libraryVersionMinimal,
+          lost: false,
+          libraryComponentSetName,
+          libraryComponentId: importedComponentIdForComparison,
+          libraryComponentName
+        });
+      } else {
+        componentUpdateCache.set(cacheKey, {
+          latest: null,
+          minimal: null,
+          lost: true,
+          libraryComponentSetName: null,
+          libraryComponentId: null,
+          libraryComponentName: null
+        });
+      }
+    }
+    const componentName = mainComponent.name || "";
+    const setName = libraryComponentSetName || "";
+    const isDeprecated = checkIsDeprecated(componentName, setName);
+    const result = {
+      isOutdated: false,
+      isNotLatest: false,
+      checkVersion: null,
+      isLost: false,
+      isDeprecated,
+      mainComponentId: mainComponent.id,
+      importedId: importedComponentIdForComparison,
+      importedMainComponentId: importedComponentIdForComparison,
+      libraryComponentName,
+      libraryComponentSetName,
+      libraryComponentId: importedComponentIdForComparison,
+      libraryComponentVersion: libraryVersion,
+      libraryComponentVersionMinimal: libraryVersionMinimal,
+      version: instanceVersion != null ? instanceVersion : null,
+      description: null
+    };
+    if (libraryVersion || libraryVersionMinimal) {
+      const compareResult = compareVersions(
+        instanceVersion,
+        libraryVersion,
+        libraryVersionMinimal
+      );
+      result.isOutdated = compareResult === "Outdated";
+      result.isNotLatest = compareResult === "NotLatest";
+      result.checkVersion = compareResult;
+    } else if (importedComponentIdForComparison) {
+      result.isOutdated = false;
+      result.checkVersion = "Latest";
+    } else {
+      result.isLost = true;
+    }
+    console.warn(
+      `[updateAvailabilityCheck] FINAL RESULT for ${mainComponent.name}:`,
+      {
+        name: mainComponent.name,
+        isOutdated: result.isOutdated,
+        isNotLatest: result.isNotLatest,
+        isLost: result.isLost,
+        checkVersion: result.checkVersion,
+        instanceVersion,
+        libraryVersion: result.libraryComponentVersion,
+        libraryVersionMinimal: result.libraryComponentVersionMinimal,
+        libraryComponentId: result.libraryComponentId,
+        libraryComponentName: result.libraryComponentName,
+        libraryComponentSetName: result.libraryComponentSetName,
+        cacheKey
+      }
+    );
+    return result;
+  } catch (error) {
+    console.error(
+      `\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent ? mainComponent.name : "N/A"}":`,
+      {
+        componentName: mainComponent ? mainComponent.name : "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E",
+        error: error.message,
+        stack: error.stack
+      }
+    );
+    const safeResult = {
+      isOutdated: false,
+      isNotLatest: false,
+      isDeprecated: false,
+      mainComponentId: mainComponent ? mainComponent.id : null,
+      importedMainComponentId: null,
+      importedId: null,
+      libraryComponentName: mainComponent ? mainComponent.name : null,
+      libraryComponentSetName: null,
+      libraryComponentId: null,
+      checkVersion: null,
+      version: instanceVersion != null ? instanceVersion : null,
+      description: null,
+      libraryComponentVersion: null,
+      libraryComponentVersionMinimal: null,
+      isLost: false
+    };
+    return safeResult;
+  }
+};
+var clearUpdateCache = () => {
+  componentUpdateCache.clear();
+};
+
+// src/js/update/updateQueue.ts
+var UpdateQueue = class {
+  constructor(config = {}) {
+    this.queue = [];
+    this.processing = /* @__PURE__ */ new Set();
+    this.completed = /* @__PURE__ */ new Map();
+    this.seenIds = /* @__PURE__ */ new Set();
+    this.isRunning = false;
+    this.totalComponents = 0;
+    this.processedCount = 0;
+    this.activeBatchesCount = 0;
+    this.producerDone = false;
+    this.config = __spreadValues({
+      batchSize: 5,
+      maxConcurrent: 2,
+      progressUpdateInterval: 1e3,
+      autoStart: true
+    }, config);
+  }
+  /**
+   * Запускает обработку, если включён autoStart и очередь ещё не работает
+   */
+  maybeStartProcessing() {
+    if (this.config.autoStart && !this.isRunning) {
+      void this.startProcessing();
+    }
+  }
+  /**
+   * Add component to the update queue
+   */
+  addComponent(component) {
+    if (!component.mainComponentKey) {
+      console.warn(
+        "[UpdateQueue] Component without mainComponentKey skipped:",
+        component.name
+      );
+      return;
+    }
+    const dedupeKey = `${component.mainComponentKey || "unknown"}_$$${component.nodeId || "no-node"}`;
+    if (this.seenIds.has(dedupeKey)) {
+      console.warn("[UpdateQueue] Duplicate component detected and skipped:", {
+        name: component.name,
+        nodeId: component.nodeId,
+        mainKey: component.mainComponentKey
+      });
+      return;
+    }
+    this.seenIds.add(dedupeKey);
+    const queueItem = {
+      component,
+      index: this.queue.length,
+      totalCount: this.totalComponents
+    };
+    this.queue.push(queueItem);
+    this.totalComponents++;
+    this.maybeStartProcessing();
+  }
+  /**
+   * Add multiple components to the queue
+   */
+  addComponents(components) {
+    components.forEach((component) => this.addComponent(component));
+  }
+  /**
+   * Start processing manually after all components are added
+   */
+  startProcessingManually() {
+    if (!this.isRunning) {
+      this.startProcessing();
+    }
+  }
+  /**
+   * Set progress callback
+   */
+  onProgress(callback) {
+    this.onProgressCallback = callback;
+  }
+  /**
+   * Set completion callback
+   */
+  onComplete(callback) {
+    this.onCompleteCallback = callback;
+  }
+  /**
+   * Пометить, что продюсер (сканирование) завершён
+   */
+  markProducerDone() {
+    this.producerDone = true;
+    console.log("[UpdateQueue] Producer marked as done");
+  }
+  /**
+   * Start processing the queue
+   */
+  async startProcessing() {
+    if (this.isRunning) {
+      console.log(
+        "[UpdateQueue] startProcessing called but already running, skipping"
+      );
+      return;
+    }
+    this.isRunning = true;
+    console.log("[UpdateQueue] Starting parallel update check processing");
+    const activeBatches = [];
+    while (true) {
+      while (activeBatches.length < this.config.maxConcurrent && this.queue.length > 0) {
+        const batch = this.queue.splice(0, this.config.batchSize);
+        const batchPromise = this.processBatch(batch);
+        activeBatches.push(batchPromise);
+        this.activeBatchesCount++;
+        batchPromise.finally(() => {
+          const index = activeBatches.indexOf(batchPromise);
+          if (index > -1) {
+            activeBatches.splice(index, 1);
+            this.activeBatchesCount--;
+          }
+        });
+      }
+      if (this.queue.length === 0 && activeBatches.length === 0) {
+        if (this.producerDone) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        continue;
+      }
+      if (activeBatches.length >= this.config.maxConcurrent) {
+        await Promise.race(activeBatches);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    this.isRunning = false;
+    this.notifyCompletion();
+  }
+  /**
+   * Reset queue state
+   */
+  reset() {
+    this.queue = [];
+    this.processing.clear();
+    this.completed.clear();
+    this.seenIds.clear();
+    this.totalComponents = 0;
+    this.processedCount = 0;
+    this.activeBatchesCount = 0;
+    this.isRunning = false;
+    this.producerDone = false;
+  }
+  /**
+   * Clear queue state without stopping processing
+   */
+  clear() {
+    console.log("[UpdateQueue] Clearing queue state");
+    this.queue = [];
+    this.processing.clear();
+    this.completed.clear();
+    this.seenIds.clear();
+    this.totalComponents = 0;
+    this.processedCount = 0;
+    this.activeBatchesCount = 0;
+    this.isRunning = false;
+    this.producerDone = false;
+  }
+  // Возвращает текущий статус очереди
+  getStatus() {
+    return {
+      queueLength: this.queue.length,
+      total: this.totalComponents,
+      processing: this.processing.size,
+      completed: this.completed.size,
+      isRunning: this.isRunning
+    };
+  }
+  // Обработка батча компонентов
+  async processBatch(batch) {
+    for (const item of batch) {
+      const component = item.component;
+      const dedupeKey = `${component.mainComponentKey || "unknown"}_$$$${component.nodeId || "no-node"}`;
+      this.processing.add(dedupeKey);
+      let updated = component;
+      try {
+        if (!component.mainComponentId || component.remote === false) {
+          updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+        } else {
+          const trimmedName = (component.name || "").trim();
+          const skipByName = component.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
+          if (component.isIcon === true || skipByName) {
+            updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+          } else {
+            const mainComponent = await figma.getNodeByIdAsync(component.mainComponentId);
+            if (!mainComponent) {
+              console.warn(`[UpdateQueue] Main component not found by id: ${component.mainComponentId}`);
+              updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+            } else {
+              const info = await updateAvailabilityCheck(mainComponent, component.nodeVersion);
+              updated = __spreadProps(__spreadValues({}, component), {
+                isOutdated: info.isOutdated,
+                checkVersion: info.checkVersion,
+                isNotLatest: Boolean(info.isNotLatest),
+                isLost: Boolean(info.isLost),
+                isDeprecated: Boolean(info.isDeprecated),
+                libraryComponentName: info.libraryComponentName,
+                libraryComponentSetName: info.libraryComponentSetName,
+                libraryComponentId: info.libraryComponentId,
+                libraryComponentVersion: info.libraryComponentVersion,
+                libraryComponentVersionMinimal: info.libraryComponentVersionMinimal,
+                updateStatus: "checked"
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[UpdateQueue] Error processing component "${component.name}":`, err);
+        updated = __spreadProps(__spreadValues({}, component), { updateStatus: "checked" });
+      } finally {
+        this.completed.set(dedupeKey, updated);
+        this.processing.delete(dedupeKey);
+        this.processedCount++;
+        if (this.onProgressCallback) {
+          try {
+            this.onProgressCallback(this.processedCount, this.totalComponents, updated);
+          } catch (cbErr) {
+            console.error("[UpdateQueue] onProgress callback error:", cbErr);
+          }
+        }
+      }
+    }
+  }
+  // Финализирует и отдает результаты
+  notifyCompletion() {
+    const instances = Array.from(this.completed.values());
+    const outdated = instances.filter((i) => i.isOutdated);
+    const lost = instances.filter((i) => i.isLost);
+    const deprecated = instances.filter((i) => i.isDeprecated);
+    const iconsCount = instances.filter((i) => i.isIcon).length;
+    const componentsCount = instances.length - iconsCount;
+    const results = {
+      instances,
+      outdated,
+      lost,
+      deprecated,
+      counts: {
+        components: componentsCount,
+        icons: iconsCount,
+        outdated: outdated.length,
+        lost: lost.length,
+        deprecated: deprecated.length
+      }
+    };
+    if (this.onCompleteCallback) {
+      try {
+        this.onCompleteCallback(results);
+      } catch (err) {
+        console.error("[UpdateQueue] onComplete callback error:", err);
+      }
+    }
+  }
+  // Мягкая остановка: помечаем как завершение продюсера и ждем активные батчи
+  async stop() {
+    this.producerDone = true;
+    const deadline = Date.now() + 2e3;
+    while (this.activeBatchesCount > 0 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    this.isRunning = false;
+  }
+};
+var globalUpdateQueue = null;
+var getUpdateQueue = () => {
+  if (!globalUpdateQueue) {
+    globalUpdateQueue = new UpdateQueue({
+      batchSize: 5,
+      maxConcurrent: 3,
+      progressUpdateInterval: 1e3,
+      autoStart: true
+      // запускаем обработку автоматически при добавлении первого элемента
+    });
+  }
+  return globalUpdateQueue;
+};
+var resetUpdateQueue = () => {
+  if (globalUpdateQueue) {
+    globalUpdateQueue.stop();
+    globalUpdateQueue = null;
+  }
+};
+
 // src/js/component/processNodeComponent.ts
 var processNodeComponent = async (node, componentsResult2) => {
+  const isButtonComponent = node.name.toLowerCase().includes("button");
   let mainComponent = null;
   if (node.type === "INSTANCE") {
     try {
-      mainComponent = await retryGetMainComponent(node, node.name);
+      mainComponent = await retryGetMainComponent(
+        node,
+        node.name
+      );
     } catch (error) {
-      console.error(`[processNodeComponent] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`, error);
+      console.error(
+        `[processNodeComponent] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A:`,
+        error
+      );
       figma.ui.postMessage({
         type: "error",
         message: `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C mainComponent \u0434\u043B\u044F ${node.name} \u043F\u043E\u0441\u043B\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u043F\u043E\u043F\u044B\u0442\u043E\u043A: ${error.message}`
@@ -449,7 +1041,10 @@ var processNodeComponent = async (node, componentsResult2) => {
     }
     if ("children" in node) {
       for (const child of node.children) {
-        const childResults = await processNodeComponent(child, componentsResult2);
+        const childResults = await processNodeComponent(
+          child,
+          componentsResult2
+        );
         if (childResults) {
           if (Array.isArray(childResults)) {
             results.push(...childResults);
@@ -459,7 +1054,6 @@ var processNodeComponent = async (node, componentsResult2) => {
         }
       }
     }
-    console.log("COMPONENT_SET recursive results:", results);
     return results;
   }
   let mainComponentName = mainComponent ? mainComponent.name : null;
@@ -506,7 +1100,9 @@ var processNodeComponent = async (node, componentsResult2) => {
     }
     let parent2 = node.parent;
     if (!mainComponent) {
-      console.warn(`[processNodeComponent] mainComponent is null for node ${node.name}, skipping.`);
+      console.warn(
+        `[processNodeComponent] mainComponent is null for node ${node.name}, skipping.`
+      );
       return null;
     }
     const componentData = {
@@ -557,8 +1153,31 @@ var processNodeComponent = async (node, componentsResult2) => {
       // Пропускать ли проверку обновления для вложенных инстансов
       pluginDataKey,
       // Пользовательский ключ из PluginData
-      updateStatus: "checking"
+      updateStatus: "checking",
+      // Инициализируем поля версий библиотеки как null (будут обновлены в updateQueue)
+      libraryComponentVersion: null,
+      libraryComponentVersionMinimal: null,
+      libraryComponentName: null,
+      libraryComponentSetName: null,
+      libraryComponentId: null
     };
+    const updateQueue = getUpdateQueue();
+    if (!componentData.mainComponentKey) {
+      console.warn(
+        `[processNodeComponent] \u041F\u0420\u041E\u041F\u0423\u0429\u0415\u041D - \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 mainComponentKey \u0434\u043B\u044F:`,
+        {
+          name: componentData.name,
+          type: componentData.type,
+          nodeId: componentData.nodeId,
+          mainComponent: mainComponent ? {
+            name: mainComponent.name,
+            key: mainComponent.key,
+            id: mainComponent.id
+          } : "null"
+        }
+      );
+    }
+    updateQueue.addComponent(componentData);
     if (componentData && (node.type === "INSTANCE" || node.type === "COMPONENT")) {
       if (Array.isArray(componentsResult2.instances)) {
         componentsResult2.instances.push(componentData);
@@ -567,7 +1186,10 @@ var processNodeComponent = async (node, componentsResult2) => {
           componentsResult2.counts.icons = (componentsResult2.counts.icons || 0) + 1;
         }
       } else {
-        console.error("componentsResult.instances is not an array:", componentsResult2.instances);
+        console.error(
+          "componentsResult.instances is not an array:",
+          componentsResult2.instances
+        );
       }
     }
     return componentData;
@@ -644,351 +1266,154 @@ var processNodeStatistics = (nodes, nodeName = "Unnamed Selection") => {
   };
 };
 
-// src/js/component/getComponentCacheKey.ts
-var getComponentCacheKey = (component) => {
-  if (!component) {
-    return "unknown_component_no_id";
+// src/js/update/parallelUpdateProcessor.ts
+var ParallelUpdateProcessor = class {
+  constructor(config = {}) {
+    this.isProcessing = false;
+    this.processedCount = 0;
+    this.totalCount = 0;
+    this.config = __spreadValues({
+      maxConcurrent: 3,
+      batchSize: 5,
+      progressUpdateInterval: 1e3
+    }, config);
   }
-  try {
-    if (!component.key) {
-      return `local_component_${component.id || "no_id"}`;
+  /**
+   * Set progress callback
+   */
+  onProgress(callback) {
+    this.onProgressCallback = callback;
+  }
+  /**
+   * Set completion callback
+   */
+  onComplete(callback) {
+    this.onCompleteCallback = callback;
+  }
+  /**
+   * Process all components in the update queue
+   */
+  async processAll() {
+    if (this.isProcessing) {
+      throw new Error("Processor is already running");
     }
-    const parent = component.parent;
-    if (parent && parent.type === "COMPONENT_SET" && parent.key) {
-      const componentNameInSet = component.name || "unnamed_variant";
-      return `set_${parent.key}_variant_${componentNameInSet}`;
-    }
-    return component.key;
-  } catch (error) {
-    console.error("Error in getComponentCacheKey:", error);
-    return `error_processing_component_${component.id || "no_id"}`;
-  }
-};
-
-// src/js/update/compareVersions.ts
-var compareVersions = (versionInstance, versionLatest, versionMinimal) => {
-  const extractNumeric = (v) => {
-    if (!v) return [];
-    const m = String(v).match(/^(\d+(?:\.\d+)*)/);
-    if (!m) return [];
-    return m[1].split(".").map((s) => Number(s));
-  };
-  const cmpParts = (a, b) => {
-    const len = Math.max(a.length, b.length);
-    for (let i = 0; i < len; i++) {
-      const p1 = a[i] || 0;
-      const p2 = b[i] || 0;
-      if (p1 < p2) return -1;
-      if (p1 > p2) return 1;
-    }
-    return 0;
-  };
-  if (!versionLatest && !versionInstance) return "Latest";
-  if (!versionLatest) return "Latest";
-  if (!versionInstance) return "Outdated";
-  const instParts = extractNumeric(versionInstance);
-  const latestParts = extractNumeric(versionLatest);
-  const minimalParts = versionMinimal ? extractNumeric(versionMinimal) : null;
-  if (minimalParts) {
-    const cmpToMinimal = cmpParts(instParts, minimalParts);
-    if (cmpToMinimal < 0) return "Outdated";
-    const cmpToLatest = cmpParts(instParts, latestParts);
-    if (cmpToLatest < 0) return "NotLatest";
-    return "Latest";
-  }
-  const cmp = cmpParts(instParts, latestParts);
-  if (cmp < 0) return "Outdated";
-  return "Latest";
-};
-
-// src/js/update/updateAvailabilityCheck.ts
-var checkIsDeprecated = (componentName, setName = "") => {
-  return componentName.includes("Deprecated") || componentName.includes("DEPRECATED") || componentName.includes("\u274C") || setName.includes("Deprecated") || setName.includes("DEPRECATED") || setName.includes("\u274C");
-};
-var componentUpdateCache = /* @__PURE__ */ new Map();
-var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
-  var _a2, _b;
-  if (!mainComponent) {
-    console.error("updateAvailabilityCheck: \u043F\u043E\u043B\u0443\u0447\u0435\u043D \u043F\u0443\u0441\u0442\u043E\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442");
-    return {
-      isOutdated: false,
-      importedId: null,
-      version: instanceVersion != null ? instanceVersion : null,
-      checkVersion: null,
-      description: null,
-      mainComponentId: null,
-      importedMainComponentId: null,
-      libraryComponentName: null,
-      libraryComponentSetName: null,
-      isLost: false,
-      isNotLatest: false,
-      isDeprecated: false
-    };
-  }
-  try {
-    const cacheKey = getComponentCacheKey(mainComponent);
-    const isPartOfSet = ((_a2 = mainComponent.parent) == null ? void 0 : _a2.type) === "COMPONENT_SET";
-    let libraryVersionSourceNode = null;
-    let importedComponentIdForComparison = null;
-    let libraryComponentSetName = null;
-    let libraryVersion = null;
-    let libraryVersionMinimal = null;
-    const cached = componentUpdateCache.get(cacheKey);
-    if (cached) {
-      libraryVersion = cached.latest;
-      libraryVersionMinimal = cached.minimal;
-      libraryComponentSetName = cached.libraryComponentSetName;
-      importedComponentIdForComparison = cached.libraryComponentId;
-      console.warn("DEBUG: \u0412\u0437\u044F\u043B\u0438 \u0438\u0437 \u043A\u044D\u0448\u0430 \u0434\u043B\u044F", cacheKey, { name: mainComponent.name, latest: libraryVersion, minimal: libraryVersionMinimal, lost: cached.lost });
-      if (cached.lost) {
-        const componentName2 = mainComponent.name || "";
-        const isDeprecated2 = checkIsDeprecated(componentName2);
-        const cachedLostResult = {
-          isOutdated: false,
-          isNotLatest: false,
-          checkVersion: null,
-          isLost: true,
-          isDeprecated: isDeprecated2,
-          mainComponentId: mainComponent.id,
-          importedId: cached.libraryComponentId,
-          importedMainComponentId: cached.libraryComponentId,
-          libraryComponentName: null,
-          libraryComponentSetName: cached.libraryComponentSetName,
-          libraryComponentId: cached.libraryComponentId,
-          libraryComponentVersion: null,
-          libraryComponentVersionMinimal: null,
-          version: instanceVersion != null ? instanceVersion : null,
-          description: null
-        };
-        console.warn("DEBUG: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D \u043A\u0430\u043A \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u043D\u044B\u0439 (\u0438\u0437 \u043A\u044D\u0448\u0430)", { cacheKey, name: mainComponent.name, isDeprecated: isDeprecated2 });
-        return cachedLostResult;
-      }
-    } else {
-      if (!mainComponent.key) {
-        console.error("\u0423 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043A\u043B\u044E\u0447:", mainComponent.name);
-      } else if (isPartOfSet && ((_b = mainComponent.parent) == null ? void 0 : _b.key)) {
-        try {
-          const importedSet = await figma.importComponentSetByKeyAsync(mainComponent.parent.key);
-          if (importedSet) {
-            libraryVersionSourceNode = importedSet;
-            libraryComponentSetName = importedSet.name;
-            const importedComponentInSet = importedSet.findChild(
-              (comp) => comp.type === "COMPONENT" && comp.key === mainComponent.key
-            );
-            if (importedComponentInSet) {
-              if (!importedComponentInSet.id) {
-                console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponentInSet.name}" \u0432 \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
+    this.isProcessing = true;
+    this.processedCount = 0;
+    try {
+      const updateQueue = getUpdateQueue();
+      const status = updateQueue.getStatus();
+      this.totalCount = status.total;
+      return new Promise((resolve, reject) => {
+        updateQueue.onProgress(async (processed, total, component) => {
+          this.processedCount = processed;
+          this.totalCount = total;
+          if (this.onProgressCallback) {
+            await this.onProgressCallback(processed, total, component == null ? void 0 : component.name);
+          }
+        });
+        updateQueue.onComplete((results) => {
+          this.isProcessing = false;
+          try {
+            if (this.onCompleteCallback) {
+              if (typeof this.onCompleteCallback !== "function") {
+                console.warn("[ParallelUpdateProcessor] onCompleteCallback \u0437\u0430\u0434\u0430\u043D, \u043D\u043E \u044D\u0442\u043E \u043D\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u044F");
               } else {
-                importedComponentIdForComparison = importedComponentInSet.id;
+                this.onCompleteCallback(results);
               }
             } else {
-              console.error(`\u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${mainComponent.name}" (key: ${mainComponent.key}) \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u043C \u043D\u0430\u0431\u043E\u0440\u0435 "${importedSet.name}"`);
+              console.warn("[ParallelUpdateProcessor] onCompleteCallback \u043D\u0435 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D");
             }
-          } else {
-            console.error(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043D\u0430\u0431\u043E\u0440 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}" (parent key: ${mainComponent.parent.key})`);
+          } catch (err) {
+            console.error("[ParallelUpdateProcessor] \u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u043D\u0443\u0442\u0440\u0438 onCompleteCallback:", err);
+          } finally {
+            resolve(results);
           }
-        } catch (setError) {
-          console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043D\u0430\u0431\u043E\u0440\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F "${mainComponent.name}":`, setError);
-        }
-      } else {
-        try {
-          const importedComponent = await figma.importComponentByKeyAsync(mainComponent.key);
-          if (importedComponent) {
-            if (!importedComponent.id) {
-              console.error(`\u041E\u0448\u0438\u0431\u043A\u0430: \u0418\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u044B\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 "${importedComponent.name}" \u043D\u0435 \u0438\u043C\u0435\u0435\u0442 ID.`);
-            } else {
-              libraryVersionSourceNode = importedComponent;
-              importedComponentIdForComparison = importedComponent.id;
-            }
-          }
-        } catch (componentError) {
-          console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0438\u043C\u043F\u043E\u0440\u0442\u0435 \u043E\u0434\u0438\u043D\u043E\u0447\u043D\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent.name}":`, componentError);
-        }
-      }
-      if (libraryVersionSourceNode) {
-        const libraryDescData = await getDescription(libraryVersionSourceNode);
-        libraryVersion = libraryDescData.nodeVersion;
-        libraryVersionMinimal = libraryDescData.nodeVersionMinimal;
-        componentUpdateCache.set(cacheKey, {
-          latest: libraryVersion,
-          minimal: libraryVersionMinimal,
-          lost: false,
-          libraryComponentSetName,
-          libraryComponentId: importedComponentIdForComparison
         });
-      } else {
-        componentUpdateCache.set(cacheKey, {
-          latest: null,
-          minimal: null,
-          lost: true,
-          libraryComponentSetName: null,
-          libraryComponentId: null
-        });
-      }
-    }
-    const componentName = mainComponent.name || "";
-    const setName = libraryComponentSetName || "";
-    const isDeprecated = checkIsDeprecated(componentName, setName);
-    const result = {
-      isOutdated: false,
-      isNotLatest: false,
-      checkVersion: null,
-      isLost: false,
-      isDeprecated,
-      mainComponentId: mainComponent.id,
-      importedId: importedComponentIdForComparison,
-      importedMainComponentId: importedComponentIdForComparison,
-      libraryComponentName: mainComponent.name,
-      libraryComponentSetName,
-      libraryComponentId: importedComponentIdForComparison,
-      libraryComponentVersion: libraryVersion,
-      libraryComponentVersionMinimal: libraryVersionMinimal,
-      version: instanceVersion != null ? instanceVersion : null,
-      description: null
-    };
-    if (libraryVersion || libraryVersionMinimal) {
-      const compareResult = compareVersions(instanceVersion, libraryVersion, libraryVersionMinimal);
-      result.isOutdated = compareResult === "Outdated";
-      result.isNotLatest = compareResult === "NotLatest";
-      result.checkVersion = compareResult;
-    } else if (importedComponentIdForComparison) {
-      result.isOutdated = false;
-      result.checkVersion = "Latest";
-    } else {
-      result.isLost = true;
-    }
-    console.log("\u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430:", {
-      name: mainComponent.name,
-      isOutdated: result.isOutdated,
-      isNotLatest: result.isNotLatest,
-      isLost: result.isLost,
-      instanceVersion,
-      libraryVersion: result.libraryComponentVersion,
-      libraryVersionMinimal: result.libraryComponentVersionMinimal,
-      cacheKey
-    });
-    return result;
-  } catch (error) {
-    console.error(`\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent ? mainComponent.name : "N/A"}":`, {
-      componentName: mainComponent ? mainComponent.name : "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E",
-      error: error.message,
-      stack: error.stack
-    });
-    const safeResult = {
-      isOutdated: false,
-      isNotLatest: false,
-      isDeprecated: false,
-      mainComponentId: mainComponent ? mainComponent.id : null,
-      importedMainComponentId: null,
-      importedId: null,
-      libraryComponentName: mainComponent ? mainComponent.name : null,
-      libraryComponentSetName: null,
-      libraryComponentId: null,
-      checkVersion: null,
-      version: instanceVersion != null ? instanceVersion : null,
-      description: null,
-      libraryComponentVersion: null,
-      libraryComponentVersionMinimal: null,
-      isLost: false
-    };
-    return safeResult;
-  }
-};
-var clearUpdateCache = () => {
-  componentUpdateCache.clear();
-};
-
-// src/js/update/checkComponentUpdates.ts
-var checkComponentUpdates = async (componentsResult2) => {
-  var _a2, _b, _c;
-  console.log("=== \u041D\u0430\u0447\u0430\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 ===");
-  const totalComponentsToCheck = componentsResult2.instances.length;
-  const updatedInstances = [];
-  await updateProgress("check-updates", 0, totalComponentsToCheck, "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439...");
-  for (let i = 0; i < totalComponentsToCheck; i++) {
-    const instance = componentsResult2.instances[i];
-    try {
-      if (!instance.mainComponentId || instance.remote === false) {
-        updatedInstances.push(instance);
-        continue;
-      }
-      const trimmedName = (instance.name || "").trim();
-      const isInstanceWithSkippedName = instance.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
-      if (instance.isIcon === true || isInstanceWithSkippedName) {
-        updatedInstances.push(__spreadProps(__spreadValues({}, instance), { updateStatus: "checked" }));
-        continue;
-      }
-      const mainComponent = await figma.getNodeByIdAsync(instance.mainComponentId);
-      if (!mainComponent) {
-        console.warn(`\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0439\u0442\u0438 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 \u0441 ID: ${instance.mainComponentId}`);
-        updatedInstances.push(instance);
-        continue;
-      }
-      const updateInfo = await updateAvailabilityCheck(mainComponent, instance.nodeVersion);
-      console.log("DEBUG: \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 updateAvailabilityCheck \u0434\u043B\u044F", instance.name, {
-        isOutdated: updateInfo.isOutdated,
-        checkVersion: updateInfo.checkVersion,
-        version: updateInfo.version,
-        isNotLatest: updateInfo.isNotLatest,
-        libraryComponentVersion: updateInfo.libraryComponentVersion,
-        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
-        isLost: updateInfo.isLost
       });
-      updatedInstances.push(__spreadProps(__spreadValues({}, instance), {
-        isOutdated: updateInfo.isOutdated,
-        checkVersion: updateInfo.checkVersion,
-        isNotLatest: Boolean(updateInfo.isNotLatest),
-        isLost: Boolean(updateInfo.isLost),
-        isDeprecated: Boolean(updateInfo.isDeprecated),
-        libraryComponentName: updateInfo.libraryComponentName,
-        libraryComponentSetName: updateInfo.libraryComponentSetName,
-        libraryComponentId: updateInfo.libraryComponentId,
-        libraryComponentVersion: updateInfo.libraryComponentVersion,
-        libraryComponentVersionMinimal: updateInfo.libraryComponentVersionMinimal,
-        updateStatus: "checked"
-      }));
-    } catch (componentError) {
-      console.warn(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${instance.name}":`, componentError);
-      updatedInstances.push(__spreadProps(__spreadValues({}, instance), { updateStatus: "checked" }));
-    }
-    if (i % 5 === 0) {
-      await updateProgress("check-updates", i + 1, totalComponentsToCheck, `\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430: ${instance.name}`, instance.name);
+    } catch (error) {
+      this.isProcessing = false;
+      throw error;
     }
   }
-  componentsResult2.instances = updatedInstances;
-  componentsResult2.outdated = updatedInstances.filter((inst) => inst.isOutdated);
-  componentsResult2.lost = updatedInstances.filter((inst) => inst.isLost);
-  componentsResult2.deprecated = updatedInstances.filter((inst) => inst.isDeprecated);
-  if (componentsResult2.counts) {
-    componentsResult2.counts.outdated = (_a2 = componentsResult2.outdated) == null ? void 0 : _a2.length;
-    componentsResult2.counts.lost = (_b = componentsResult2.lost) == null ? void 0 : _b.length;
-    componentsResult2.counts.deprecated = (_c = componentsResult2.deprecated) == null ? void 0 : _c.length;
+  /**
+   * Stop processing
+   */
+  async stop() {
+    if (!this.isProcessing) {
+      return;
+    }
+    const updateQueue = getUpdateQueue();
+    await updateQueue.stop();
+    this.isProcessing = false;
   }
+  /**
+   * Get current processing status
+   */
+  getStatus() {
+    return {
+      isProcessing: this.isProcessing,
+      processed: this.processedCount,
+      total: this.totalCount,
+      progress: this.totalCount > 0 ? this.processedCount / this.totalCount * 100 : 0
+    };
+  }
+};
+var globalProcessor = null;
+var getParallelUpdateProcessor = () => {
+  if (!globalProcessor) {
+    globalProcessor = new ParallelUpdateProcessor({
+      maxConcurrent: 3,
+      batchSize: 5,
+      progressUpdateInterval: 1e3
+    });
+  }
+  return globalProcessor;
 };
 
 // src/js/index.ts
 if (typeof window !== "undefined") {
-  window.addEventListener("unhandledrejection", (event) => {
-    const err = event.reason;
-    console.error("Global unhandledrejection:", err);
-    const errMessage = err instanceof Error ? err.message : String(err);
-    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
-      figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
-      setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 15e3);
-    } else {
-      figma.ui.postMessage({
-        type: "error",
-        message: `Unhandled Rejection: ${errMessage}`
-      });
+  window.addEventListener(
+    "unhandledrejection",
+    (event) => {
+      const err = event.reason;
+      console.error("Global unhandledrejection:", err);
+      const errMessage = err instanceof Error ? err.message : String(err);
+      if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(
+        errMessage
+      )) {
+        figma.notify(
+          "\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D."
+        );
+        setTimeout(
+          () => figma.closePlugin(
+            "\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."
+          ),
+          15e3
+        );
+      } else {
+        figma.ui.postMessage({
+          type: "error",
+          message: `Unhandled Rejection: ${errMessage}`
+        });
+      }
     }
-  });
+  );
   window.addEventListener("error", (event) => {
     const err = event.error;
     console.error("Global error:", err);
     const errMessage = err instanceof Error ? err.message : String(err);
-    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(errMessage)) {
-      figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
-      setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 15e3);
+    if (/wasm|memory|out of bounds|null function|function signature mismatch/i.test(
+      errMessage
+    )) {
+      figma.notify(
+        "\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u043C\u044F\u0442\u0438 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D."
+      );
+      setTimeout(
+        () => figma.closePlugin(
+          "\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."
+        ),
+        15e3
+      );
     } else {
       figma.ui.postMessage({
         type: "error",
@@ -1011,7 +1436,7 @@ if (currentUser) {
 }
 var splashScreenCombinations = [
   {
-    imageUrl: "https://downloader.disk.yandex.ru/preview/9f312e965a5cb62de3b834fbdbec01be8981c981359610a3e7c562f55be0f4ee/68686aa6/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=0&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&size=2048x2048",
+    imageUrl: "https://4.downloader.disk.yandex.ru/preview/89878b59d39343329dc44c8003191698e2face0b889acc78648296b8337967f4/inf/6M6Ljd-rK85c-sAIgPYzKWBKgOuPSPDx-IDf2mqBKp1t-o7e2PHljEgnQMWzjYVuTVsd2JaL-44X0Lx4c19FNw%3D%3D?uid=47857770&filename=pionerka.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=47857770&tknv=v3&size=3456x1916",
     titleText: "\u0414\u0438\u0437\u0430\u0439\u043D\u0435\u0440, \u043A \u0431\u043E\u0440\u044C\u0431\u0435 \u0437\u0430 \u043F\u043E\u0431\u0435\u0434\u0443 \u0432\u0441\u0435\u043E\u0431\u0449\u0435\u0439 \u043A\u043E\u043D\u0441\u0438\u0441\u0442\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u0438 \u0431\u0443\u0434\u044C \u0433\u043E\u0442\u043E\u0432!",
     buttonText: "\u0412\u0441\u0435\u0433\u0434\u0430 \u0433\u043E\u0442\u043E\u0432!"
   },
@@ -1038,7 +1463,9 @@ if (currentUser == null ? void 0 : currentUser.id) {
   if (typeof userSettingIndex === "number" && splashScreenCombinations[userSettingIndex]) {
     selectedSplashData = splashScreenCombinations[userSettingIndex];
   } else {
-    const randomIndex = Math.floor(Math.random() * splashScreenCombinations.length);
+    const randomIndex = Math.floor(
+      Math.random() * splashScreenCombinations.length
+    );
     selectedSplashData = splashScreenCombinations[randomIndex];
   }
 }
@@ -1069,14 +1496,18 @@ var colorsResultStroke = {
   totalUsage: 0
 };
 figma.ui.onmessage = async (msg) => {
+  var _a2, _b, _c;
   console.log("\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u043E \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u043E\u0442 UI:", msg.type);
   if (msg.type === "resize") {
     figma.ui.resize(msg.width, msg.height);
   }
   if (msg.type === "check-all") {
-    console.log("[check-all] \u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0441 Figma...");
+    console.log("[INDEX] check-all handler started");
+    console.log("[INDEX] [check-all] \u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u0441 Figma...");
     if (!await checkFigmaConnection()) {
-      console.warn("[check-all] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E, \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F...");
+      console.warn(
+        "[check-all] \u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0441 Figma \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E, \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F..."
+      );
       figma.ui.postMessage({
         type: "connection-waiting",
         message: "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u044B \u0441 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435\u043C. \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F..."
@@ -1101,7 +1532,7 @@ figma.ui.onmessage = async (msg) => {
     clearUpdateCache();
     clearRgbToHexCache();
     publishStatusCache.clear();
-    console.log("\u0412\u0441\u0435 \u043A\u044D\u0448\u0438 \u043E\u0447\u0438\u0449\u0435\u043D\u044B \u043F\u0435\u0440\u0435\u0434 \u043D\u043E\u0432\u044B\u043C \u043F\u043E\u0438\u0441\u043A\u043E\u043C.");
+    console.log("[INDEX] \u0412\u0441\u0435 \u043A\u044D\u0448\u0438 \u043E\u0447\u0438\u0449\u0435\u043D\u044B \u043F\u0435\u0440\u0435\u0434 \u043D\u043E\u0432\u044B\u043C \u043F\u043E\u0438\u0441\u043A\u043E\u043C.");
     const startTime = Date.now();
     const selection = figma.currentPage.selection;
     if (!selection || selection.length === 0) {
@@ -1116,7 +1547,10 @@ figma.ui.onmessage = async (msg) => {
     for (const selectedNode of selection) {
       uniqueNodesToProcess.add(selectedNode);
       if ("findAll" in selectedNode && typeof selectedNode.findAll === "function") {
-        const nodeStats = processNodeStatistics(selectedNode, selectedNode.name);
+        const nodeStats = processNodeStatistics(
+          selectedNode,
+          selectedNode.name
+        );
         totalStatsList.push(nodeStats);
         try {
           const allDescendants = selectedNode.findAll();
@@ -1147,6 +1581,7 @@ figma.ui.onmessage = async (msg) => {
         icons: 0
       }
     };
+    resetUpdateQueue();
     colorsResult = {
       instances: [],
       // Массив для данных цветов заливки
@@ -1159,6 +1594,26 @@ figma.ui.onmessage = async (msg) => {
       uniqueColors: /* @__PURE__ */ new Set(),
       totalUsage: 0
     };
+    const updateQueue = getUpdateQueue();
+    updateQueue.clear();
+    const processor = getParallelUpdateProcessor();
+    processor.onProgress(
+      async (processed, total, componentName) => {
+        await updateProgress(
+          "processing",
+          processed,
+          total,
+          "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432",
+          componentName
+        );
+      }
+    );
+    processor.onComplete((results) => {
+      console.log("[INDEX] ParallelUpdateProcessor complete (check-all):", {
+        total: results.instances.length
+      });
+    });
+    const resultsPromise = processor.processAll();
     try {
       let buildComponentTree2 = function(node) {
         return {
@@ -1169,7 +1624,12 @@ figma.ui.onmessage = async (msg) => {
         };
       };
       var buildComponentTree = buildComponentTree2;
-      await updateProgress("processing", 0, nodesToProcess.length, "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432");
+      await updateProgress(
+        "processing",
+        0,
+        nodesToProcess.length,
+        "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432"
+      );
       const processNodeSafely = async (node, index) => {
         if (!node || !node.type) {
           console.warn(`[${index + 1}] \u041F\u0440\u043E\u043F\u0443\u0449\u0435\u043D \u043D\u0435\u0432\u0430\u043B\u0438\u0434\u043D\u044B\u0439 \u0443\u0437\u0435\u043B:`, node);
@@ -1180,37 +1640,119 @@ figma.ui.onmessage = async (msg) => {
           try {
             hasColor = hasFillOrStroke(node);
           } catch (err) {
-            console.error(`[${index + 1}] ERROR in hasFillOrStroke:`, err instanceof Error ? err.message : String(err));
+            console.error(
+              `[${index + 1}] ERROR in hasFillOrStroke:`,
+              err instanceof Error ? err.message : String(err)
+            );
           }
           if (hasColor) {
             try {
               await processNodeColors(node, colorsResult, colorsResultStroke);
             } catch (err) {
-              console.error(`[${index + 1}] ERROR in processNodeColors:`, err instanceof Error ? err.message : String(err));
+              console.error(
+                `[${index + 1}] ERROR in processNodeColors:`,
+                err instanceof Error ? err.message : String(err)
+              );
             }
           }
-          if (node.type === "INSTANCE") {
+          if (node.type === "INSTANCE" || node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
             try {
               await processNodeComponent(node, componentsResult);
             } catch (err) {
-              console.error(`[${index + 1}] ERROR in processNodeComponent:`, err);
+              console.error(
+                `[${index + 1}] ERROR in processNodeComponent:`,
+                err
+              );
             }
+          } else {
           }
         } catch (error) {
           console.error(`[${index + 1}] \u041E\u0448\u0438\u0431\u043A\u0430 \u043D\u0430 \u044D\u0442\u0430\u043F\u0435 \u043B\u043E\u0433\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F:`, error);
         }
       };
+      const nodeTypeStats = nodesToProcess.reduce((stats, node) => {
+        stats[node.type] = (stats[node.type] || 0) + 1;
+        return stats;
+      }, {});
+      console.log(`[INDEX] \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0443\u0437\u043B\u043E\u0432 \u0434\u043B\u044F \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438:`, {
+        total: nodesToProcess.length,
+        byType: nodeTypeStats
+      });
       for (let i = 0; i < nodesToProcess.length; i++) {
         await processNodeSafely(nodesToProcess[i], i);
         if (i % 5 === 0) {
           await new Promise((resolve) => setTimeout(resolve, 0));
-          await updateProgress("processing", i + 1, nodesToProcess.length, "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432", nodesToProcess[i].name);
+          await updateProgress(
+            "processing",
+            i + 1,
+            nodesToProcess.length,
+            "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432",
+            nodesToProcess[i].name
+          );
         }
+      }
+      const finalUpdateQueue = getUpdateQueue();
+      const finalQueueStatus = finalUpdateQueue.getStatus();
+      console.log(
+        `[INDEX] \u0424\u0438\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u043E\u0447\u0435\u0440\u0435\u0434\u0438 \u043F\u043E\u0441\u043B\u0435 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u0432\u0441\u0435\u0445 \u0443\u0437\u043B\u043E\u0432:`,
+        {
+          queueLength: finalQueueStatus.queueLength,
+          total: finalQueueStatus.total,
+          processing: finalQueueStatus.processing,
+          completed: finalQueueStatus.completed,
+          isRunning: finalQueueStatus.isRunning,
+          componentsResultCount: componentsResult.instances.length
+        }
+      );
+      const queueTotalComponents = finalQueueStatus.total;
+      const instancesCount = componentsResult.instances.length;
+      console.warn(`[INDEX] \u0410\u041D\u0410\u041B\u0418\u0417 \u041F\u041E\u0422\u0415\u0420\u0418 \u0414\u0410\u041D\u041D\u042B\u0425:`, {
+        totalProcessedNodes: nodesToProcess.length,
+        queueTotalComponents,
+        componentsInResult: instancesCount,
+        buttonComponentsInResult: componentsResult.instances.filter(
+          (comp) => comp.name.toLowerCase().includes("button")
+        ).length,
+        queueSize: finalQueueStatus.queueLength,
+        // Потери считаем относительно общего количества компонентов, попавших в очередь, а не относительно всех узлов страницы
+        lossPercentageByQueue: queueTotalComponents > 0 ? ((queueTotalComponents - instancesCount) / queueTotalComponents * 100).toFixed(2) + "%" : "0%"
+      });
+      const componentTypeAnalysis = componentsResult.instances.reduce(
+        (acc, comp) => {
+          acc[comp.type] = (acc[comp.type] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+      console.log(
+        `[CRITICAL DEBUG] \u0422\u0438\u043F\u044B \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435:`,
+        componentTypeAnalysis
+      );
+      const buttonComponents = componentsResult.instances.filter(
+        (comp) => comp.name.toLowerCase().includes("button")
+      );
+      if (buttonComponents.length > 0) {
+        console.log(
+          `[CRITICAL DEBUG] \u041D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0435 button \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B:`,
+          buttonComponents.slice(0, 5).map((comp) => ({
+            name: comp.name,
+            type: comp.type,
+            nodeId: comp.nodeId,
+            mainComponentName: comp.mainComponentName
+          }))
+        );
+      } else {
+        console.log(
+          `[CRITICAL DEBUG] \u041F\u0420\u041E\u0411\u041B\u0415\u041C\u0410: \u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B button \u041D\u0415 \u041D\u0410\u0419\u0414\u0415\u041D\u042B \u0432 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0435!`
+        );
       }
       componentsResult.instances.sort((a, b) => {
         const aName = a.mainComponentName || a.name;
         const bName = b.mainComponentName || b.name;
-        const removeEmoji = (str) => str.replace(/([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu, "").trim();
+        const removeEmoji = (str) => str.replace(
+          /([\u0023-\u0039]\uFE0F?\u20E3|\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF])/gu,
+          ""
+        ).trim();
         const startsWithSpecial = (str) => /^[._]/.test(str);
         const cleanA = removeEmoji(aName);
         const cleanB = removeEmoji(bName);
@@ -1220,13 +1762,102 @@ figma.ui.onmessage = async (msg) => {
         if (!aSpecial && bSpecial) return -1;
         return cleanA.localeCompare(cleanB);
       });
+      lastColorsData = colorsResult;
+      const updateQueue2 = getUpdateQueue();
+      const queueStatus = updateQueue2.getStatus();
+      console.log("[INDEX] Queue status:", queueStatus);
+      console.log("[INDEX] Components in queue:", queueStatus.total);
+      updateQueue2.markProducerDone();
+      const results = await resultsPromise;
+      const updatedComponentsMap = /* @__PURE__ */ new Map();
+      results.instances.forEach((updatedComponent) => {
+        const key = `${updatedComponent.mainComponentKey || "unknown"}_$${updatedComponent.nodeId || "no-node"}`;
+        updatedComponentsMap.set(key, updatedComponent);
+      });
+      let matchedCount = 0;
+      let unmatchedKeys = [];
+      componentsResult.instances = componentsResult.instances.map(
+        (existingComponent) => {
+          var _a3, _b2, _c2, _d, _e, _f, _g, _h, _i, _j, _k;
+          const key = `${existingComponent.mainComponentKey || "unknown"}_$${existingComponent.nodeId || "no-node"}`;
+          const updatedComponent = updatedComponentsMap.get(key);
+          if (updatedComponent) {
+            matchedCount++;
+            return __spreadProps(__spreadValues({}, existingComponent), {
+              isOutdated: (_a3 = updatedComponent.isOutdated) != null ? _a3 : existingComponent.isOutdated,
+              isLost: (_b2 = updatedComponent.isLost) != null ? _b2 : existingComponent.isLost,
+              isDeprecated: (_c2 = updatedComponent.isDeprecated) != null ? _c2 : existingComponent.isDeprecated,
+              isNotLatest: (_d = updatedComponent.isNotLatest) != null ? _d : existingComponent.isNotLatest,
+              checkVersion: (_e = updatedComponent.checkVersion) != null ? _e : existingComponent.checkVersion,
+              libraryComponentVersion: (_f = updatedComponent.libraryComponentVersion) != null ? _f : existingComponent.libraryComponentVersion,
+              libraryComponentVersionMinimal: (_g = updatedComponent.libraryComponentVersionMinimal) != null ? _g : existingComponent.libraryComponentVersionMinimal,
+              libraryComponentName: (_h = updatedComponent.libraryComponentName) != null ? _h : existingComponent.libraryComponentName,
+              libraryComponentSetName: (_i = updatedComponent.libraryComponentSetName) != null ? _i : existingComponent.libraryComponentSetName,
+              libraryComponentId: (_j = updatedComponent.libraryComponentId) != null ? _j : existingComponent.libraryComponentId,
+              updateStatus: (_k = updatedComponent.updateStatus) != null ? _k : existingComponent.updateStatus
+            });
+          } else {
+            unmatchedKeys.push(key);
+            console.log(
+              `[INDEX] NO MATCH: ${existingComponent.name} with key: ${key}`
+            );
+          }
+          return existingComponent;
+        }
+      );
+      const existingKeys = new Set(
+        componentsResult.instances.map(
+          (c) => `${c.mainComponentKey || "unknown"}_$$${c.nodeId || "no-node"}`
+        )
+      );
+      results.instances.forEach((updatedComponent) => {
+        const key = `${updatedComponent.mainComponentKey || "unknown"}_$${updatedComponent.nodeId || "no-node"}`;
+        if (!existingKeys.has(key)) {
+          componentsResult.instances.push(updatedComponent);
+        }
+      });
+      console.log(
+        `[INDEX] Unmatched keys (${unmatchedKeys.length}):`,
+        unmatchedKeys.slice(0, 10)
+      );
+      console.log("[INDEX] After updating components:", {
+        originalCount: results.instances.length,
+        finalCount: componentsResult.instances.length,
+        updatedComponentsCount: updatedComponentsMap.size,
+        matchedCount,
+        componentsWithLibraryVersions: componentsResult.instances.filter(
+          (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
+        ).length
+      });
+      console.log(
+        "[INDEX] Received results from processor:",
+        results,
+        results.instances.length
+      );
+      const statusAfter = updateQueue2.getStatus();
+      console.log("[INTEGRITY] Queue status after processing:", statusAfter);
+      const expectedTotal = statusAfter.total;
+      const received = results.instances.length;
+      if (expectedTotal !== received) {
+        console.warn(
+          "[INTEGRITY] \u041D\u0435\u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u043C\u0435\u0436\u0434\u0443 \u043E\u0447\u0435\u0440\u0435\u0434\u044C\u044E \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C",
+          {
+            expectedTotal,
+            received,
+            delta: expectedTotal - received
+          }
+        );
+      } else {
+        console.log(
+          "[INTEGRITY] \u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 \u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u043E \u043C\u0435\u0436\u0434\u0443 \u043E\u0447\u0435\u0440\u0435\u0434\u044C\u044E \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C"
+        );
+      }
       console.log("Final components result:", {
         total: componentsResult.instances.length,
         components: componentsResult.counts.components,
         icons: componentsResult.counts.icons,
         instances: componentsResult.instances
       });
-      lastColorsData = colorsResult;
       let componentTree = [];
       if (figma.currentPage.selection && figma.currentPage.selection.length > 0) {
         componentTree = figma.currentPage.selection.map(buildComponentTree2);
@@ -1245,6 +1876,30 @@ figma.ui.onmessage = async (msg) => {
           // Добавляем общее количество явно
         }
       });
+      console.log(
+        "[INDEX] Sending all-results to UI with components:",
+        componentsResult.instances.length
+      );
+      if (componentsResult.instances.length > 0) {
+        console.log(
+          "[INDEX] Final libraryComponentVersion:",
+          componentsResult.instances.map((item) => item.libraryComponentVersion)
+        );
+        console.log(
+          "[INDEX] Final first instance isOutdated:",
+          componentsResult.instances[0].isOutdated
+        );
+        console.log(
+          "[INDEX] Final first instance updateStatus:",
+          componentsResult.instances[0].updateStatus
+        );
+      }
+      console.log("[INDEX] BEFORE UI SEND - componentsResult structure:", {
+        instancesCount: componentsResult.instances.length,
+        firstInstanceKeys: componentsResult.instances.length > 0 ? Object.keys(componentsResult.instances[0]) : [],
+        firstInstanceLibraryVersion: componentsResult.instances.length > 0 ? componentsResult.instances[0].libraryComponentVersion : "NO_INSTANCES",
+        componentsResultReference: componentsResult
+      });
       figma.ui.postMessage({
         type: "all-results",
         components: componentsResult,
@@ -1254,11 +1909,18 @@ figma.ui.onmessage = async (msg) => {
         totalStats
         // Включаем статистику и в этом сообщении для синхронизации
       });
+      console.log("[INDEX] AFTER UI SEND - data still intact:", {
+        instancesCount: componentsResult.instances.length,
+        firstInstanceLibraryVersion: componentsResult.instances.length > 0 ? componentsResult.instances[0].libraryComponentVersion : "NO_INSTANCES"
+      });
     } catch (error) {
       console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435:", error);
       const errMessage = error instanceof Error ? error.message : String(error);
       figma.notify(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}`);
-      figma.ui.postMessage({ type: "error", message: `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}` });
+      figma.ui.postMessage({
+        type: "error",
+        message: `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435: ${errMessage}`
+      });
       return;
     }
   } else if (msg.type === "scroll-to-node") {
@@ -1286,10 +1948,21 @@ figma.ui.onmessage = async (msg) => {
             figma.currentPage.selection = [node];
           } catch (err) {
             console.error("\u041E\u0448\u0438\u0431\u043A\u0430 scrollAndZoomIntoView:", err, node);
-            figma.notify("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0437\u0438\u0446\u0438\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F: " + (err instanceof Error ? err.message : String(err)));
-            if (err && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(err instanceof Error ? err.message : String(err))) {
-              figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
-              setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 3e3);
+            figma.notify(
+              "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0437\u0438\u0446\u0438\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F: " + (err instanceof Error ? err.message : String(err))
+            );
+            if (err && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(
+              err instanceof Error ? err.message : String(err)
+            )) {
+              figma.notify(
+                "\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D."
+              );
+              setTimeout(
+                () => figma.closePlugin(
+                  "\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."
+                ),
+                3e3
+              );
             }
           }
         } else if (node) {
@@ -1300,10 +1973,21 @@ figma.ui.onmessage = async (msg) => {
         }
       } catch (criticalErr) {
         console.error("Critical error in scroll-to-node:", criticalErr);
-        figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u0441 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C: " + (criticalErr instanceof Error ? criticalErr.message : String(criticalErr)));
-        if (criticalErr && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(criticalErr instanceof Error ? criticalErr.message : String(criticalErr))) {
-          figma.notify("\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D.");
-          setTimeout(() => figma.closePlugin("\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."), 3e3);
+        figma.notify(
+          "\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u044B \u0441 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C: " + (criticalErr instanceof Error ? criticalErr.message : String(criticalErr))
+        );
+        if (criticalErr && /wasm|memory|out of bounds|null function|function signature mismatch/i.test(
+          criticalErr instanceof Error ? criticalErr.message : String(criticalErr)
+        )) {
+          figma.notify(
+            "\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 Figma API. \u041F\u043B\u0430\u0433\u0438\u043D \u0431\u0443\u0434\u0435\u0442 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D."
+          );
+          setTimeout(
+            () => figma.closePlugin(
+              "\u041F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 WebAssembly. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u043B\u0430\u0433\u0438\u043D."
+            ),
+            3e3
+          );
         }
       }
     })();
@@ -1338,7 +2022,9 @@ figma.ui.onmessage = async (msg) => {
         figma.notify("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0439\u0442\u0438 \u043D\u0438 \u043E\u0434\u0438\u043D \u0438\u0437 \u0443\u043A\u0430\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0437\u043B\u043E\u0432");
         return;
       }
-      const validNodes = nodes.filter((n) => n && "type" in n && typeof n.visible === "boolean");
+      const validNodes = nodes.filter(
+        (n) => n && "type" in n && typeof n.visible === "boolean"
+      );
       if (validNodes.length === 0) {
         figma.notify("\u041D\u0435\u0442 \u0432\u0430\u043B\u0438\u0434\u043D\u044B\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u044F!");
         return;
@@ -1387,7 +2073,10 @@ figma.ui.onmessage = async (msg) => {
             originalKey: node.key || null
           };
         } catch (error) {
-          console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0447\u0442\u0435\u043D\u0438\u0438 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.name}):`, error);
+          console.error(
+            `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0447\u0442\u0435\u043D\u0438\u0438 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.name}):`,
+            error
+          );
           componentData[node.id] = {
             name: node.name,
             type: node.type,
@@ -1451,14 +2140,21 @@ figma.ui.onmessage = async (msg) => {
           if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
             node.setPluginData("customKey", key);
             node.setPluginData("customVersion", version);
-            console.log(`\u0423\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u044B \u0434\u0430\u043D\u043D\u044B\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.type}) (${node.name}): key = ${key}, version = ${version}`);
+            console.log(
+              `\u0423\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u044B \u0434\u0430\u043D\u043D\u044B\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.type}) (${node.name}): key = ${key}, version = ${version}`
+            );
             dataSet = true;
             updatedComponents++;
           } else {
-            console.log(`\u041F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u0435\u043C \u043D\u043E\u0434 ${node.id} (${node.name}), \u0442\u0430\u043A \u043A\u0430\u043A \u043E\u043D \u043D\u0435 \u044F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u043C \u0438\u043B\u0438 \u043D\u0430\u0431\u043E\u0440\u043E\u043C \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432`);
+            console.log(
+              `\u041F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u0435\u043C \u043D\u043E\u0434 ${node.id} (${node.name}), \u0442\u0430\u043A \u043A\u0430\u043A \u043E\u043D \u043D\u0435 \u044F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u043C \u0438\u043B\u0438 \u043D\u0430\u0431\u043E\u0440\u043E\u043C \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432`
+            );
           }
         } catch (error) {
-          console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.name}):`, error);
+          console.error(
+            `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.name}):`,
+            error
+          );
         }
       }
       if (dataSet) {
@@ -1474,7 +2170,10 @@ figma.ui.onmessage = async (msg) => {
         });
       }
     } catch (error) {
-      console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u0437\u0430\u043F\u0440\u043E\u0441\u0430 \u043D\u0430 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0443 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430:", error);
+      console.error(
+        "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u0437\u0430\u043F\u0440\u043E\u0441\u0430 \u043D\u0430 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0443 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430:",
+        error
+      );
       figma.ui.postMessage({
         type: "component-data-set",
         message: `\u041E\u0448\u0438\u0431\u043A\u0430: ${error instanceof Error ? error.message : String(error)}`,
@@ -1513,13 +2212,18 @@ figma.ui.onmessage = async (msg) => {
         if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
           node.setPluginData("customKey", "");
           node.setPluginData("customVersion", "");
-          console.log(`\u041E\u0447\u0438\u0449\u0435\u043D\u044B \u0434\u0430\u043D\u043D\u044B\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.type}) (${node.name})`);
+          console.log(
+            `\u041E\u0447\u0438\u0449\u0435\u043D\u044B \u0434\u0430\u043D\u043D\u044B\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.type}) (${node.name})`
+          );
           dataCleared = true;
           clearedComponents++;
         } else {
         }
       } catch (error) {
-        console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0447\u0438\u0441\u0442\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.name}):`, error);
+        console.error(
+          `\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0447\u0438\u0441\u0442\u043A\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 ${node.id} (${node.name}):`,
+          error
+        );
       }
     }
     if (dataCleared) {
@@ -1535,9 +2239,10 @@ figma.ui.onmessage = async (msg) => {
       });
     }
   } else if (msg.type === "check-updates") {
-    console.log("Received update check request");
+    console.log("[INDEX] Received update check request");
+    console.log("[INDEX] Message data:", msg);
     clearUpdateCache();
-    console.log("\u041A\u0435\u0448 \u043E\u0447\u0438\u0449\u0435\u043D \u043F\u0435\u0440\u0435\u0434 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u043E\u0439 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439.");
+    console.log("[INDEX] \u041A\u0435\u0448 \u043E\u0447\u0438\u0449\u0435\u043D \u043F\u0435\u0440\u0435\u0434 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u043E\u0439 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439.");
     let componentsToCheck = null;
     if (msg.components && msg.components.instances) {
       componentsToCheck = msg.components;
@@ -1550,8 +2255,60 @@ figma.ui.onmessage = async (msg) => {
       return;
     }
     try {
-      await checkComponentUpdates(componentsToCheck);
-      figma.ui.postMessage({ type: "all-results", components: componentsToCheck, colors: lastColorsData || colorsResult, colorsStroke: colorsResultStroke, componentTree: [], totalStats: { nodeTypeCounts: {}, totalNodes: 0, nodeName: "" } });
+      const processor = getParallelUpdateProcessor();
+      const updateQueue = getUpdateQueue();
+      updateQueue.clear();
+      processor.onProgress(
+        async (processed, total, componentName) => {
+          await updateProgress(
+            "check-updates",
+            processed,
+            total,
+            "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432",
+            componentName
+          );
+        }
+      );
+      const resultsPromise = processor.processAll();
+      for (const component of componentsToCheck.instances) {
+        updateQueue.addComponent(component);
+      }
+      updateQueue.markProducerDone();
+      const results = await resultsPromise;
+      componentsToCheck.instances = results.instances;
+      componentsToCheck.outdated = results.instances.filter(
+        (inst) => inst.isOutdated
+      );
+      componentsToCheck.lost = results.instances.filter((inst) => inst.isLost);
+      componentsToCheck.deprecated = results.instances.filter(
+        (inst) => inst.isDeprecated
+      );
+      if (componentsToCheck.counts) {
+        componentsToCheck.counts.outdated = (_a2 = componentsToCheck.outdated) == null ? void 0 : _a2.length;
+        componentsToCheck.counts.lost = (_b = componentsToCheck.lost) == null ? void 0 : _b.length;
+        componentsToCheck.counts.deprecated = (_c = componentsToCheck.deprecated) == null ? void 0 : _c.length;
+      }
+      const componentsWithVersions = componentsToCheck.instances.filter(
+        (c) => c.libraryComponentVersion || c.libraryComponentVersionMinimal
+      );
+      console.log(
+        `[Index] Components with library versions before sending to UI: ${componentsWithVersions.length}`
+      );
+      if (componentsWithVersions.length > 0) {
+        console.log(`[Index] Sample component with versions before UI:`, {
+          name: componentsWithVersions[0].name,
+          libraryComponentVersion: componentsWithVersions[0].libraryComponentVersion,
+          libraryComponentVersionMinimal: componentsWithVersions[0].libraryComponentVersionMinimal
+        });
+      }
+      figma.ui.postMessage({
+        type: "all-results",
+        components: componentsToCheck,
+        colors: lastColorsData || colorsResult,
+        colorsStroke: colorsResultStroke,
+        componentTree: [],
+        totalStats: { nodeTypeCounts: {}, totalNodes: 0, nodeName: "" }
+      });
     } catch (error) {
       console.error("Error during update check:", error);
       figma.ui.postMessage({

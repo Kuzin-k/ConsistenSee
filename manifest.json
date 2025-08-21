@@ -1,12 +1,12 @@
 {
-    "name": "ConsistenSee 2.6.7 [HEXA UI TOOLS]",
-    "id": "1493892994224385588",
-    "api": "1.0.0",
-    "main": "dist/code.js",
-    "ui": "dist/ui.html",
-    "editorType": ["figma"],
-    "permissions": ["teamlibrary", "currentuser"],
-    "enablePrivatePluginApi": true,
-    "documentAccess": "dynamic-page",
-    "networkAccess": {"allowedDomains": ["https://*.yandex.ru"]}
-  }
+  "name": "ConsistenSee 2.7.1 [HEXA UI TOOLS]",
+  "id": "1493892994224385588",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "permissions": ["teamlibrary", "currentuser"],
+  "enablePrivatePluginApi": true,
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["https://*.yandex.ru"] }
+}

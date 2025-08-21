@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Console</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .console {
+            background-color: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+            border-bottom: 1px solid #333;
+        }
+        .log-info { color: #4fc3f7; }
+        .log-warn { color: #ffb74d; }
+        .log-error { color: #f44336; }
+        .log-debug { color: #81c784; }
+        .iframe-container {
+            border: 2px solid #3e3e42;
+            border-radius: 4px;
+            height: 600px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        h1, h2 {
+            color: #569cd6;
+        }
+        .clear-btn {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .clear-btn:hover {
+            background-color: #005a9e;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Console - ConsistenSee Plugin</h1>
+    
+    <h2>Console Logs</h2>
+    <button class="clear-btn" onclick="clearLogs()">Clear Logs</button>
+    <div id="console" class="console"></div>
+    
+    <h2>Plugin Interface</h2>
+    <div class="iframe-container">
+        <iframe id="pluginFrame" src="test-debug.html"></iframe>
+    </div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const iframe = document.getElementById('pluginFrame');
+        
+        function addLogEntry(type, message, source = 'main') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<strong>[${timestamp}] [${source.toUpperCase()}]</strong> ${message}`;
+            consoleDiv.appendChild(entry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        function clearLogs() {
+            consoleDiv.innerHTML = '';
+        }
+        
+        // Перехватываем консольные логи главного окна
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLogEntry('info', args.join(' '), 'main');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLogEntry('warn', args.join(' '), 'main');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLogEntry('error', args.join(' '), 'main');
+        };
+        
+        // Слушаем сообщения от iframe
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'console-log') {
+                addLogEntry(event.data.level, event.data.message, 'iframe');
+            }
+        });
+        
+        // Перехватываем логи из iframe
+        iframe.onload = function() {
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeConsole = iframeWindow.console;
+                
+                // Перехватываем методы консоли iframe
+                ['log', 'warn', 'error', 'info', 'debug'].forEach(method => {
+                    const original = iframeConsole[method];
+                    iframeConsole[method] = function(...args) {
+                        original.apply(iframeConsole, args);
+                        const message = args.map(arg => 
+                            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                        ).join(' ');
+                        addLogEntry(method === 'info' || method === 'debug' ? 'debug' : method, message, 'iframe');
+                    };
+                });
+                
+                addLogEntry('info', 'Iframe loaded and console intercepted', 'debug');
+            } catch (e) {
+                addLogEntry('error', 'Failed to intercept iframe console: ' + e.message, 'debug');
+            }
+        };
+        
+        addLogEntry('info', 'Debug console initialized', 'debug');
+    </script>
+</body>
+</html>
