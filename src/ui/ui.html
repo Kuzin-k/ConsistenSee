@@ -680,6 +680,16 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
       } 
       if (msg.type === 'all-results') {
+        // Детальная проверка данных, полученных в UI
+        console.log('[UI] RECEIVED all-results message:', {
+          messageType: msg.type,
+          componentsExists: !!msg.components,
+          componentsInstancesCount: msg.components ? msg.components.instances.length : 0,
+          firstInstanceKeys: msg.components && msg.components.instances.length > 0 ? Object.keys(msg.components.instances[0]) : [],
+          firstInstanceLibraryVersion: msg.components && msg.components.instances.length > 0 ? msg.components.instances[0].libraryComponentVersion : 'NO_INSTANCES',
+          fullMessage: msg
+        });
+        
         // Save data for search
         window.lastDebugData = {
           components: msg.components,

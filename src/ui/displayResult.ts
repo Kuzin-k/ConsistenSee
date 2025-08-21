@@ -20,7 +20,7 @@ export const displayResult = (message: string, isError: boolean = false): void =
   resultElement.style.borderRadius = '4px';
   outputElement.appendChild(resultElement);
   
-  console.log('Отображен результат:', message);
+  
 }
 
 // Добавляем функцию к глобальному объекту UIModules

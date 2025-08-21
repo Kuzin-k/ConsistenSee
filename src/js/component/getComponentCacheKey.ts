@@ -16,12 +16,9 @@ export const getComponentCacheKey = (component: ComponentNode): string => {
       return `local_component_${component.id || 'no_id'}`;
     }
 
-    const parent = component.parent;
-    if (parent && parent.type === 'COMPONENT_SET' && parent.key) {
-      const componentNameInSet = component.name || 'unnamed_variant';
-      return `set_${parent.key}_variant_${componentNameInSet}`;
-    }
-
+    // Для всех компонентов (включая компоненты в наборах) используем только component.key
+    // Это обеспечивает одинаковые ключи кэша для идентичных компонентов
+    // независимо от их имен вариантов
     return component.key;
   } catch (error) {
     console.error('Error in getComponentCacheKey:', error);

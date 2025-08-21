@@ -33,6 +33,8 @@ export function processAndDisplayComponents(
   iconResultsList?: HTMLElement,
   tabType: string = "instances"
 ): void {
+  
+  
   // Определяем источник данных в зависимости от типа вкладки
   let sourceInstances: any[];
   if (tabType === "outdated") {
@@ -66,6 +68,8 @@ export function processAndDisplayComponents(
   } else {
     sourceInstances = componentsData.instances;
   }
+  
+  
 
   // Обновляем глобальную ссылку на все инстансы (если вызывающий код полагается на неё)
   allInstances = sourceInstances;
@@ -104,10 +108,19 @@ export function processAndDisplayComponents(
       ? componentsData.deprecated.length
       : 0;
 
+  // Debug: Log source instances with library version data
+  const instancesWithVersions = sourceInstances.filter(
+    (i: any) => i.libraryComponentVersion || i.libraryComponentVersionMinimal
+  );
+  
+  
+
   // Проходим по всем инстансам и распределяем их в соответствующие группы
   // - Пропускаем скрытые элементы, если пользователь отключил их показ
   // - Определяем ключ группы: сперва mainComponentSetKey, затем mainComponentKey
   sourceInstances.forEach((instance: any) => {
+    
+    
     if (!showHidden && instance.hidden) {
       return; // Пропускаем скрытые элементы
     }
@@ -127,6 +140,8 @@ export function processAndDisplayComponents(
       ? instance.mainComponentSetKey
       : instance.mainComponentKey;
 
+    
+
     if (
       tabType === "outdated" ||
       tabType === "lost" ||
@@ -136,8 +151,16 @@ export function processAndDisplayComponents(
       if (!groupedInstances[groupKey]) {
         groupedInstances[groupKey] = [];
       }
+      
+      // Проверяем на дублирование перед добавлением
+      const existingInstance = groupedInstances[groupKey].find(existing => existing.nodeId === instance.nodeId);
+      if (existingInstance) {
+        return; // Пропускаем дубликат
+      }
+      
       groupedInstances[groupKey].push(instance);
       nonIconCount++;
+      
     } else if (instance.isIcon === true) {
       // Иконки группируем отдельно
       if (!groupedIcons[groupKey]) {
@@ -149,8 +172,17 @@ export function processAndDisplayComponents(
       if (!groupedInstances[groupKey]) {
         groupedInstances[groupKey] = [];
       }
+      
+      // Проверяем на дублирование перед добавлением для обычных компонентов
+      const existingInstance = groupedInstances[groupKey].find(existing => existing.nodeId === instance.nodeId);
+      if (existingInstance) {
+        return; // Пропускаем дубликат
+      }
+      
       groupedInstances[groupKey].push(instance);
       nonIconCount++;
+      
+      
     }
   });
 
@@ -309,6 +341,16 @@ export function processAndDisplayComponents(
   // Передаём сгруппированные и отсортированные данные в модуль рендера
   const tabTitle =
     tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
+
+  // Логируем финальные группы перед отображением
+  console.log(`[UI processAndDisplayComponents] Final groups for ${tabType}:`, {
+    groupedInstancesKeys: Object.keys(groupedInstances),
+    groupedInstancesCount: Object.keys(groupedInstances).length,
+    buttonGroups: Object.keys(groupedInstances).filter(key => 
+      groupedInstances[key].some((inst: any) => inst.name === 'button')
+    ),
+    totalInstances: Object.values(groupedInstances).reduce((sum: number, group: any) => sum + group.length, 0)
+  });
 
   if (
     tabType === "outdated" ||

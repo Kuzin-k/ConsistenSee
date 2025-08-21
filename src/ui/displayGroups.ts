@@ -102,6 +102,20 @@ export const displayGroups = (
   isOutdatedTab: boolean = false,
   tabType: string = ""
 ): void => {
+  
+  
+  // Проверяем наличие button компонентов в группах
+  const buttonGroups = Object.keys(groupedData).filter(key => 
+    groupedData[key].some((inst: any) => inst.name === 'button')
+  );
+  
+  
+  // Детальная информация о button компонентах
+  buttonGroups.forEach(groupKey => {
+    const buttonInstances = groupedData[groupKey].filter((inst: any) => inst.name === 'button');
+    
+  });
+  
   const showHidden = document.getElementById("showHiddenToggle")
     ? (document.getElementById("showHiddenToggle") as HTMLInputElement).checked
     : true;
@@ -203,6 +217,11 @@ export const displayGroups = (
         }
 
       // тег версии для одиночного элемента на первом уровне
+            // Debug: Log version data before passing to displayVersionTag
+            if (instance.libraryComponentVersion) {
+              console.log(`[UI] Component ${instance.name} has libraryComponentVersion: ${instance.libraryComponentVersion}`);
+            }
+            
             const versionGroup = displayVersionTag({
               instanceVersion: instance.nodeVersion ?? undefined,
               libraryVersion: instance.libraryComponentVersion ?? undefined,
@@ -417,7 +436,8 @@ export const displayGroups = (
       // Добавляем информацию о цвете, если это элемент с цветом
       groupItem.appendChild(componentNameContainer);
 
-      // тег версии одиночного элемента внутри группы
+      
+      
       const versionGroup = displayVersionTag({
         instanceVersion: instance.nodeVersion ?? undefined,
         libraryVersion: instance.libraryComponentVersion ?? undefined,

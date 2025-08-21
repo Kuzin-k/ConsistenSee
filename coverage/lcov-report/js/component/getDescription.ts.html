@@ -1,0 +1,355 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for js/component/getDescription.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">js/component</a> getDescription.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">5.55% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>2/36</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/40</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">5.55% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>2/36</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { retryGetMainComponent } from '../utils/retryWithBackoff';
+&nbsp;
+/**
+ * Извлекает описание и версию из описания узла или его главного компонента.
+ * Если узел является INSTANCE, пытается получить описание из его mainComponent или родительского mainComponentSet.
+ * @param {SceneNode | ComponentNode | ComponentSetNode} node - Узел (может быть INSTANCE, COMPONENT, или COMPONENT_SET) для получения описания.
+ * @returns {Promise&lt;Object&gt;} Объект с описанием (`description`) и найденными версиями:
+ *   - `nodeVersion` — основная найденная версия (например, "1.2.3")
+ *   - `nodeVersionMinimal` — версия из формата "v X.X.X (minimal)", если указана
+ */
+export async function <span class="fstat-no" title="function not covered" >getDescription(</span>node: SceneNode | ComponentNode | ComponentSetNode): Promise&lt;{ description: string, nodeVersion: string | null, nodeVersionMinimal: string | null }&gt; {
+  let description = <span class="cstat-no" title="statement not covered" >'';</span>
+  // let nodeToParse = node; // Эта переменная менее критична, если description правильно каскадируется.
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (!node) {</span>
+<span class="cstat-no" title="statement not covered" >    console.warn('getDescription: получен пустой узел.');</span>
+<span class="cstat-no" title="statement not covered" >    return { description: '', nodeVersion: null, nodeVersionMinimal: null };</span>
+  }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  try {</span>
+    // 1. Сначала пытаемся получить описание непосредственно с самого узла.
+    // Некоторые типы SceneNode не содержат поле description, поэтому читаем безопасно.
+<span class="cstat-no" title="statement not covered" >    if ('description' in node &amp;&amp; (node as any).description) {</span>
+<span class="cstat-no" title="statement not covered" >      description = (node as any).description || '';</span>
+    } else {
+<span class="cstat-no" title="statement not covered" >      description = '';</span>
+    }
+&nbsp;
+    // 2. Если узел - КОМПОНЕНТ и у него нет своего описания,
+    //    а его родитель - НАБОР КОМПОНЕНТОВ, берем описание из набора.
+<span class="cstat-no" title="statement not covered" >    if (node.type === 'COMPONENT' &amp;&amp; !description &amp;&amp; node.parent &amp;&amp; node.parent.type === 'COMPONENT_SET') {</span>
+<span class="cstat-no" title="statement not covered" >      description = node.parent.description || '';</span>
+    }
+    // 3. Если узел - ЭКЗЕМПЛЯР и у него нет своего описания (или у его mainComponent нет описания).
+    else <span class="cstat-no" title="statement not covered" >if (node.type === 'INSTANCE') {</span>
+      // description = node.description || ''; // Это уже было сделано в п.1
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!description) { // Если у инстанса нет описания, идем к главному компоненту</span>
+<span class="cstat-no" title="statement not covered" >        try {</span>
+          const mainComponent = <span class="cstat-no" title="statement not covered" >await retryGetMainComponent(node, node.name);</span>
+<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if (mainComponent) {</span>
+            // nodeToParse = mainComponent; // Обновляем узел, из которого берем описание
+<span class="cstat-no" title="statement not covered" >            description = mainComponent.description || '';</span>
+            // Если у mainComponent нет описания, и он часть COMPONENT_SET, берем описание из SET
+<span class="cstat-no" title="statement not covered" >            <span class="missing-if-branch" title="if path not taken" >I</span>if (!description &amp;&amp; mainComponent.parent &amp;&amp; mainComponent.parent.type === 'COMPONENT_SET') {</span>
+              // nodeToParse = mainComponent.parent; // Обновляем узел
+<span class="cstat-no" title="statement not covered" >              description = mainComponent.parent.description || '';</span>
+            }
+          }
+        } catch (retryError) {
+<span class="cstat-no" title="statement not covered" >          console.error(`Не удалось получить mainComponent для ${node.name} после повторных попыток:`, retryError);</span>
+        }
+      }
+    }
+    // 4. Если узел - КОМПОНЕНТ (это может быть mainComponent, переданный в функцию)
+    //    и у него все еще нет описания, проверяем его родительский COMPONENT_SET.
+    //    Этот блок дублирует логику из пункта 2, но обеспечивает покрытие, если getDescription вызвана с COMPONENT.
+    else <span class="cstat-no" title="statement not covered" ><span class="missing-if-branch" title="if path not taken" >I</span>if (node.type === 'COMPONENT' &amp;&amp; !description &amp;&amp; node.parent &amp;&amp; node.parent.type === 'COMPONENT_SET') {</span>
+<span class="cstat-no" title="statement not covered" >      description = node.parent.description || '';</span>
+    }
+  } catch (error) {
+<span class="cstat-no" title="statement not covered" >    console.error(`Ошибка в getDescription для узла "${node.name}" (ID: ${node.id}):`, error);</span>
+    // Не отправляем сообщение в UI отсюда, чтобы не дублировать ошибки из checkComponentUpdate
+    // figma.ui.postMessage({
+    //   type: 'error',
+    //   message: `Ошибка при получении описания для ${node.name}: ${error.message}`
+    // });
+    // В случае ошибки, description останется пустым, и версия не будет найдена.
+  }
+&nbsp;
+  // Извлекаем версию из полученного описания с помощью регулярного выражения
+  let nodeVersion = <span class="cstat-no" title="statement not covered" >null;</span>
+  let nodeVersionMinimal = <span class="cstat-no" title="statement not covered" >null;</span>
+  
+<span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (description) { // Убедимся, что description это строка</span>
+    const descStr = <span class="cstat-no" title="statement not covered" >String(description);</span>
+    // Паттерн для специальной формы "v X.Y.Z (minimal)" — ищем и отдельную minimal-версию
+    const minimalPattern = <span class="cstat-no" title="statement not covered" >/v\s*(\d+\.\d+\.\d+)\s*\(minimal\)/i;</span>
+    const minimalMatch = <span class="cstat-no" title="statement not covered" >descStr.match(minimalPattern);</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (minimalMatch) {</span>
+<span class="cstat-no" title="statement not covered" >      nodeVersionMinimal = minimalMatch[1];</span>
+    }
+&nbsp;
+    // Общий паттерн для основной версии "v X.Y.Z" (без учета minimal)
+    const versionPattern = <span class="cstat-no" title="statement not covered" >/v\s*(\d+\.\d+\.\d+)/i;</span> // Паттерн для поиска "v X.Y.Z"
+    const match = <span class="cstat-no" title="statement not covered" >descStr.match(versionPattern);</span> // Приводим description к строке на всякий случай
+<span class="cstat-no" title="statement not covered" >    nodeVersion = match ? match[1] : null; </span>// Если найдено совпадение, берем первую группу (версию)
+  }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return { description: description || '', nodeVersion, nodeVersionMinimal };</span>
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2025-08-21T00:31:55.626Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

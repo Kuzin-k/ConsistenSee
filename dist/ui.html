@@ -1535,6 +1535,16 @@ document.getElementById('setComponentData').addEventListener('click', function()
         }
       } 
       if (msg.type === 'all-results') {
+        // Детальная проверка данных, полученных в UI
+        console.log('[UI] RECEIVED all-results message:', {
+          messageType: msg.type,
+          componentsExists: !!msg.components,
+          componentsInstancesCount: msg.components ? msg.components.instances.length : 0,
+          firstInstanceKeys: msg.components && msg.components.instances.length > 0 ? Object.keys(msg.components.instances[0]) : [],
+          firstInstanceLibraryVersion: msg.components && msg.components.instances.length > 0 ? msg.components.instances[0].libraryComponentVersion : 'NO_INSTANCES',
+          fullMessage: msg
+        });
+        
         // Save data for search
         window.lastDebugData = {
           components: msg.components,
@@ -2136,7 +2146,6 @@ document.getElementById('setComponentData').addEventListener('click', function()
     resultElement.style.border = `1px solid ${isError ? "#d32f2f" : "#2e7d32"}`;
     resultElement.style.borderRadius = "4px";
     outputElement.appendChild(resultElement);
-    console.log("\u041E\u0442\u043E\u0431\u0440\u0430\u0436\u0435\u043D \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442:", message);
   };
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
@@ -2453,6 +2462,12 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false, tabType = "") => {
+    const buttonGroups = Object.keys(groupedData).filter(
+      (key) => groupedData[key].some((inst) => inst.name === "button")
+    );
+    buttonGroups.forEach((groupKey) => {
+      const buttonInstances = groupedData[groupKey].filter((inst) => inst.name === "button");
+    });
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -3186,6 +3201,12 @@ document.getElementById('setComponentData').addEventListener('click', function()
 
   // src/ui/displayGroups.ts
   var displayGroups = (groupedData, targetList, isOutdatedTab = false, tabType = "") => {
+    const buttonGroups = Object.keys(groupedData).filter(
+      (key) => groupedData[key].some((inst) => inst.name === "button")
+    );
+    buttonGroups.forEach((groupKey) => {
+      const buttonInstances = groupedData[groupKey].filter((inst) => inst.name === "button");
+    });
     const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
@@ -3424,6 +3445,9 @@ document.getElementById('setComponentData').addEventListener('click', function()
     let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === "number" ? componentsData.counts.outdated : componentsData.outdated ? componentsData.outdated.length : 0;
     let lostCount = componentsData.counts && typeof componentsData.counts.lost === "number" ? componentsData.counts.lost : componentsData.lost ? componentsData.lost.length : 0;
     let deprecatedCount = componentsData.counts && typeof componentsData.counts.deprecated === "number" ? componentsData.counts.deprecated : componentsData.deprecated ? componentsData.deprecated.length : 0;
+    const instancesWithVersions = sourceInstances.filter(
+      (i) => i.libraryComponentVersion || i.libraryComponentVersionMinimal
+    );
     sourceInstances.forEach((instance) => {
       if (!showHidden && instance.hidden) {
         return;
@@ -3442,6 +3466,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
         if (!groupedInstances[groupKey]) {
           groupedInstances[groupKey] = [];
         }
+        const existingInstance = groupedInstances[groupKey].find((existing) => existing.nodeId === instance.nodeId);
+        if (existingInstance) {
+          return;
+        }
         groupedInstances[groupKey].push(instance);
         nonIconCount++;
       } else if (instance.isIcon === true) {
@@ -3453,6 +3481,10 @@ document.getElementById('setComponentData').addEventListener('click', function()
       } else {
         if (!groupedInstances[groupKey]) {
           groupedInstances[groupKey] = [];
+        }
+        const existingInstance = groupedInstances[groupKey].find((existing) => existing.nodeId === instance.nodeId);
+        if (existingInstance) {
+          return;
         }
         groupedInstances[groupKey].push(instance);
         nonIconCount++;
@@ -3576,6 +3608,14 @@ document.getElementById('setComponentData').addEventListener('click', function()
       }
     }
     const tabTitle = tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
+    console.log(`[UI processAndDisplayComponents] Final groups for ${tabType}:`, {
+      groupedInstancesKeys: Object.keys(groupedInstances),
+      groupedInstancesCount: Object.keys(groupedInstances).length,
+      buttonGroups: Object.keys(groupedInstances).filter(
+        (key) => groupedInstances[key].some((inst) => inst.name === "button")
+      ),
+      totalInstances: Object.values(groupedInstances).reduce((sum, group) => sum + group.length, 0)
+    });
     if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated") {
       displayGroups(sortGroups(groupedInstances), resultsList, tabTitle, tabType);
       if (iconResultsList) {

@@ -2,6 +2,7 @@ import { getDescription } from './getDescription';
 import { checkIsNodeOrParentHidden } from '../utils/checkIsNodeOrParentHidden';
 import { getParentComponentName } from './getParentComponentName';
 import { retryGetMainComponent } from '../utils/retryWithBackoff';
+import { getUpdateQueue } from '../update/updateQueue';
 import { SceneNode, ComponentNode, ComponentSetNode, ComponentData, ComponentsResult } from '../../shared/types';
 
 /**
@@ -13,12 +14,16 @@ import { SceneNode, ComponentNode, ComponentSetNode, ComponentData, ComponentsRe
  * @returns {Promise<Object|null>} Объект с данными компонента или null, если узел не является INSTANCE или COMPONENT
  */
 export const processNodeComponent = async (node: SceneNode, componentsResult: ComponentsResult): Promise<ComponentData | ComponentData[] | null> => {
-      /*console.log(`[processNodeComponent] Начало обработки узла:`, {
-        id: node.id,
-        type: node.type,
-        name: node.name,
-        hasParent: !!node.parent
-      });*/
+      // Логируем начало обработки для button компонентов
+      const isButtonComponent = node.name.toLowerCase().includes('button');
+      if (isButtonComponent) {
+        console.log(`[processNodeComponent] BUTTON COMPONENT - Начало обработки:`, {
+          id: node.id,
+          type: node.type,
+          name: node.name,
+          hasParent: !!node.parent
+        });
+      }
 
       let mainComponent: ComponentNode | null = null; // Переменная для хранения главного компонента
       // Если узел является инстансом, получаем его главный компонент
@@ -177,15 +182,49 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
           mainComponentSetKey: mainComponentSetKey ? mainComponentSetKey : null, // Ключ набора компонентов (если есть)
           mainComponentSetName: mainComponentSetName ? mainComponentSetName : null, // Имя набора компонентов (если есть)
           mainComponentSetId: mainComponentSetId ? mainComponentSetId : null, // Имя набора компонентов (если есть)
-          
-          
           isIcon: isIcon, // Является ли иконкой
           size: isIcon ? width : `${width}x${height}`, // Размер (для иконок - одна сторона, для других - ШxВ)
           isNested: isNested, // Является ли вложенным инстансом
           skipUpdate: isNested, // Пропускать ли проверку обновления для вложенных инстансов
           pluginDataKey: pluginDataKey, // Пользовательский ключ из PluginData
-          updateStatus: 'checking'
+          updateStatus: 'checking',
+          // Инициализируем поля версий библиотеки как null (будут обновлены в updateQueue)
+          libraryComponentVersion: null,
+          libraryComponentVersionMinimal: null,
+          libraryComponentName: null,
+          libraryComponentSetName: null,
+          libraryComponentId: null
         };
+        
+        // Добавляем компонент в очередь для проверки обновлений
+        const updateQueue = getUpdateQueue();
+        
+        // Детальное логирование для отладки проблем с очередью
+        console.log(`[processNodeComponent] Попытка добавить в очередь:`, {
+          name: componentData.name,
+          type: componentData.type,
+          mainComponentKey: componentData.mainComponentKey,
+          mainComponentName: componentData.mainComponentName,
+          skipUpdate: componentData.skipUpdate,
+          isNested: componentData.isNested
+        });
+        
+        if (!componentData.mainComponentKey) {
+          console.warn(`[processNodeComponent] ПРОПУЩЕН - отсутствует mainComponentKey для:`, {
+            name: componentData.name,
+            type: componentData.type,
+            nodeId: componentData.nodeId,
+            mainComponent: mainComponent ? {
+              name: mainComponent.name,
+              key: mainComponent.key,
+              id: mainComponent.id
+            } : 'null'
+          });
+        }
+        
+        updateQueue.addComponent(componentData);
+        
+        console.log(`[processNodeComponent] Статус очереди после добавления:`, updateQueue.getStatus());
         // Если объект данных компонента создан и узел является INSTANCE или COMPONENT
         if (componentData && (node.type === 'INSTANCE' || node.type === 'COMPONENT')) {
             // Проверяем, что массив componentsResult.instances существует и является массивом
@@ -197,6 +236,17 @@ export const processNodeComponent = async (node: SceneNode, componentsResult: Co
         // Если это иконка, увеличиваем счетчик иконок
         if (componentData.isIcon) {
             componentsResult.counts.icons = (componentsResult.counts.icons || 0) + 1;
+        }
+        
+        // Логируем успешное добавление button компонентов
+        if (isButtonComponent) {
+          console.log(`[processNodeComponent] BUTTON COMPONENT - Успешно добавлен в результат:`, {
+            name: componentData.name,
+            type: componentData.type,
+            nodeId: componentData.nodeId,
+            mainComponentName: componentData.mainComponentName,
+            totalInstancesNow: componentsResult.instances.length
+          });
         }
         //console.log('Added to componentsResult.instances:', componentData);
     } else {
