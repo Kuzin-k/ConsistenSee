@@ -1294,9 +1294,9 @@ var ParallelUpdateProcessor = class {
     this.processedCount = 0;
     this.totalCount = 0;
     this.config = __spreadValues({
-      maxConcurrent: 5,
+      maxConcurrent: 10,
       batchSize: 5,
-      progressUpdateInterval: 1e3
+      progressUpdateInterval: 500
     }, config);
   }
   /**

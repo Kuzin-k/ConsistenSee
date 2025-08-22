@@ -27,9 +27,9 @@ export class ParallelUpdateProcessor {
 
   constructor(config: Partial<ParallelProcessorConfig> = {}) {
     this.config = {
-      maxConcurrent: 5,
+      maxConcurrent: 10,
       batchSize: 5,
-      progressUpdateInterval: 1000,
+      progressUpdateInterval: 500,
       ...config,
     };
   }
