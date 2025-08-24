@@ -16,13 +16,13 @@ export interface RetryOptions {
  */
 const isConnectionError = (error: Error): boolean => {
   // Безопасно получаем сообщение ошибки
-  const message = error?.message?.toLowerCase() || '';
+  const message = error?.message?.toLowerCase() || "";
   return (
-    message.includes('unable to establish connection') ||
-    message.includes('connection timeout') ||
-    message.includes('network error') ||
-    message.includes('connection failed') ||
-    message.includes('timeout')
+    message.includes("unable to establish connection") ||
+    message.includes("connection timeout") ||
+    message.includes("network error") ||
+    message.includes("connection failed") ||
+    message.includes("timeout")
   );
 };
 
@@ -41,56 +41,61 @@ export const retryWithBackoff = async <T>(
     initialDelay = 1000,
     maxDelay = 10000,
     backoffMultiplier = 2,
-    onRetry
+    onRetry,
   } = options;
 
   let lastError: Error;
   let connectionIssueReported = false;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error) {
       // Безопасно приводим к типу Error
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       // Если это не ошибка соединения, не повторяем попытку
       if (!isConnectionError(lastError)) {
         throw lastError;
       }
-      
+
       // Отправляем сообщение о проблемах с соединением только один раз
       if (!connectionIssueReported) {
         figma.ui.postMessage({
-          type: 'connection-waiting' as const,
-          message: 'Waiting for connection...'
+          type: "connection-waiting" as const,
+          message: "Waiting for connection...",
         });
         connectionIssueReported = true;
       }
-      
+
       // Если это последняя попытка, выбрасываем ошибку
       if (attempt === maxRetries) {
         throw lastError;
       }
-      
+
       // Вызываем колбэк, если он предоставлен
       if (onRetry) {
         onRetry(attempt + 1, lastError);
       }
-      
+
       // Вычисляем задержку с экспоненциальным увеличением
       const delay = Math.min(
         initialDelay * Math.pow(backoffMultiplier, attempt),
         maxDelay
       );
-      
-      console.log(`[retryWithBackoff] Попытка ${attempt + 1}/${maxRetries + 1} неудачна. Повтор через ${delay}мс. Ошибка:`, lastError.message);
-      
+
+      console.log(
+        `[retryWithBackoff] Попытка ${attempt + 1}/${
+          maxRetries + 1
+        } неудачна. Повтор через ${delay}мс. Ошибка:`,
+        lastError.message
+      );
+
       // Ждем перед следующей попыткой
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  
+
   // Этот код никогда не должен выполниться, но TypeScript требует return
   throw lastError!;
 };
@@ -105,23 +110,22 @@ export const retryGetMainComponent = async (
   node: InstanceNode,
   nodeName: string
 ): Promise<ComponentNode | null> => {
-  return retryWithBackoff(
-    () => node.getMainComponentAsync(),
-    {
-      maxRetries: 3,
-      initialDelay: 2000, // Увеличиваем начальную задержку для Figma API
-      maxDelay: 15000,
-      onRetry: (attempt, error) => {
-        console.log(`[retryGetMainComponent] Повторная попытка ${attempt} для компонента "${nodeName}": ${error.message}`);
-        
-        // Отправляем уведомление в UI о повторной попытке
-        figma.ui.postMessage({
-          type: 'retry-notification' as const,
-          message: `Повторная попытка ${attempt}/3 для компонента "${nodeName}"`
-        });
-      }
-    }
-  );
+  return retryWithBackoff(() => node.getMainComponentAsync(), {
+    maxRetries: 3,
+    initialDelay: 2000, // Увеличиваем начальную задержку для Figma API
+    maxDelay: 15000,
+    onRetry: (attempt, error) => {
+      console.log(
+        `[retryGetMainComponent] Try ${attempt} for "${nodeName}": ${error.message}`
+      );
+
+      // Отправляем уведомление в UI о повторной попытке
+      figma.ui.postMessage({
+        type: "retry-notification" as const,
+        message: `Try ${attempt}/3 for "${nodeName}"`,
+      });
+    },
+  });
 };
 
 /**
@@ -137,7 +141,7 @@ export const checkFigmaConnection = async (): Promise<boolean> => {
     }
     return false;
   } catch (error) {
-    console.error('[checkFigmaConnection] Ошибка проверки соединения:', error);
+    console.error("[checkFigmaConnection] Ошибка проверки соединения:", error);
     return false;
   }
 };
@@ -147,23 +151,25 @@ export const checkFigmaConnection = async (): Promise<boolean> => {
  * @param maxWaitTime - Максимальное время ожидания в миллисекундах (по умолчанию 30 секунд)
  * @returns Promise<boolean> - true, если соединение восстановлено
  */
-export const waitForConnection = async (maxWaitTime: number = 30000): Promise<boolean> => {
+export const waitForConnection = async (
+  maxWaitTime: number = 30000
+): Promise<boolean> => {
   const startTime = Date.now();
   const checkInterval = 2000; // Проверяем каждые 2 секунды
-  
+
   while (Date.now() - startTime < maxWaitTime) {
     if (await checkFigmaConnection()) {
       return true;
     }
-    
-    console.log('[waitForConnection] Ожидание восстановления соединения...');
+
+    console.log("[waitForConnection] Ожидание восстановления соединения...");
     figma.ui.postMessage({
-      type: 'connection-waiting' as const,
-      message: 'Ожидание восстановления соединения с Figma...'
+      type: "connection-waiting" as const,
+      message: "Ожидание восстановления соединения с Figma...",
     });
-    
-    await new Promise(resolve => setTimeout(resolve, checkInterval));
+
+    await new Promise((resolve) => setTimeout(resolve, checkInterval));
   }
-  
+
   return false;
 };

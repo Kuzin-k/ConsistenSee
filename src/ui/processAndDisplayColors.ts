@@ -140,12 +140,14 @@ export function processAndDisplayColors(
     if (colorsTab) { // Ensure colorsTab exists
         if (totalColorIssues === 0) {
             colorsTab.classList.remove('tab');
-            colorsTab.classList.add('tab_success');
-            colorsTab.textContent = `Colors (OK)`;
+            colorsTab.classList.add('tab_disabled');
+            colorsTab.textContent = `Colors (0)`;
+            (colorsTab as HTMLElement).style.pointerEvents = 'none';
         } else {
-            colorsTab.classList.remove('tab_success');
+            colorsTab.classList.remove('tab_success', 'tab_disabled');
             colorsTab.classList.add('tab');
             colorsTab.textContent = `Colors (${totalColorIssues})`;
+            (colorsTab as HTMLElement).style.pointerEvents = 'auto';
         }
     }
 }

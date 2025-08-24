@@ -63,6 +63,7 @@ export interface ComponentData {
   isNested: boolean;
   isLost: boolean;
   isDeprecated: boolean;
+  isDetached?: boolean; // Добавляем поле для detached фреймов
   skipUpdate: boolean;
   pluginDataKey?: string;
   // Поля статуса обновления
@@ -74,7 +75,7 @@ export interface ComponentData {
   libraryComponentId?: string | null;
   libraryComponentVersion?: string | null;
   libraryComponentVersionMinimal?: string | null;
-  updateStatus?: "checking" | "checked" | null;
+  updateStatus?: "checking" | "checked" | "skipped" | null;
 }
 
 /** Результат анализа компонентов */
@@ -89,6 +90,7 @@ export interface ComponentsResult {
     outdated?: number;
     lost?: number;
     deprecated?: number;
+    detached?: number; // Добавляем счетчик для detached фреймов
   };
   executionTime?: number;
 }

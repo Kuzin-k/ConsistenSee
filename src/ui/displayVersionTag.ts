@@ -31,8 +31,8 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
     tabType = "",
   } = options;
 
-  // Не отображаем теги версий на вкладке deprecated
-  if (tabType === "deprecated") {
+  // Не отображаем теги версий на специальных вкладках
+  if (tabType === "deprecated" || tabType === "detached" || tabType === "lost") {
     const emptyContainer = document.createElement("span");
     emptyContainer.classList.add("version-group");
     return emptyContainer;

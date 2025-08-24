@@ -62,7 +62,6 @@ export const showPopover = (icon: Element, instance: ComponentData): void => {
   const popover = document.createElement('div');
   popover.classList.add('popover');
   
-
   // Формируем контент: простой рендер ключ-значение
   // Для объектов используем JSON.stringify для читаемого представления
   const content = Object.entries(instance).map(([key, value]) => {
@@ -79,6 +78,16 @@ export const showPopover = (icon: Element, instance: ComponentData): void => {
   }).join('<br>');
 
   popover.innerHTML = content;
+  
+  // Адаптируем размеры поповера к размеру окна плагина
+  const maxWidth = Math.min(500, window.innerWidth - 40); // 20px отступ с каждой стороны
+  const maxHeight = window.innerHeight - 40; // 20px отступ сверху и снизу
+  
+  popover.style.maxWidth = `${maxWidth}px`;
+  popover.style.maxHeight = `${maxHeight}px`;
+  popover.style.overflowY = 'auto'; // Добавляем скролл если контент не помещается
+  popover.style.wordWrap = 'break-word';
+  
   document.body.appendChild(popover);
 
   // Получаем bounding rect иконки (триггера)
@@ -117,25 +126,12 @@ export const showPopover = (icon: Element, instance: ComponentData): void => {
   popover.style.top = `${top}px`;
   popover.style.display = 'block';
 
-  // Отправляем сообщение в родительский код плагина чтобы подкорректировать размер окна
-  parent.postMessage({
-    pluginMessage: {
-      type: 'resize-plugin-window',
-      // Подбираем ширину/высоту с небольшим запасом (padding)
-      width: Math.max(document.body.scrollWidth, popoverRect.width + left + 20),
-      height: Math.max(document.body.scrollHeight, popoverRect.height + top + 20)
-    }
-  }, '*');
+  // Убираем отправку сообщения resize-plugin-window, так как поповер теперь адаптируется
+  // к текущему размеру окна и не требует его изменения
 
   // Обработчик удаления popover при уходе курсора с иконки
   const onLeave = () => {
     popover.remove();
-    // Сообщаем родителю восстановить исходный размер окна (опционально)
-    parent.postMessage({
-      pluginMessage: {
-        type: 'reset-plugin-window-size'
-      }
-    }, '*');
     // Удаляем обработчик чтобы не накапливать их
     try { icon.removeEventListener('mouseleave', onLeave); } catch (e) { /* silent */ }
   };

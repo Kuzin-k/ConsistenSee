@@ -4,7 +4,6 @@ import {
   ComponentNode,
 } from "../../shared/types";
 import { updateAvailabilityCheck } from "./updateAvailabilityCheck";
-import { updateProgress } from "../utils/updateProgress";
 
 /**
  * Interface for update queue item
@@ -155,14 +154,12 @@ export class UpdateQueue {
    */
   private async startProcessing(): Promise<void> {
     if (this.isRunning) {
-      console.log(
-        "[UpdateQueue] startProcessing called but already running, skipping"
-      );
+      //console.log("[UpdateQueue] startProcessing called but already running, skipping");
       return;
     }
 
     this.isRunning = true;
-    console.log("[UpdateQueue] Starting parallel update check processing");
+    //console.log("[UpdateQueue] Starting parallel update check processing");
 
     const activeBatches: Promise<void>[] = [];
 
@@ -264,7 +261,9 @@ export class UpdateQueue {
   private async processBatch(batch: UpdateQueueItem[]): Promise<void> {
     for (const item of batch) {
       const component = item.component;
-      const dedupeKey = `${component.mainComponentKey || "unknown"}_$$$${component.nodeId || "no-node"}`;
+      const dedupeKey = `${component.mainComponentKey || "unknown"}_$$$${
+        component.nodeId || "no-node"
+      }`;
       this.processing.add(dedupeKey);
 
       let updated: ComponentData = component;
@@ -272,39 +271,63 @@ export class UpdateQueue {
       try {
         if (!component.mainComponentId || component.remote === false) {
           // Нет mainComponentId или локальный — просто помечаем как проверенный
-          updated = { ...component, updateStatus: "checked" };
+          updated = { ...component, updateStatus: "skipped" };
         } else {
-          // Пропуск иконок и имён, начинающихся с '_' или '.'
-          const trimmedName = (component.name || "").trim();
-          const skipByName = component.type === "INSTANCE" && (trimmedName.startsWith("_") || trimmedName.startsWith("."));
-          if (component.isIcon === true || skipByName) {
+          // Удалить этот блок:
+          // // Пропуск иконок и имён, начинающихся с '_' или '.'
+          // const trimmedName = (component.mainComponentName || "").trim();
+          // const skipByName =
+          //   component.type === "INSTANCE" &&
+          //   (trimmedName.startsWith("_") || trimmedName.startsWith("."));
+          // if (component.isIcon === true || skipByName) {
+          //   updated = { ...component, updateStatus: "skipped" };
+          // } else {
+
+          // Заменить на:
+          // Проверяем доступность обновлений для компонента
+          /*
+          const updateAvailable = await updateAvailabilityCheck(
+            component.mainComponentKey!,
+            component.mainComponentId!,
+            component.nodeId!,
+            component.name
+          );
+          */
+          const mainComponent = (await figma.getNodeByIdAsync(
+            component.mainComponentId
+          )) as ComponentNode | null;
+          if (!mainComponent) {
+            console.warn(
+              `[UpdateQueue] Main component not found by id: ${component.mainComponentId}`
+            );
             updated = { ...component, updateStatus: "checked" };
           } else {
-            const mainComponent = (await figma.getNodeByIdAsync(component.mainComponentId)) as ComponentNode | null;
-            if (!mainComponent) {
-              console.warn(`[UpdateQueue] Main component not found by id: ${component.mainComponentId}`);
-              updated = { ...component, updateStatus: "checked" };
-            } else {
-              const info = await updateAvailabilityCheck(mainComponent, component.nodeVersion);
-              updated = {
-                ...component,
-                isOutdated: info.isOutdated,
-                checkVersion: info.checkVersion,
-                isNotLatest: Boolean(info.isNotLatest),
-                isLost: Boolean(info.isLost),
-                isDeprecated: Boolean(info.isDeprecated),
-                libraryComponentName: info.libraryComponentName,
-                libraryComponentSetName: info.libraryComponentSetName,
-                libraryComponentId: info.libraryComponentId,
-                libraryComponentVersion: info.libraryComponentVersion,
-                libraryComponentVersionMinimal: info.libraryComponentVersionMinimal,
-                updateStatus: "checked",
-              };
-            }
+            const info = await updateAvailabilityCheck(
+              mainComponent,
+              component.nodeVersion
+            );
+            updated = {
+              ...component,
+              isOutdated: info.isOutdated,
+              checkVersion: info.checkVersion,
+              isNotLatest: Boolean(info.isNotLatest),
+              isLost: Boolean(info.isLost),
+              isDeprecated: Boolean(info.isDeprecated),
+              libraryComponentName: info.libraryComponentName,
+              libraryComponentSetName: info.libraryComponentSetName,
+              libraryComponentId: info.libraryComponentId,
+              libraryComponentVersion: info.libraryComponentVersion,
+              libraryComponentVersionMinimal:
+                info.libraryComponentVersionMinimal,
+              updateStatus: "checked",
+            };
           }
         }
       } catch (err) {
-        console.warn(`[UpdateQueue] Error processing component "${component.name}":`, err);
+        console.warn(
+          `[UpdateQueue] Error processing component "${component.name}":`,
+          err
+        );
         updated = { ...component, updateStatus: "checked" };
       } finally {
         this.completed.set(dedupeKey, updated);
@@ -313,7 +336,11 @@ export class UpdateQueue {
 
         if (this.onProgressCallback) {
           try {
-            this.onProgressCallback(this.processedCount, this.totalComponents, updated);
+            this.onProgressCallback(
+              this.processedCount,
+              this.totalComponents,
+              updated
+            );
           } catch (cbErr) {
             console.error("[UpdateQueue] onProgress callback error:", cbErr);
           }

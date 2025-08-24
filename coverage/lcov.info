@@ -2382,12 +2382,12 @@ BRF:9
 BRH:0
 end_of_record
 TN:
-SF:src/ui/displayTotal.ts
-FN:7,displayTotal
+SF:src/ui/displayTabTotal.ts
+FN:7,displayTabTotal
 FN:40,(anonymous_1)
 FNF:2
 FNH:0
-FNDA:0,displayTotal
+FNDA:0,displayTabTotal
 FNDA:0,(anonymous_1)
 DA:7,0
 DA:10,0

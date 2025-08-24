@@ -1,6 +1,5 @@
-import { ComponentData, ComponentsResult } from '../../shared/types';
-import { getUpdateQueue } from './updateQueue';
-import { updateProgress } from '../utils/updateProgress';
+import { ComponentData, ComponentsResult } from "../../shared/types";
+import { getUpdateQueue } from "./updateQueue";
 
 /**
  * Configuration for parallel update processor
@@ -19,22 +18,32 @@ export class ParallelUpdateProcessor {
   private isProcessing: boolean = false;
   private processedCount: number = 0;
   private totalCount: number = 0;
-  private onProgressCallback?: (processed: number, total: number, componentName?: string) => Promise<void>;
+  private onProgressCallback?: (
+    processed: number,
+    total: number,
+    componentName?: string
+  ) => Promise<void>;
   private onCompleteCallback?: (results: ComponentsResult) => void;
 
   constructor(config: Partial<ParallelProcessorConfig> = {}) {
     this.config = {
-      maxConcurrent: 3,
+      maxConcurrent: 10,
       batchSize: 5,
-      progressUpdateInterval: 1000,
-      ...config
+      progressUpdateInterval: 500,
+      ...config,
     };
   }
 
   /**
    * Set progress callback
    */
-  public onProgress(callback: (processed: number, total: number, componentName?: string) => Promise<void>): void {
+  public onProgress(
+    callback: (
+      processed: number,
+      total: number,
+      componentName?: string
+    ) => Promise<void>
+  ): void {
     this.onProgressCallback = callback;
   }
 
@@ -50,7 +59,7 @@ export class ParallelUpdateProcessor {
    */
   public async processAll(): Promise<ComponentsResult> {
     if (this.isProcessing) {
-      throw new Error('Processor is already running');
+      throw new Error("Processor is already running");
     }
 
     this.isProcessing = true;
@@ -58,34 +67,47 @@ export class ParallelUpdateProcessor {
 
     try {
       const updateQueue = getUpdateQueue();
-      
+
       const status = updateQueue.getStatus();
       this.totalCount = status.total;
 
       // Не выходим, даже если totalCount === 0 — ждём наполнение очереди и автостарт
       return new Promise<ComponentsResult>((resolve, reject) => {
-        updateQueue.onProgress(async (processed: number, total: number, component?: ComponentData) => {
-          this.processedCount = processed;
-          this.totalCount = total;
-          if (this.onProgressCallback) {
-            await this.onProgressCallback(processed, total, component?.name);
+        updateQueue.onProgress(
+          async (
+            processed: number,
+            total: number,
+            component?: ComponentData
+          ) => {
+            this.processedCount = processed;
+            this.totalCount = total;
+            if (this.onProgressCallback) {
+              await this.onProgressCallback(processed, total, component?.name);
+            }
           }
-        });
+        );
 
         updateQueue.onComplete((results: ComponentsResult) => {
           this.isProcessing = false;
           try {
             if (this.onCompleteCallback) {
               if (typeof this.onCompleteCallback !== "function") {
-                console.warn("[ParallelUpdateProcessor] onCompleteCallback задан, но это не функция");
+                console.warn(
+                  "[ParallelUpdateProcessor] onCompleteCallback задан, но это не функция"
+                );
               } else {
                 this.onCompleteCallback(results);
               }
             } else {
-              console.warn("[ParallelUpdateProcessor] onCompleteCallback не установлен");
+              console.warn(
+                "[ParallelUpdateProcessor] onCompleteCallback не установлен"
+              );
             }
           } catch (err) {
-            console.error("[ParallelUpdateProcessor] Ошибка внутри onCompleteCallback:", err);
+            console.error(
+              "[ParallelUpdateProcessor] Ошибка внутри onCompleteCallback:",
+              err
+            );
           } finally {
             resolve(results);
           }
@@ -126,7 +148,8 @@ export class ParallelUpdateProcessor {
       isProcessing: this.isProcessing,
       processed: this.processedCount,
       total: this.totalCount,
-      progress: this.totalCount > 0 ? (this.processedCount / this.totalCount) * 100 : 0
+      progress:
+        this.totalCount > 0 ? (this.processedCount / this.totalCount) * 100 : 0,
     };
   }
 }
@@ -142,7 +165,7 @@ export const getParallelUpdateProcessor = (): ParallelUpdateProcessor => {
     globalProcessor = new ParallelUpdateProcessor({
       maxConcurrent: 3,
       batchSize: 5,
-      progressUpdateInterval: 1000
+      progressUpdateInterval: 1000,
     });
   }
   return globalProcessor;
