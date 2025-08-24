@@ -93,19 +93,18 @@
           <div class="tab" data-tab="total">Total</div>
           <!--<div class="tab" data-tab="icons">Icons</div>-->
         </div>
-      </div>
-      <!-- Контент -->
-      <div class="tabs-content">
-        <!-- Подвкладки для инстансов -->
         <div id="subTabs" class="tabs small" style="display: flex;">
           <div class="tab_borderless active" data-tab="instances">All</div>
           <div class="tab_borderless" data-tab="outdated">Outdated</div>
           <div class="tab_borderless" data-tab="lost">Lost</div>
           <div class="tab_borderless" data-tab="deprecated">Deprecated</div>
-          <div class="tab_borderless_disabled" data-tab="detached">Detached (soon)</div>
-
-
+          <div class="tab_borderless" data-tab="detached">Detached</div>
         </div>
+      </div>
+      <!-- Контент -->
+      <div class="tabs-content">
+        <!-- Подвкладки для инстансов -->
+
 
         <!-- Главная вкладка инстансов -->
         <div id="main-instances" class="tab-content active">
@@ -141,6 +140,14 @@
           <div id="deprecatedResults">
             <a href="#" class="toggle-groups" data-action="expand">expand all</a>
             <ul id="deprecatedResultsList"></ul>
+          </div>
+        </div>
+
+        <!-- Отсоединенные фреймы -->
+        <div id="detached" class="tab-content">
+          <div id="detachedResults">
+            <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+            <ul id="detachedResultsList"></ul>
           </div>
         </div>
 
@@ -724,6 +731,13 @@
               const deprecatedResultsList = document.getElementById('deprecatedResultsList');
               let allInstances = [];
               UIModules.processAndDisplayComponents(msg.components, allInstances, deprecatedResultsList, null, 'deprecated');
+            }
+
+            // Process detached components if present
+            if (msg.components) {
+              const detachedResultsList = document.getElementById('detachedResultsList');
+              let allInstances = [];
+              UIModules.processAndDisplayComponents(msg.components, allInstances, detachedResultsList, null, 'detached');
             }
 
             // Process colors

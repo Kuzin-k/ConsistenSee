@@ -5,6 +5,7 @@
 
 import { displayGroups } from "./displayGroups";
 import { sortGroups } from "./sortGroups";
+import { filterDetachedFrames } from "../js/component/processDetachedFrame";
 
 /**
  * Обрабатывает данные компонентов и отображает их в интерфейсе с разделением на обычные компоненты и иконки
@@ -33,8 +34,6 @@ export function processAndDisplayComponents(
   iconResultsList?: HTMLElement,
   tabType: string = "instances"
 ): void {
-  
-  
   // Определяем источник данных в зависимости от типа вкладки
   let sourceInstances: any[];
   if (tabType === "outdated") {
@@ -65,11 +64,14 @@ export function processAndDisplayComponents(
         (instance: any) => instance.isDeprecated === true
       );
     }
+  } else if (tabType === "detached") {
+    sourceInstances = componentsData.instances.filter((instance: any) => {
+      const isDetached = instance.isDetached === true;
+      return isDetached;
+    });
   } else {
     sourceInstances = componentsData.instances;
   }
-  
-  
 
   // Обновляем глобальную ссылку на все инстансы (если вызывающий код полагается на неё)
   allInstances = sourceInstances;
@@ -108,19 +110,20 @@ export function processAndDisplayComponents(
       ? componentsData.deprecated.length
       : 0;
 
+  // Добавляем подсчет detached элементов
+  let detachedCount =
+    componentsData.counts && typeof componentsData.counts.detached === "number"
+      ? componentsData.counts.detached
+      : filterDetachedFrames(componentsData.instances).length;
+
   // Debug: Log source instances with library version data
   const instancesWithVersions = sourceInstances.filter(
     (i: any) => i.libraryComponentVersion || i.libraryComponentVersionMinimal
   );
-  
-  
 
   // Проходим по всем инстансам и распределяем их в соответствующие группы
-  // - Пропускаем скрытые элементы, если пользователь отключил их показ
-  // - Определяем ключ группы: сперва mainComponentSetKey, затем mainComponentKey
+  // Проходим по всем инстансам и распределяем их в соответствующие группы
   sourceInstances.forEach((instance: any) => {
-    
-    
     if (!showHidden && instance.hidden) {
       return; // Пропускаем скрытые элементы
     }
@@ -135,32 +138,42 @@ export function processAndDisplayComponents(
     if (tabType === "deprecated" && instance.isDeprecated !== true) {
       return;
     }
+    if (tabType === "detached" && !instance.isDetached) {
+      return;
+    }
+    // Исключаем detached элементы из вкладки instances (ALL)
+    if (tabType === "instances" && instance.isDetached) {
+      return;
+    }
 
-    const groupKey = instance.mainComponentSetKey
-      ? instance.mainComponentSetKey
-      : instance.mainComponentKey;
-
-    
+    const groupKey =
+      tabType === "detached"
+        ? instance.name // Для detached группируем по имени элемента
+        : instance.mainComponentSetKey
+        ? instance.mainComponentSetKey
+        : instance.mainComponentKey;
 
     if (
       tabType === "outdated" ||
       tabType === "lost" ||
-      tabType === "deprecated"
+      tabType === "deprecated" ||
+      tabType === "detached"
     ) {
       // Для специальных вкладок не разделяем на иконки и обычные, показываем все в одном списке
       if (!groupedInstances[groupKey]) {
         groupedInstances[groupKey] = [];
       }
-      
+
       // Проверяем на дублирование перед добавлением
-      const existingInstance = groupedInstances[groupKey].find(existing => existing.nodeId === instance.nodeId);
+      const existingInstance = groupedInstances[groupKey].find(
+        (existing) => existing.nodeId === instance.nodeId
+      );
       if (existingInstance) {
         return; // Пропускаем дубликат
       }
-      
+
       groupedInstances[groupKey].push(instance);
       nonIconCount++;
-      
     } else if (instance.isIcon === true) {
       // Иконки группируем отдельно
       if (!groupedIcons[groupKey]) {
@@ -172,17 +185,17 @@ export function processAndDisplayComponents(
       if (!groupedInstances[groupKey]) {
         groupedInstances[groupKey] = [];
       }
-      
+
       // Проверяем на дублирование перед добавлением для обычных компонентов
-      const existingInstance = groupedInstances[groupKey].find(existing => existing.nodeId === instance.nodeId);
+      const existingInstance = groupedInstances[groupKey].find(
+        (existing) => existing.nodeId === instance.nodeId
+      );
       if (existingInstance) {
         return; // Пропускаем дубликат
       }
-      
+
       groupedInstances[groupKey].push(instance);
       nonIconCount++;
-      
-      
     }
   });
 
@@ -231,7 +244,10 @@ export function processAndDisplayComponents(
 
   // Сортируем элементы внутри каждой группы
   const sortFunction =
-    tabType === "outdated" || tabType === "lost" || tabType === "deprecated"
+    tabType === "outdated" ||
+    tabType === "lost" ||
+    tabType === "deprecated" ||
+    tabType === "detached"
       ? compareByName
       : compareByVersionThenName;
 
@@ -336,16 +352,35 @@ export function processAndDisplayComponents(
         (deprecatedTab as HTMLElement).style.pointerEvents = "auto";
       }
     }
+  } else if (tabType === "detached") {
+    const detachedTab = document.querySelector('[data-tab="detached"]');
+    if (detachedTab) {
+      detachedTab.textContent = `Detached (${detachedCount})`;
+      // Блокируем вкладку если 0 элементов
+      if (detachedCount === 0) {
+        detachedTab.classList.remove("tab_borderless");
+        detachedTab.classList.add("tab_borderless_disabled");
+        (detachedTab as HTMLElement).style.pointerEvents = "none";
+      } else {
+        detachedTab.classList.remove("tab_borderless_disabled");
+        detachedTab.classList.add("tab_borderless");
+        (detachedTab as HTMLElement).style.pointerEvents = "auto";
+      }
+    }
   }
 
   // Передаём сгруппированные и отсортированные данные в модуль рендера
   const tabTitle =
-    tabType === "outdated" || tabType === "lost" || tabType === "deprecated";
+    tabType === "outdated" ||
+    tabType === "lost" ||
+    tabType === "deprecated" ||
+    tabType === "detached";
 
   if (
     tabType === "outdated" ||
     tabType === "lost" ||
-    tabType === "deprecated"
+    tabType === "deprecated" ||
+    tabType === "detached"
   ) {
     // Для специальных вкладок показываем всё в одном списке (resultsList)
     displayGroups(sortGroups(groupedInstances), resultsList, tabTitle, tabType);

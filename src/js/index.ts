@@ -25,6 +25,7 @@ import { clearRgbToHexCache } from "./color/clearRgbToHexCache";
 
 import { processNodeComponent } from "./component/processNodeComponent";
 import { processNodeStatistics } from "./component/processNodeStatistics";
+import { processDetachedFrame } from "./component/processDetachedFrame";
 
 
 import { clearUpdateCache } from "./update/updateAvailabilityCheck";
@@ -495,6 +496,16 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                 index: index + 1,
               }
             );*/
+          }
+
+          // Проверяем detached фреймы для всех типов узлов
+          try {
+            await processDetachedFrame(node, componentsResult);
+          } catch (err) {
+            console.error(
+              `[${index + 1}] ERROR in processDetachedFrame:`,
+              err instanceof Error ? err.message : String(err)
+            );
           }
         } catch (error) {
           console.error(`[${index + 1}] Ошибка на этапе логирования:`, error);

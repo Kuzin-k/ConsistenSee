@@ -1287,6 +1287,67 @@ var processNodeStatistics = (nodes, nodeName = "Unnamed Selection") => {
   };
 };
 
+// src/js/component/processDetachedFrame.ts
+function isDetachedFrame(frameNode) {
+  if (!frameNode || frameNode.type !== "FRAME") {
+    return false;
+  }
+  if (frameNode.detachedInfo) {
+    return true;
+  }
+  if (frameNode.mainComponent === null && frameNode.mainComponentId) {
+    return true;
+  }
+  return false;
+}
+async function processDetachedFrame(node, componentsResult2) {
+  var _a2;
+  if (!isDetachedFrame(node)) {
+    return;
+  }
+  try {
+    const componentData = {
+      type: node.type,
+      // Используем реальный тип узла (FRAME)
+      name: node.name || "Unnamed Frame",
+      nodeId: node.id,
+      key: node.key || null,
+      description: node.description || void 0,
+      nodeVersion: null,
+      hidden: checkIsNodeOrParentHidden(node),
+      remote: false,
+      parentName: await getParentComponentName(node),
+      parentId: ((_a2 = node.parent) == null ? void 0 : _a2.id) || null,
+      mainComponentName: null,
+      mainComponentKey: null,
+      mainComponentId: null,
+      mainComponentSetKey: null,
+      mainComponentSetName: null,
+      mainComponentSetId: null,
+      isIcon: false,
+      size: `${Math.round(node.width || 0)}\xD7${Math.round(node.height || 0)}`,
+      isNested: false,
+      isLost: false,
+      isDeprecated: false,
+      isDetached: true,
+      // Помечаем как detached
+      skipUpdate: true,
+      // Detached фреймы не нуждаются в обновлении
+      isOutdated: false,
+      isNotLatest: false,
+      checkVersion: null,
+      updateStatus: "skipped"
+    };
+    componentsResult2.instances.push(componentData);
+    if (!componentsResult2.counts.detached) {
+      componentsResult2.counts.detached = 0;
+    }
+    componentsResult2.counts.detached++;
+  } catch (error) {
+    console.error("[DEBUG] \u274C \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 detached \u0444\u0440\u0435\u0439\u043C\u0430:", error);
+  }
+}
+
 // src/js/update/parallelUpdateProcessor.ts
 var ParallelUpdateProcessor = class {
   constructor(config = {}) {
@@ -1688,6 +1749,14 @@ figma.ui.onmessage = async (msg) => {
               );
             }
           } else {
+          }
+          try {
+            await processDetachedFrame(node, componentsResult);
+          } catch (err) {
+            console.error(
+              `[${index + 1}] ERROR in processDetachedFrame:`,
+              err instanceof Error ? err.message : String(err)
+            );
           }
         } catch (error) {
           console.error(`[${index + 1}] \u041E\u0448\u0438\u0431\u043A\u0430 \u043D\u0430 \u044D\u0442\u0430\u043F\u0435 \u043B\u043E\u0433\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F:`, error);
