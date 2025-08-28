@@ -339,7 +339,6 @@ h3 {
 }
 
 #results ul,
-#review ul,
 #icons ul,
 #colors ul,
 #outdated ul,
@@ -350,6 +349,15 @@ h3 {
 #lost ul,
 #errorsTab ul {
   gap: 2px;
+  margin-top: 0px;
+  padding-left: 0px;
+}
+
+#review ul {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 0px;
   padding-left: 0px;
 }
@@ -365,6 +373,94 @@ h3 {
 #log li {
   margin: 0px;
   padding: 4px 0 0 16px;
+}
+
+/* Review Summary Styles */
+.review-summary {
+  padding: 20px 0px;
+}
+
+.summary-grid {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg-danger-tertiary);
+  border: 1px solid var(--color-bg-danger-tertiary);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.summary-item:hover {
+  border: 1px solid var(--color-border-danger);
+}
+
+.summary-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.summary-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.summary-title {
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  flex: 1;
+}
+
+.summary-count {
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-danger);
+  margin-left: 8px;
+}
+
+/* Specific icon colors */
+.colors-icon {
+  background-color: rgba(255, 193, 7, 0.1);
+  border-radius: 4px;
+}
+
+.outdated-icon {
+  background-color: rgba(255, 152, 0, 0.1);
+  border-radius: 4px;
+}
+
+.lost-icon {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 4px;
+}
+
+.deprecated-icon {
+  background-color: rgba(156, 39, 176, 0.1);
+  border-radius: 4px;
+}
+
+.detached-icon {
+  background-color: rgba(96, 125, 139, 0.1);
+  border-radius: 4px;
   list-style-type: none;
 }
 

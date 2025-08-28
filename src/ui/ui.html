@@ -90,8 +90,8 @@
         <div class="tabs">
           <div class="tab errors active" data-tab="errorsTab">Errors</div>
           <div class="tab" data-tab="instances">Instanses</div>
-          <!--<div class="tab colors" data-tab="colors">Colors</div>-->
           <div class="tab" data-tab="total">Nodes</div>
+          <!--<div class="tab colors" data-tab="colors">Colors</div>-->
           <!--<div class="tab" data-tab="icons">Icons</div>-->
         </div>
         <div id="subTabs" class="tabs small" style="display: flex;">
@@ -109,8 +109,7 @@
 
 
         <!-- Главная вкладка инстансов -->
-        <div id="errorsTab" class="tab-content active">
-        </div>
+        <div id="errorsTab" class="tab-content active"></div>
         <!-- Все инстансы -->
         <div id="instances" class="tab-content">
           <!-- Search Results -->
@@ -121,15 +120,48 @@
           </div>
         </div>
 
-        <div id="instances" class="tab-content">
-        </div>
-        <!-- Все инстансы -->
-        <div id="instances" class="tab-content">
-          <!-- Search Results -->
-          <div id="searchResults" style="display: none;"></div>
-          <div id="results">
-            <a href="#" class="toggle-groups" data-action="expand">expand all</a>
-            <ul id="resultsList"></ul>
+        <!-- Review - сводная информация -->
+        <div id="review" class="tab-content">
+          <div id="reviewResults">
+            <div class="review-summary">
+              <div class="summary-grid">
+                <div class="summary-item" data-tab="colors">
+                  <div class="summary-icon colors-icon">🎨</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Old colors</div>
+                    <div class="summary-count" id="colors-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="outdated">
+                  <div class="summary-icon outdated-icon">⚠️</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Outdated components</div>
+                    <div class="summary-count" id="outdated-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="lost">
+                  <div class="summary-icon lost-icon">❌</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Lost instances</div>
+                    <div class="summary-count" id="lost-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="deprecated">
+                  <div class="summary-icon deprecated-icon">🚫</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Deprecated components</div>
+                    <div class="summary-count" id="deprecated-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="detached">
+                  <div class="summary-icon detached-icon">🔗</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Detached components</div>
+                    <div class="summary-count" id="detached-count">0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -279,7 +311,7 @@
               });
 
               // Если поиск активен и выбрана вкладка instances, сохраняем отображение результатов поиска
-              if (isSearchActive && tabId === 'errorsTab') {
+              if (isSearchActive && tabId === 'instances') {
                 const searchResults = document.getElementById('searchResults');
                 const resultsDiv = document.getElementById('results');
                 if (searchResults && resultsDiv) {
@@ -294,26 +326,32 @@
 
               // Показываем/скрываем дочерние вкладки в зависимости от выбранной вкладки
               if (subTabs) {
-                const instancesRelatedTabs = ['errorsTab', 'review', 'colors', 'outdated', 'lost', 'deprecated', 'icons'];
+                const instancesRelatedTabs = ['errorsTab'];
                 if (instancesRelatedTabs.includes(tabId)) {
                   subTabs.style.display = 'flex';
 
-                  // Если переходим на errorsTab, автоматически активируем подвкладку All
+                  // Если переходим на errorsTab, автоматически активируем подвкладку review
                   if (tabId === 'errorsTab') {
                     // Сбрасываем активность всех подвкладок
                     document.querySelectorAll('.tab_borderless').forEach(subTab => {
                       subTab.classList.remove('active');
                     });
-                    // Активируем подвкладку All (instances)
-                    const allSubTab = document.querySelector('.tab_borderless[data-tab="review"]');
-                    if (allSubTab) {
-                      allSubTab.classList.add('active');
+                    // Активируем подвкладку review
+                    const reviewSubTab = document.querySelector('.tab_borderless[data-tab="review"]');
+                    if (reviewSubTab) {
+                      reviewSubTab.classList.add('active');
                     }
-                    // Показываем контент вкладки instances
+                    // Показываем контент вкладки review
                     document.querySelectorAll('.tab-content').forEach(content => {
                       content.style.display = content.id === 'review' ? 'block' : 'none';
                     });
                   }
+                } else if (tabId === 'instances') {
+                  subTabs.style.display = 'none';
+                  // Сбрасываем активность дочерних вкладок
+                  document.querySelectorAll('.tab_borderless').forEach(subTab => {
+                    subTab.classList.remove('active');
+                  });
                 } else {
                   subTabs.style.display = 'none';
                   // Сбрасываем активность дочерних вкладок
@@ -340,8 +378,8 @@
                 content.style.display = content.id === tabId ? 'block' : 'none';
               });
 
-              // Если поиск активен и выбрана вкладка instances (All), сохраняем отображение результатов поиска
-              if (isSearchActive && tabId === 'errorsTab') {
+              // Если поиск активен и выбрана подвкладка instances, сохраняем отображение результатов поиска
+              if (isSearchActive && tabId === 'instances') {
                 const searchResults = document.getElementById('searchResults');
                 const resultsDiv = document.getElementById('results');
                 if (searchResults && resultsDiv) {
@@ -369,8 +407,22 @@
             });
           });
 
+          // Инициализация по умолчанию - показываем вкладку review (соответствует активным вкладкам в HTML)
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = content.id === 'review' ? 'block' : 'none';
+          });
 
-
+          // Убираем активность с вкладки instances, так как по умолчанию активна errorsTab
+          const instancesTab = document.querySelector('.tab[data-tab="instances"]');
+          if (instancesTab) {
+            instancesTab.classList.remove('active');
+          }
+          
+          // Убеждаемся, что errorsTab активна по умолчанию
+          const errorsTab = document.querySelector('.tab[data-tab="errorsTab"]');
+          if (errorsTab) {
+            errorsTab.classList.add('active');
+          }
 
         });
 
@@ -714,7 +766,7 @@
               }
 
               // Активируем подвкладку "All" по умолчанию и показываем её контент
-              const allSubTab = document.querySelector('.tab_borderless[data-tab="review"]');
+              const allSubTab = document.querySelector('.tab_borderless[data-tab="instances"]');
               if (allSubTab) {
                 document.querySelectorAll('.tab_borderless').forEach(t => t.classList.remove('active'));
                 allSubTab.classList.add('active');
@@ -758,6 +810,9 @@
             if (msg.colors) {
               UIModules.processAndDisplayColors(msg.colors, msg.colorsStroke);
             }
+
+            // Update review summary counts (после всех обновлений вкладок)
+            updateReviewCounts(msg.components, msg.colors, msg.colorsStroke);
 
             // Update debug information
             debugContent.innerHTML = '';
@@ -1108,28 +1163,24 @@
             // Показываем результаты поиска
             searchResults.style.display = 'block';
 
-            // Показываем вкладки errorsTab и instances
+            // Показываем только вкладку instances
             document.querySelectorAll('.tab-content').forEach(content => {
-              content.style.display = (content.id === 'instances' || content.id === 'errorsTab') ? 'block' : 'none';
+              content.style.display = content.id === 'instances' ? 'block' : 'none';
             });
 
-            // Переключаемся на вкладку Instances и показываем дочернюю вкладку All
+            // Переключаемся на вкладку Instances (не errorsTab!)
             tabs.forEach(t => t.classList.remove('active'));
-            const instancesTab = document.querySelector('.tab[data-tab="errorsTab"]');
+            const instancesTab = document.querySelector('.tab[data-tab="instances"]');
             if (instancesTab) {
               instancesTab.classList.add('active');
             }
 
-            // Показываем дочерние вкладки и активируем All
+            // Скрываем дочерние вкладки при поиске в instances
             const subTabs = document.getElementById('subTabs');
             if (subTabs) {
-              subTabs.style.display = 'flex';
+              subTabs.style.display = 'none';
               const subTabElements = subTabs.querySelectorAll('.tab_borderless');
               subTabElements.forEach(t => t.classList.remove('active'));
-              const allSubTab = subTabs.querySelector('.tab_borderless[data-tab="review"]');
-              if (allSubTab) {
-                allSubTab.classList.add('active');
-              }
             }
 
             UIModules.displaySearchResults(results, searchTerm);
@@ -1160,6 +1211,63 @@
         }
 
         // Functions moved to UIModules
+
+        // Function to update review summary counts
+        function updateReviewCounts(componentsData, colorsData, colorsStrokeData) {
+          // Извлекаем количество из уже обновленных вкладок
+          const extractCount = (tabSelector) => {
+            const tab = document.querySelector(tabSelector);
+            if (!tab || !tab.textContent) return 0;
+            const match = tab.textContent.match(/\((\d+)\)/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+
+          // Получаем актуальные значения из вкладок
+          const colorsCount = extractCount('[data-tab="colors"]');
+          const outdatedCount = extractCount('[data-tab="outdated"]');
+          const lostCount = extractCount('[data-tab="lost"]');
+          const deprecatedCount = extractCount('[data-tab="deprecated"]');
+          const detachedCount = extractCount('[data-tab="detached"]');
+
+          // Update UI
+          const colorsCountEl = document.getElementById('colors-count');
+          const outdatedCountEl = document.getElementById('outdated-count');
+          const lostCountEl = document.getElementById('lost-count');
+          const deprecatedCountEl = document.getElementById('deprecated-count');
+          const detachedCountEl = document.getElementById('detached-count');
+
+          if (colorsCountEl) colorsCountEl.textContent = colorsCount;
+          if (outdatedCountEl) outdatedCountEl.textContent = outdatedCount;
+          if (lostCountEl) lostCountEl.textContent = lostCount;
+          if (deprecatedCountEl) deprecatedCountEl.textContent = deprecatedCount;
+          if (detachedCountEl) detachedCountEl.textContent = detachedCount;
+        }
+
+        // Add click handlers for summary items
+        document.addEventListener('DOMContentLoaded', function() {
+          const summaryItems = document.querySelectorAll('.summary-item');
+          summaryItems.forEach(item => {
+            item.addEventListener('click', function() {
+              const targetTab = this.getAttribute('data-tab');
+              if (targetTab) {
+                // Switch to the corresponding sub-tab
+                const subTabs = document.querySelectorAll('.tab_borderless');
+                subTabs.forEach(tab => {
+                  tab.classList.remove('active');
+                  if (tab.getAttribute('data-tab') === targetTab) {
+                    tab.classList.add('active');
+                  }
+                });
+
+                // Show the corresponding tab content
+                const tabContents = document.querySelectorAll('.tab-content');
+                tabContents.forEach(content => {
+                  content.style.display = content.id === targetTab ? 'block' : 'none';
+                });
+              }
+            });
+          });
+        });
 
         // Removed duplicate check-updates handler and redundant inputs init (moved earlier)
 

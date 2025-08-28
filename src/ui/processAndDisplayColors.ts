@@ -152,8 +152,11 @@ export function processAndDisplayColors(
     }
 
     // Обновляем заголовок errorsTab после обновления colors
-    if (typeof window !== 'undefined' && (window as any).UIModules?.updateErrorsTabHeader) {
-        (window as any).UIModules.updateErrorsTabHeader();
+    if (typeof window !== 'undefined') {
+        const uiModules = (window as unknown as Record<string, unknown>).UIModules as Record<string, unknown> | undefined;
+        if (uiModules && typeof uiModules.updateErrorsTabHeader === 'function') {
+            (uiModules.updateErrorsTabHeader as () => void)();
+        }
     }
 }
 

@@ -497,14 +497,16 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             );*/
           }
 
-          // Проверяем detached фреймы для всех типов узлов
-          try {
-            await processDetachedFrame(node, componentsResult);
-          } catch (err) {
-            console.error(
-              `[${index + 1}] ERROR in processDetachedFrame:`,
-              err instanceof Error ? err.message : String(err)
-            );
+          // Проверяем detached фреймы только для FRAME узлов
+          if (node.type === "FRAME") {
+            try {
+              await processDetachedFrame(node as any, componentsResult);
+            } catch (err) {
+              console.error(
+                `[${index + 1}] ERROR in processDetachedFrame:`,
+                err instanceof Error ? err.message : String(err)
+              );
+            }
           }
         } catch (error) {
           console.error(`[${index + 1}] Ошибка на этапе логирования:`, error);
@@ -720,7 +722,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
       // Подготавливаем общую статистику для всех выделенных элементов
       // Используем selection вместо uniqueNodesToProcess для полной статистики
-      const totalStats = processNodeStatistics(selection, "Total");
+      const totalStats = processNodeStatistics(Array.from(selection) as SceneNode[], "Total");
 
       // Отправляем статистику в UI
       figma.ui.postMessage({
@@ -789,9 +791,9 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           }
           try {
             // Прокручиваем и масштабируем вид так, чтобы узел был виден
-            figma.viewport.scrollAndZoomIntoView([node]);
+            figma.viewport.scrollAndZoomIntoView([node as any]);
             // Выделяем найденный узел в интерфейсе Figma
-            figma.currentPage.selection = [node as SceneNode];
+            figma.currentPage.selection = [node as any];
           } catch (err) {
             // Обработка ошибок при прокрутке и выделении
             console.error("Ошибка scrollAndZoomIntoView:", err, node);
@@ -915,9 +917,9 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         return;
       }
       // Выделяем найденные валидные узлы в интерфейсе Figma
-      figma.currentPage.selection = validNodes;
+      figma.currentPage.selection = validNodes as any;
       // Прокручиваем и масштабируем вид так, чтобы все выделенные узлы были видны
-      figma.viewport.scrollAndZoomIntoView(validNodes);
+      figma.viewport.scrollAndZoomIntoView(validNodes as any);
       // Уведомляем пользователя о количестве выбранных элементов
       figma.notify(`Выбрано ${validNodes.length} элементов`);
     })();

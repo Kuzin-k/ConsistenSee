@@ -1749,13 +1749,15 @@ figma.ui.onmessage = async (msg) => {
             }
           } else {
           }
-          try {
-            await processDetachedFrame(node, componentsResult);
-          } catch (err) {
-            console.error(
-              `[${index + 1}] ERROR in processDetachedFrame:`,
-              err instanceof Error ? err.message : String(err)
-            );
+          if (node.type === "FRAME") {
+            try {
+              await processDetachedFrame(node, componentsResult);
+            } catch (err) {
+              console.error(
+                `[${index + 1}] ERROR in processDetachedFrame:`,
+                err instanceof Error ? err.message : String(err)
+              );
+            }
           }
         } catch (error) {
           console.error(`[${index + 1}] \u041E\u0448\u0438\u0431\u043A\u0430 \u043D\u0430 \u044D\u0442\u0430\u043F\u0435 \u043B\u043E\u0433\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F:`, error);
@@ -1866,7 +1868,7 @@ figma.ui.onmessage = async (msg) => {
       const executionTime = Date.now() - startTime;
       componentsResult.executionTime = executionTime;
       console.log(`\u0412\u0440\u0435\u043C\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0440\u043E\u0441\u0430 check-all: ${executionTime}ms`);
-      const totalStats = processNodeStatistics(selection, "Total");
+      const totalStats = processNodeStatistics(Array.from(selection), "Total");
       figma.ui.postMessage({
         type: "display-total",
         data: {
