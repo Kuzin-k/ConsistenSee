@@ -5,7 +5,7 @@ export interface VersionDisplayOptions {
   isGroupHeader?: boolean;
   uniqueVersions?: string[];
   checkVersion?: string;
-  groupItems?: any[]; // Массив элементов группы для подсчета статусов
+  groupItems?: Record<string, unknown>[]; // Массив элементов группы для подсчета статусов
   tabType?: string; // Тип вкладки для определения логики отображения
 }
 
@@ -23,10 +23,8 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   const {
     instanceVersion = "      ",
     libraryVersion = "      ",
-    isOutdated = "",
     checkVersion = "",
     isGroupHeader = false,
-    uniqueVersions = [],
     groupItems = [],
     tabType = "",
   } = options;
@@ -38,7 +36,7 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
     return emptyContainer;
   }
 
-  let versionText = "";
+
 
   // Создаем контейнер для версионного тега
   const versionGroup = document.createElement("span");
@@ -52,13 +50,13 @@ export function displayVersionTag(options: VersionDisplayOptions): HTMLElement {
   if (isGroupHeader && groupItems) {
     // Подсчитываем количество элементов для каждого статуса
     const latestCount = groupItems.filter(
-      (item: any) => item.checkVersion === "Latest"
+      (item: Record<string, unknown>) => item.checkVersion === "Latest"
     ).length;
     const notLatestCount = groupItems.filter(
-      (item: any) => item.checkVersion === "NotLatest"
+      (item: Record<string, unknown>) => item.checkVersion === "NotLatest"
     ).length;
     const outdatedCount = groupItems.filter(
-      (item: any) => item.checkVersion === "Outdated"
+      (item: Record<string, unknown>) => item.checkVersion === "Outdated"
     ).length;
 
     // Если нет элементов с версиями, не показываем теги

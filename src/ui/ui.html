@@ -88,13 +88,15 @@
         </div>
         <!-- Tabs -->
         <div class="tabs">
-          <div class="tab active" data-tab="main-instances">Instances</div>
-          <div class="tab" data-tab="colors">Colors</div>
+          <div class="tab" data-tab="instances">All instanses</div>
+          <div class="tab color active" data-tab="errorsTab">Errors</div>
+          <!--<div class="tab colors" data-tab="colors">Colors</div>-->
           <div class="tab" data-tab="total">Total</div>
           <!--<div class="tab" data-tab="icons">Icons</div>-->
         </div>
         <div id="subTabs" class="tabs small" style="display: flex;">
-          <div class="tab_borderless active" data-tab="instances">All</div>
+          <div class="tab_borderless active" data-tab="review">Review</div>
+          <div class="tab_borderless" data-tab="colors">Colors</div>
           <div class="tab_borderless" data-tab="outdated">Outdated</div>
           <div class="tab_borderless" data-tab="lost">Lost</div>
           <div class="tab_borderless" data-tab="deprecated">Deprecated</div>
@@ -107,7 +109,19 @@
 
 
         <!-- Главная вкладка инстансов -->
-        <div id="main-instances" class="tab-content active">
+        <div id="errorsTab" class="tab-content active">
+        </div>
+        <!-- Все инстансы -->
+        <div id="instances" class="tab-content">
+          <!-- Search Results -->
+          <div id="searchResults" style="display: none;"></div>
+          <div id="results">
+            <a href="#" class="toggle-groups" data-action="expand">expand all</a>
+            <ul id="resultsList"></ul>
+          </div>
+        </div>
+
+        <div id="instances" class="tab-content">
         </div>
         <!-- Все инстансы -->
         <div id="instances" class="tab-content">
@@ -265,7 +279,7 @@
               });
 
               // Если поиск активен и выбрана вкладка instances, сохраняем отображение результатов поиска
-              if (isSearchActive && tabId === 'main-instances') {
+              if (isSearchActive && tabId === 'errorsTab') {
                 const searchResults = document.getElementById('searchResults');
                 const resultsDiv = document.getElementById('results');
                 if (searchResults && resultsDiv) {
@@ -280,24 +294,24 @@
 
               // Показываем/скрываем дочерние вкладки в зависимости от выбранной вкладки
               if (subTabs) {
-                const instancesRelatedTabs = ['main-instances', 'instances', 'outdated', 'lost', 'deprecated', 'icons'];
+                const instancesRelatedTabs = ['errorsTab', 'review', 'colors', 'outdated', 'lost', 'deprecated', 'icons'];
                 if (instancesRelatedTabs.includes(tabId)) {
                   subTabs.style.display = 'flex';
 
-                  // Если переходим на main-instances, автоматически активируем подвкладку All
-                  if (tabId === 'main-instances') {
+                  // Если переходим на errorsTab, автоматически активируем подвкладку All
+                  if (tabId === 'errorsTab') {
                     // Сбрасываем активность всех подвкладок
                     document.querySelectorAll('.tab_borderless').forEach(subTab => {
                       subTab.classList.remove('active');
                     });
                     // Активируем подвкладку All (instances)
-                    const allSubTab = document.querySelector('.tab_borderless[data-tab="instances"]');
+                    const allSubTab = document.querySelector('.tab_borderless[data-tab="review"]');
                     if (allSubTab) {
                       allSubTab.classList.add('active');
                     }
                     // Показываем контент вкладки instances
                     document.querySelectorAll('.tab-content').forEach(content => {
-                      content.style.display = content.id === 'instances' ? 'block' : 'none';
+                      content.style.display = content.id === 'review' ? 'block' : 'none';
                     });
                   }
                 } else {
@@ -327,7 +341,7 @@
               });
 
               // Если поиск активен и выбрана вкладка instances (All), сохраняем отображение результатов поиска
-              if (isSearchActive && tabId === 'instances') {
+              if (isSearchActive && tabId === 'errorsTab') {
                 const searchResults = document.getElementById('searchResults');
                 const resultsDiv = document.getElementById('results');
                 if (searchResults && resultsDiv) {
@@ -340,15 +354,15 @@
               subTabElements.forEach(t => t.classList.remove('active'));
               subTab.classList.add('active');
 
-              // Убираем активность с основных вкладок, кроме main-instances
+              // Убираем активность с основных вкладок, кроме errorsTab
               tabs.forEach(t => {
-                if (t.getAttribute('data-tab') !== 'main-instances') {
+                if (t.getAttribute('data-tab') !== 'errorsTab') {
                   t.classList.remove('active');
                 }
               });
 
-              // Обеспечиваем, что основная вкладка main-instances остается активной
-              const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+              // Обеспечиваем, что основная вкладка errorsTab остается активной
+              const instancesTab = document.querySelector('.tab[data-tab="errorsTab"]');
               if (instancesTab) {
                 instancesTab.classList.add('active');
               }
@@ -635,7 +649,7 @@
               resultsList.innerHTML = '';
 
               if (msg.instances && msg.instances.length > 0) {
-                UIModules.displayGroups(msg.instances, resultsList, false, 'colors');
+                UIModules.displayGroups(msg.instances, resultsList, 'colors');
               } else { resultsList.innerHTML = '<p>Цвета не найдены</p>'; }
             }
             else {
@@ -691,7 +705,7 @@
               }
 
               // Активируем вкладку Instances
-              const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+              const instancesTab = document.querySelector('.tab[data-tab="errorsTab"]');
               if (instancesTab) {
                 // Убираем активность со всех основных вкладок
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -700,7 +714,7 @@
               }
 
               // Активируем подвкладку "All" по умолчанию и показываем её контент
-              const allSubTab = document.querySelector('.tab_borderless[data-tab="instances"]');
+              const allSubTab = document.querySelector('.tab_borderless[data-tab="review"]');
               if (allSubTab) {
                 document.querySelectorAll('.tab_borderless').forEach(t => t.classList.remove('active'));
                 allSubTab.classList.add('active');
@@ -1094,14 +1108,14 @@
             // Показываем результаты поиска
             searchResults.style.display = 'block';
 
-            // Показываем вкладки main-instances и instances
+            // Показываем вкладки errorsTab и instances
             document.querySelectorAll('.tab-content').forEach(content => {
-              content.style.display = (content.id === 'instances' || content.id === 'main-instances') ? 'block' : 'none';
+              content.style.display = (content.id === 'instances' || content.id === 'errorsTab') ? 'block' : 'none';
             });
 
             // Переключаемся на вкладку Instances и показываем дочернюю вкладку All
             tabs.forEach(t => t.classList.remove('active'));
-            const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+            const instancesTab = document.querySelector('.tab[data-tab="errorsTab"]');
             if (instancesTab) {
               instancesTab.classList.add('active');
             }
@@ -1112,7 +1126,7 @@
               subTabs.style.display = 'flex';
               const subTabElements = subTabs.querySelectorAll('.tab_borderless');
               subTabElements.forEach(t => t.classList.remove('active'));
-              const allSubTab = subTabs.querySelector('.tab_borderless[data-tab="instances"]');
+              const allSubTab = subTabs.querySelector('.tab_borderless[data-tab="review"]');
               if (allSubTab) {
                 allSubTab.classList.add('active');
               }

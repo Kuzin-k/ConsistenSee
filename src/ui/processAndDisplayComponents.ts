@@ -6,6 +6,7 @@
 import { displayGroups } from "./displayGroups";
 import { sortGroups } from "./sortGroups";
 import { filterDetachedFrames } from "../js/component/processDetachedFrame";
+import { ComponentsResult, ComponentData } from "../shared/types";
 
 /**
  * Обрабатывает данные компонентов и отображает их в интерфейсе с разделением на обычные компоненты и иконки
@@ -28,14 +29,14 @@ import { filterDetachedFrames } from "../js/component/processDetachedFrame";
  * - Для вкладки 'lost' показывает только компоненты с isLost = true
  */
 export function processAndDisplayComponents(
-  componentsData: any,
-  allInstances: any[],
+  componentsData: ComponentsResult,
+  allInstances: ComponentData[],
   resultsList: HTMLElement,
   iconResultsList?: HTMLElement,
   tabType: string = "instances"
 ): void {
   // Определяем источник данных в зависимости от типа вкладки
-  let sourceInstances: any[];
+  let sourceInstances: ComponentData[];
   if (tabType === "outdated") {
     // Для вкладки outdated используем outdated массив или фильтруем instances по checkVersion
     if (componentsData.outdated && componentsData.outdated.length > 0) {
@@ -43,7 +44,7 @@ export function processAndDisplayComponents(
     } else {
       // Фильтруем instances по checkVersion = 'Outdated'
       sourceInstances = componentsData.instances.filter(
-        (instance: any) => instance.checkVersion === "Outdated"
+        (instance: ComponentData) => instance.checkVersion === "Outdated"
       );
     }
   } else if (tabType === "lost") {
@@ -52,7 +53,7 @@ export function processAndDisplayComponents(
       sourceInstances = componentsData.lost;
     } else {
       sourceInstances = componentsData.instances.filter(
-        (instance: any) => instance.isLost === true
+        (instance: ComponentData) => instance.isLost === true
       );
     }
   } else if (tabType === "deprecated") {
@@ -61,11 +62,11 @@ export function processAndDisplayComponents(
       sourceInstances = componentsData.deprecated;
     } else {
       sourceInstances = componentsData.instances.filter(
-        (instance: any) => instance.isDeprecated === true
+        (instance: ComponentData) => instance.isDeprecated === true
       );
     }
   } else if (tabType === "detached") {
-    sourceInstances = componentsData.instances.filter((instance: any) => {
+    sourceInstances = componentsData.instances.filter((instance: ComponentData) => {
       const isDetached = instance.isDetached === true;
       return isDetached;
     });
@@ -77,8 +78,8 @@ export function processAndDisplayComponents(
   allInstances = sourceInstances;
 
   // Словари групп: ключ -> массив инстансов
-  const groupedInstances: Record<string, any[]> = {};
-  const groupedIcons: Record<string, any[]> = {};
+  const groupedInstances: Record<string, ComponentData[]> = {};
+  const groupedIcons: Record<string, ComponentData[]> = {};
 
   // Читаем переключатель отображения скрытых элементов из DOM
   const showHiddenToggle = document.getElementById(
@@ -111,19 +112,16 @@ export function processAndDisplayComponents(
       : 0;
 
   // Добавляем подсчет detached элементов
-  let detachedCount =
+  const detachedCount =
     componentsData.counts && typeof componentsData.counts.detached === "number"
       ? componentsData.counts.detached
       : filterDetachedFrames(componentsData.instances).length;
 
-  // Debug: Log source instances with library version data
-  const instancesWithVersions = sourceInstances.filter(
-    (i: any) => i.libraryComponentVersion || i.libraryComponentVersionMinimal
-  );
+
 
   // Проходим по всем инстансам и распределяем их в соответствующие группы
   // Проходим по всем инстансам и распределяем их в соответствующие группы
-  sourceInstances.forEach((instance: any) => {
+  sourceInstances.forEach((instance: ComponentData) => {
     if (!showHidden && instance.hidden) {
       return; // Пропускаем скрытые элементы
     }
@@ -148,10 +146,10 @@ export function processAndDisplayComponents(
 
     const groupKey =
       tabType === "detached"
-        ? instance.name // Для detached группируем по имени элемента
+        ? instance.name || "Unknown" // Для detached группируем по имени элемента
         : instance.mainComponentSetKey
         ? instance.mainComponentSetKey
-        : instance.mainComponentKey;
+        : instance.mainComponentKey || "Unknown";
 
     if (
       tabType === "outdated" ||
@@ -166,7 +164,7 @@ export function processAndDisplayComponents(
 
       // Проверяем на дублирование перед добавлением
       const existingInstance = groupedInstances[groupKey].find(
-        (existing) => existing.nodeId === instance.nodeId
+        (existing: ComponentData) => existing.nodeId === instance.nodeId
       );
       if (existingInstance) {
         return; // Пропускаем дубликат
@@ -188,7 +186,7 @@ export function processAndDisplayComponents(
 
       // Проверяем на дублирование перед добавлением для обычных компонентов
       const existingInstance = groupedInstances[groupKey].find(
-        (existing) => existing.nodeId === instance.nodeId
+        (existing: ComponentData) => existing.nodeId === instance.nodeId
       );
       if (existingInstance) {
         return; // Пропускаем дубликат
@@ -213,10 +211,10 @@ export function processAndDisplayComponents(
     return [Number(m[1] || 0), Number(m[2] || 0), Number(m[3] || 0)];
   };
 
-  const compareByVersionThenName = (a: any, b: any): number => {
+  const compareByVersionThenName = (a: ComponentData, b: ComponentData): number => {
     // Используем исключительно nodeVersion из экземпляра
-    const aVer = parseVersionNumbers(a.nodeVersion);
-    const bVer = parseVersionNumbers(b.nodeVersion);
+    const aVer = parseVersionNumbers(a.nodeVersion || "");
+    const bVer = parseVersionNumbers(b.nodeVersion || "");
 
     if (aVer && bVer) {
       for (let i = 0; i < 3; i++) {
@@ -236,7 +234,7 @@ export function processAndDisplayComponents(
   };
 
   // Для специальных вкладок используем простую сортировку по имени
-  const compareByName = (a: any, b: any): number => {
+  const compareByName = (a: ComponentData, b: ComponentData): number => {
     const aName = a.name || "";
     const bName = b.name || "";
     return aName.localeCompare(bName);
@@ -270,7 +268,6 @@ export function processAndDisplayComponents(
   }
 
   // Обновляем тексты вкладок с количеством
-  const componentsTab = document.querySelector('[data-tab="main-instances"]');
   const allSubTab = document.querySelector(
     '.tab_borderless[data-tab="instances"]'
   );
@@ -370,11 +367,6 @@ export function processAndDisplayComponents(
   }
 
   // Передаём сгруппированные и отсортированные данные в модуль рендера
-  const tabTitle =
-    tabType === "outdated" ||
-    tabType === "lost" ||
-    tabType === "deprecated" ||
-    tabType === "detached";
 
   if (
     tabType === "outdated" ||
@@ -383,22 +375,22 @@ export function processAndDisplayComponents(
     tabType === "detached"
   ) {
     // Для специальных вкладок показываем всё в одном списке (resultsList)
-    displayGroups(sortGroups(groupedInstances), resultsList, tabTitle, tabType);
+    displayGroups(sortGroups(groupedInstances), resultsList, tabType);
     if (iconResultsList) {
       iconResultsList.innerHTML = ""; // Очищаем список иконок для специальных вкладок
     }
   } else {
     // Для обычных вкладок показываем и компоненты, и иконки
-    displayGroups(sortGroups(groupedInstances), resultsList, false, tabType);
+    displayGroups(sortGroups(groupedInstances), resultsList, tabType);
     if (iconResultsList) {
-      displayGroups(sortGroups(groupedIcons), iconResultsList, false, tabType);
+      displayGroups(sortGroups(groupedIcons), iconResultsList, tabType);
     }
   }
 }
 
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== "undefined") {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.processAndDisplayComponents =
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).processAndDisplayComponents =
     processAndDisplayComponents;
 }

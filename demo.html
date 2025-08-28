@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colors Tab Style Demo</title>
+    <link rel="stylesheet" href="src/ui/ui.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background-color: var(--color-bg);
+        }
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+        }
+        .demo-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Демонстрация стилей вкладки Colors</h1>
+    
+    <div class="demo-section">
+        <div class="demo-title">Вкладка Colors с элементами (красная рамка и отступы как у instances)</div>
+        <div class="tabs small">
+            <div class="tab_colors" data-tab="colors">Colors (5)</div>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">Вкладка Colors без элементов (заблокированная с серой рамкой)</div>
+        <div class="tabs small">
+            <div class="tab_colors_disabled" data-tab="colors">Colors (0)</div>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">Сравнение с другими вкладками</div>
+        <div class="tabs small">
+            <div class="tab_borderless" data-tab="lost">Lost (3)</div>
+            <div class="tab_colors" data-tab="colors">Colors (5)</div>
+            <div class="tab_borderless" data-tab="outdated">Outdated (2)</div>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">Активная вкладка Colors</div>
+        <div class="tabs small">
+            <div class="tab_colors active" data-tab="colors">Colors (5)</div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <div class="demo-title">Тест активной вкладки Colors (должна быть красной с белым текстом)</div>
+        <div class="tabs small">
+            <div class="tab_borderless active" data-tab="colors">Colors (5)</div>
+        </div>
+    </div>
+    
+    <script>
+        // Добавляем интерактивность для демонстрации
+        document.querySelectorAll('.tab_borderless').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Убираем активный класс у всех вкладок в той же группе
+                const parent = this.parentElement;
+                parent.querySelectorAll('.tab_borderless').forEach(t => t.classList.remove('active'));
+                // Добавляем активный класс к текущей вкладке
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

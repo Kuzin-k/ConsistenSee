@@ -143,7 +143,7 @@ var clearRgbToHexCache = () => {
 // src/js/color/convertRgbToHex.ts
 var convertRgbToHex = ({ r, g, b }) => {
   if (r === void 0 || g === void 0 || b === void 0 || typeof r !== "number" || typeof g !== "number" || typeof b !== "number" || // Проверка на тип number
-  // @ts-ignore: figma.mixed может быть символом, а не числом, поэтому прямое сравнение может быть нежелательным.
+  // @ts-expect-error: figma.mixed может быть символом, а не числом, поэтому прямое сравнение может быть нежелательным.
   r === figma.mixed || g === figma.mixed || b === figma.mixed) {
     return "#MIXED";
   }
@@ -328,23 +328,25 @@ var processPaintType = async (paints, styleId, prefix, nodeData, node) => {
         nodeData[`${prefix}_collection_name`] = style.description || "";
       } else {
         nodeData[`${prefix}_variable_name`] = String(styleId);
-        console.warn(`Style with ID "${styleId}" not found for ${prefix} of node ${nodeData.name}.`);
+        console.warn(`Style with ID "${String(styleId)}" not found for ${prefix} of node ${nodeData.name}.`);
       }
     } catch (e) {
-      console.error(`Error getting style by ID "${styleId}" for ${prefix} of node ${nodeData.name}:`, e);
+      console.error(`Error getting style by ID "${String(styleId)}" for ${prefix} of node ${nodeData.name}:`, e);
       nodeData[`${prefix}_variable_name`] = String(styleId);
     }
   }
   const propertyType = prefix === "fill" ? "fills" : "strokes";
-  if (node.boundVariables && node.boundVariables[propertyType]) {
+  const nodeWithBoundVariables = node;
+  if (nodeWithBoundVariables.boundVariables && nodeWithBoundVariables.boundVariables[propertyType]) {
     await processVariableBindings(node, nodeData, propertyType, prefix);
   }
 };
 var processNodeColors = async (node, colorsResult2, colorsResultStroke2) => {
+  const nodeWithKey = node;
   const nodeData = {
     name: node.name,
     nodeId: node.id,
-    key: node.key,
+    key: nodeWithKey.key,
     color: true,
     hidden: checkIsNodeOrParentHidden(node),
     type: node.type
@@ -692,12 +694,14 @@ var updateAvailabilityCheck = async (mainComponent, instanceVersion) => {
     );
     return result;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : void 0;
     console.error(
       `\u041A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${mainComponent ? mainComponent.name : "N/A"}":`,
       {
         componentName: mainComponent ? mainComponent.name : "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E",
-        error: error.message,
-        stack: error.stack
+        error: errorMessage,
+        stack: errorStack
       }
     );
     const safeResult = {
@@ -1015,7 +1019,6 @@ var resetUpdateQueue = () => {
 
 // src/js/component/processNodeComponent.ts
 var processNodeComponent = async (node, componentsResult2) => {
-  const isButtonComponent = node.name.toLowerCase().includes("button");
   let mainComponent = null;
   if (node.type === "INSTANCE") {
     try {
@@ -1037,7 +1040,7 @@ var processNodeComponent = async (node, componentsResult2) => {
   } else if (node.type === "COMPONENT") {
     mainComponent = node;
   }
-  let name = node.name;
+  const name = node.name;
   const descriptionDataMain = await getDescription(mainComponent || node);
   let parentComponentName = null;
   if (node.type === "COMPONENT_SET") {
@@ -1062,8 +1065,8 @@ var processNodeComponent = async (node, componentsResult2) => {
     }
     return results;
   }
-  let mainComponentName = mainComponent ? mainComponent.name : null;
-  let mainComponentKey = mainComponent ? mainComponent.key : null;
+  const mainComponentName = mainComponent ? mainComponent.name : null;
+  const mainComponentKey = mainComponent ? mainComponent.key : null;
   let isNested = false;
   let parent = node.parent;
   while (parent) {
@@ -1073,12 +1076,10 @@ var processNodeComponent = async (node, componentsResult2) => {
     }
     parent = parent.parent;
   }
-  let componentKeyToUse = mainComponent ? mainComponent.key : null;
   let mainComponentSetKey = null;
   let mainComponentSetName = null;
   let mainComponentSetId = null;
   if (mainComponent && mainComponent.parent && mainComponent.parent.type === "COMPONENT_SET") {
-    componentKeyToUse = mainComponent.parent.key;
     mainComponentSetName = mainComponent.parent.name;
     mainComponentSetKey = mainComponent.parent.key;
     mainComponentSetId = mainComponent.parent.id;
@@ -1094,17 +1095,15 @@ var processNodeComponent = async (node, componentsResult2) => {
     const hasNumberTextSlashPattern = /^\d+\s.+\s\/\s/.test(name);
     const isIcon = dimensionsMatch && (nameStartsWithNumber && hasSlashAfterNumber || hasNumberTextSlashPattern);
     let pluginDataKey = "";
-    let pluginDataVersion = "";
     try {
       pluginDataKey = node.getPluginData("customKey") || "";
-      pluginDataVersion = node.getPluginData("customVersion") || "";
       if (node.type === "INSTANCE" && mainComponent && !pluginDataKey) {
         pluginDataKey = mainComponent.getPluginData("customKey") || "";
       }
     } catch (error) {
       console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 PluginData \u0434\u043B\u044F ${node.name}:`, error);
     }
-    let parent2 = node.parent;
+    const parent2 = node.parent;
     if (!mainComponent) {
       console.warn(
         `[processNodeComponent] mainComponent is null for node ${node.name}, skipping.`
@@ -1295,7 +1294,8 @@ function isDetachedFrame(frameNode) {
   if (frameNode.detachedInfo) {
     return true;
   }
-  if (frameNode.mainComponent === null && frameNode.mainComponentId) {
+  const instanceNode = frameNode;
+  if (instanceNode.mainComponent === null && instanceNode.mainComponentId) {
     return true;
   }
   return false;
@@ -1307,8 +1307,8 @@ async function processDetachedFrame(node, componentsResult2) {
   }
   try {
     const componentData = {
-      type: node.type,
-      // Используем реальный тип узла (FRAME)
+      type: "INSTANCE",
+      // Detached фреймы обрабатываем как инстансы
       name: node.name || "Unnamed Frame",
       nodeId: node.id,
       key: node.key || null,
@@ -1385,7 +1385,7 @@ var ParallelUpdateProcessor = class {
       const updateQueue = getUpdateQueue();
       const status = updateQueue.getStatus();
       this.totalCount = status.total;
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         updateQueue.onProgress(
           async (processed, total, component) => {
             this.processedCount = processed;
@@ -1566,7 +1566,6 @@ if (selectedSplashData) {
     data: selectedSplashData
   });
 }
-var lastColorsData = null;
 var totalStatsList = [];
 var publishStatusCache = /* @__PURE__ */ new Map();
 var componentsResult = {
@@ -1773,8 +1772,6 @@ figma.ui.onmessage = async (msg) => {
       for (let i = 0; i < nodesToProcess.length; i++) {
         await processNodeSafely(nodesToProcess[i], i);
       }
-      const finalUpdateQueue = getUpdateQueue();
-      const finalQueueStatus = finalUpdateQueue.getStatus();
       componentsResult.instances.sort((a, b) => {
         const aName = a.mainComponentName || a.name;
         const bName = b.mainComponentName || b.name;
@@ -1791,7 +1788,6 @@ figma.ui.onmessage = async (msg) => {
         if (!aSpecial && bSpecial) return -1;
         return cleanA.localeCompare(cleanB);
       });
-      lastColorsData = colorsResult;
       const updateQueue2 = getUpdateQueue();
       updateQueue2.markProducerDone();
       const results = await resultsPromise;
@@ -1800,15 +1796,13 @@ figma.ui.onmessage = async (msg) => {
         const key = `${updatedComponent.mainComponentKey || "unknown"}_$${updatedComponent.nodeId || "no-node"}`;
         updatedComponentsMap.set(key, updatedComponent);
       });
-      let matchedCount = 0;
-      let unmatchedKeys = [];
+      const unmatchedKeys = [];
       componentsResult.instances = componentsResult.instances.map(
         (existingComponent) => {
           var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
           const key = `${existingComponent.mainComponentKey || "unknown"}_$${existingComponent.nodeId || "no-node"}`;
           const updatedComponent = updatedComponentsMap.get(key);
           if (updatedComponent) {
-            matchedCount++;
             return __spreadProps(__spreadValues({}, existingComponent), {
               isOutdated: (_a2 = updatedComponent.isOutdated) != null ? _a2 : existingComponent.isOutdated,
               isLost: (_b = updatedComponent.isLost) != null ? _b : existingComponent.isLost,
@@ -1869,7 +1863,7 @@ figma.ui.onmessage = async (msg) => {
       } else {
         figma.notify("\u041D\u0435\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u044F \u0434\u0435\u0440\u0435\u0432\u0430.");
       }
-      let executionTime = Date.now() - startTime;
+      const executionTime = Date.now() - startTime;
       componentsResult.executionTime = executionTime;
       console.log(`\u0412\u0440\u0435\u043C\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0440\u043E\u0441\u0430 check-all: ${executionTime}ms`);
       const totalStats = processNodeStatistics(selection, "Total");

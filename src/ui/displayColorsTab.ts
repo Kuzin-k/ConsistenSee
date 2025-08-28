@@ -47,14 +47,14 @@ interface ComponentInstance {
  * @interface GroupedData
  * @description Представляет объект, в котором данные сгруппированы по ключу.
  */
-interface GroupedData {
+export interface GroupedData {
   /** Ключ - это идентификатор группы, значение - массив экземпляров в этой группе. */
   [key: string]: ComponentInstance[];
 }
 
+import { ComponentData } from '../shared/types';
 import { createIcon } from './createIcon';
 import { showPopover } from './showPopover';
-import { displayVersionTag } from './displayVersionTag';
 
 // Основная функция отображения групп
 /**
@@ -92,9 +92,7 @@ import { displayVersionTag } from './displayVersionTag';
  *       - **Для цветов:** Дополнительно рендерится детальная информация о цвете (HEX-код, имя переменной, коллекция).
  * 6.  **Фильтрация:** Учитывает состояние переключателя "Show hidden" для отображения или скрытия невидимых элементов.
  */
-export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLElement, isOutdatedTab: boolean = false): void => {
-  const showHidden = document.getElementById('showHiddenToggle') ? 
-    (document.getElementById('showHiddenToggle') as HTMLInputElement).checked : true;
+export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLElement): void => {
   
   targetList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
   
@@ -119,8 +117,7 @@ export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLEleme
     targetList.parentNode?.insertBefore(header, targetList);
   }
   
-  // Логика для подсчета имен
-  const nameCount: { [key: string]: number } = {};
+  // Обрабатываем группы
 
   for (const key in groupedData) {
     const group = groupedData[key];
@@ -130,10 +127,6 @@ export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLEleme
 
     const firstInstance = group[0];
     // название - имя компонента из библиотеки
-
-    const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName 
-      : firstInstance.mainComponentName ? firstInstance.mainComponentName 
-      : firstInstance.name;
 
     // Для групп с более чем одним элементом оставляем существующую логику
     const groupHeader = document.createElement('ul');
@@ -267,7 +260,7 @@ export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLEleme
 
       // Добавляем popover при наведении на иконку
       itemIcon.addEventListener('mouseenter', () => {
-        showPopover(itemIcon, instance as any);
+        showPopover(itemIcon, instance as ComponentData);
       });
 
       // Создаем ссылку на название инстанса
@@ -315,9 +308,6 @@ export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLEleme
       // Добавляем информацию о цвете, если это элемент с цветом
       if (instance.color) {
         // Проверяем, есть ли переменные без имен
-        const hasMissingVariables = 
-          (instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === '')) ||
-          (instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === ''));
         
         // Перемещаем название элемента наверх перед отображением цветов
         groupItem.appendChild(componentNameContainer);
@@ -489,6 +479,6 @@ export const displayColorsTab = (groupedData: GroupedData, targetList: HTMLEleme
 
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== 'undefined') {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.displayColorsTab = displayColorsTab;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).displayColorsTab = displayColorsTab;
 }

@@ -1,9 +1,19 @@
 import { ParallelUpdateProcessor, getParallelUpdateProcessor, resetParallelUpdateProcessor } from '../../src/js/update/parallelUpdateProcessor';
 import { getUpdateQueue, resetUpdateQueue } from '../../src/js/update/updateQueue';
-import { ComponentData, ComponentsResult } from '../../src/shared/types';
+import { ComponentData } from '../../src/shared/types';
 
 // Mock Figma API
-(global as any).figma = {
+interface GlobalWithFigma {
+  figma: {
+    ui: {
+      postMessage: jest.Mock;
+    };
+    notify: jest.Mock;
+    closePlugin: jest.Mock;
+  };
+}
+
+(global as unknown as GlobalWithFigma).figma = {
   ui: {
     postMessage: jest.fn()
   },
@@ -124,17 +134,12 @@ describe('ParallelUpdateProcessor', () => {
       const updateQueue = getUpdateQueue();
       updateQueue.addComponents(mockComponents);
 
-      let progressCalled = false;
-      let completeCalled = false;
-
-      processor.onProgress(async (processed, total, componentName) => {
-        progressCalled = true;
+      processor.onProgress(async (processed, total) => {
         expect(processed).toBeGreaterThanOrEqual(0);
         expect(total).toBe(2);
       });
 
       processor.onComplete((results) => {
-        completeCalled = true;
         expect(results).toBeDefined();
       });
 

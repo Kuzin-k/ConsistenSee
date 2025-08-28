@@ -15,7 +15,7 @@ export const convertRgbToHex = ({ r, g, b }: { r: number; g: number; b: number }
   // Проверяем, что все значения определены, являются числами и не являются figma.mixed
   if (r === undefined || g === undefined || b === undefined ||
     typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number' || // Проверка на тип number
-    // @ts-ignore: figma.mixed может быть символом, а не числом, поэтому прямое сравнение может быть нежелательным.
+    // @ts-expect-error: figma.mixed может быть символом, а не числом, поэтому прямое сравнение может быть нежелательным.
     r === figma.mixed || g === figma.mixed || b === figma.mixed
   ) {
     return '#MIXED'; // Возвращаем специальное значение для смешанных или некорректных данных

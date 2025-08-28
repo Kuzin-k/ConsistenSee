@@ -4,7 +4,6 @@ import {
   UIMessage,
   SplashScreenData,
   ComponentData,
-  ColorData,
   ComponentsResult,
   ColorsResult,
   NodeStatistics,
@@ -181,32 +180,32 @@ if (selectedSplashData) {
  * Global variable to store the results of the last color scan.
  * @type {ColorsResult | null}
  */
-let lastColorsData: ColorsResult | null = null; // To hold color data between checks
+
 
 /**
  * Array to store statistics for all processed nodes.
  * @type {NodeStatistics[]}
  */
-let totalStatsList: NodeStatistics[] = [];
+const totalStatsList: NodeStatistics[] = [];
 
 /**
  * Timestamp for the start of the analysis process.
  * @type {number}
  */
-let startTime: number = 0;
+
 
 /**
  * The current selection of nodes in the Figma document.
  * @type {readonly SceneNode[]}
  */
-let selection: readonly SceneNode[] = [];
+
 
 // Кэши
 /**
  * Cache for storing the update status of components.
  * @type {Map<string, boolean>}
  */
-const componentUpdateCache: Map<string, boolean> = new Map();
+
 
 /**
  * Cache for storing the publish status of main components.
@@ -332,7 +331,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       // Если узел является контейнером (имеет метод findAll), собираем все его потомки
       if (
         "findAll" in selectedNode &&
-        typeof (selectedNode as any).findAll === "function"
+        typeof (selectedNode as FrameNode | GroupNode).findAll === "function"
       ) {
         // Собираем статистику для текущего выделенного элемента и всех его потомков
         const nodeStats = processNodeStatistics(
@@ -343,7 +342,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
         // Собираем всех потомков для последующей обработки
         try {
-          const allDescendants = (selectedNode as any).findAll() as SceneNode[];
+          const allDescendants = (selectedNode as FrameNode | GroupNode).findAll() as BaseNode[];
           allDescendants.forEach((descendant: BaseNode) => {
             if (
               descendant &&
@@ -541,9 +540,8 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         }*/
       }
 
-      // Логируем финальную статистику после обработки всех узлов
-      const finalUpdateQueue = getUpdateQueue();
-      const finalQueueStatus = finalUpdateQueue.getStatus();
+      // Обработка всех узлов завершена
+
 
       // Сортируем результаты компонентов по имени (с учетом специальных символов и эмодзи)
       componentsResult.instances.sort((a, b) => {
@@ -576,8 +574,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         return cleanA.localeCompare(cleanB);
       });
 
-      // Сохраняем данные о цветах в глобальную переменную
-      lastColorsData = colorsResult;
+
 
       // Запрашиваем текущий статус очереди (для логов/диагностики)
       const updateQueue = getUpdateQueue();
@@ -599,8 +596,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       });
 
       // Обновляем существующие компоненты в componentsResult.instances
-      let matchedCount = 0;
-      let unmatchedKeys: string[] = [];
+      const unmatchedKeys: string[] = [];
       componentsResult.instances = componentsResult.instances.map(
         (existingComponent) => {
           const key = `${existingComponent.mainComponentKey || "unknown"}_$${
@@ -609,7 +605,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           const updatedComponent = updatedComponentsMap.get(key);
 
           if (updatedComponent) {
-            matchedCount++;
             // Обновляем данные, НЕ затирая уже полученные версии
             return {
               ...existingComponent,
@@ -717,7 +712,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       }
 
       // Вычисляем время выполнения
-      let executionTime = Date.now() - startTime;
+      const executionTime = Date.now() - startTime;
 
       // Добавляем время выполнения в componentsResult
       componentsResult.executionTime = executionTime;
@@ -944,7 +939,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       return;
     }
 
-    const componentData: Record<string, any> = {};
+    const componentData: Record<string, unknown> = {};
 
     // Считаем количество подходящих компонентов (COMPONENT или COMPONENT_SET) в выделении
     let validComponentsCount = 0;

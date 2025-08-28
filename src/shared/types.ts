@@ -4,11 +4,39 @@
  */
 
 // --- Локальные определения типов Figma ---
-export type Paint = any;
-export type SceneNode = any;
-export type ComponentNode = any;
-export type ComponentSetNode = any;
-export type GeometryMixin = any;
+export type RGB = {
+  r: number;
+  g: number;
+  b: number;
+};
+
+export type Paint = {
+  type: string;
+  color?: RGB;
+  opacity?: number;
+  visible?: boolean;
+};
+export type SceneNode = {
+  id: string;
+  name: string;
+  type: string;
+  visible?: boolean;
+  locked?: boolean;
+};
+export type ComponentNode = SceneNode & {
+  type: 'COMPONENT';
+  key: string;
+  description: string;
+};
+export type ComponentSetNode = SceneNode & {
+  type: 'COMPONENT_SET';
+  key: string;
+  description: string;
+};
+export type GeometryMixin = {
+  fills?: ReadonlyArray<Paint>;
+  strokes?: ReadonlyArray<Paint>;
+};
 
 // --- Специфичные для плагина структуры данных ---
 
@@ -160,7 +188,7 @@ export type PluginMessage =
   | { type: "error"; message: string }
   | {
       type: "component-data-result";
-      data?: Record<string, any>;
+      data?: Record<string, unknown>;
       message?: string;
       isError?: boolean;
     }

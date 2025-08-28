@@ -25,6 +25,6 @@ export const displayResult = (message: string, isError: boolean = false): void =
 
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== 'undefined') {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.displayResult = displayResult;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).displayResult = displayResult;
 }

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Colors Tab</title>
+    <style>
+        :root {
+            --color-text-danger: #dc3412;
+            --color-bg-brand: #0066cc;
+            --color-text-onbrand: white;
+        }
+        
+        .tab_borderless {
+            padding: 3px 6px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border: none;
+            background-color: transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            height: fit-content;
+            display: inline-block;
+            margin: 10px;
+        }
+        
+        .tab_borderless.active {
+            background-color: var(--color-bg-brand);
+            color: var(--color-text-onbrand);
+        }
+        
+        .tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled).active {
+            background-color: var(--color-text-danger) !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест активной вкладки Colors</h1>
+    
+    <div>
+        <div class="tab_borderless active" data-tab="colors">Colors (5) - должна быть красной</div>
+        <div class="tab_borderless active" data-tab="other">Other (3) - должна быть синей</div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="toggleActive()">Переключить активность</button>
+    </div>
+    
+    <script>
+        function toggleActive() {
+            document.querySelectorAll('.tab_borderless').forEach(tab => {
+                tab.classList.toggle('active');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -5,27 +5,34 @@
   --color-bg-brand-pressed: #007be5;
   --color-bg-brand-secondary: #0768cf;
   --color-bg-brand-tertiary: #e5f4ff;
+
   --color-bg-danger-tertiary: #ffe2e0;
   --color-bg-disabled: #d9d9d9;
   --color-bg-hover: #f5f5f5;
   --color-bg-secondary: #f5f5f5;
   --color-bg-tertiary: #e6e6e6;
-  --color-bg-positive: #b8f8da;
-  --color-bg-positive-strong: #009951;
+
   --color-bg-warning-tertiary: #fff1c2;
   --color-border: #e6e6e6;
   --color-border-brand: #bde3ff;
   --color-border-component: #e4ccff;
   --color-border-component-hover: #9747ff;
   --color-border-component-strong: #8638e5;
-  --color-border-danger: #dc3412;
+
   --color-text: #000000e5;
   --color-text-brand: #007be5;
   --color-text-disabled: #0000004d;
   --color-text-secondary: #00000080;
   --color-text-onbrand: #ffffff;
+
+  --color-bg-danger: #dc3412;
+  --color-border-danger: #dc3412;
   --color-text-danger: #dc3412;
+
+  --color-bg-positive: #b8f8da;
+  --color-bg-positive-strong: #009951;
   --color-text-success: #009951;
+
   --color-text-warning: #b86200;
   --font-family: "Inter", "Helvetica", sans-serif;
   --font-size-small: 10px;
@@ -191,12 +198,37 @@ h3 {
   color: var(--color-text-onbrand);
 }
 
+/* Модификатор colors для базового класса tab */
+.tab.colors {
+  color: var(--color-text-danger);
+  border-color: var(--color-text-danger);
+  background-color: transparent;
+}
+
+.tab.colors:hover {
+  background-color: var(--color-bg-danger-tertiary);
+  color: var(--color-text-danger);
+}
+
+.tab.colors.active {
+  background-color: var(--color-text-danger);
+  color: white;
+}
+
+.tab.colors:disabled,
+.tab.colors.disabled {
+  color: var(--color-text-disabled);
+  border-color: var(--color-text-disabled);
+  background-color: transparent;
+  cursor: default;
+}
+
 /* Стили для дочерних вкладок без рамки */
 .tab_borderless {
   padding: 3px 6px;
   border-radius: 12px;
   cursor: pointer;
-  color: var(--color-text-brand);
+  color: var(--color-text-danger);
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   border: none;
@@ -207,12 +239,11 @@ h3 {
 }
 
 .tab_borderless:hover {
-  background-color: var(--color-bg-brand-tertiary);
-  color: var(--color-text-brand);
+  background-color: var(--color-bg-danger-tertiary);
 }
 
 .tab_borderless.active {
-  background-color: var(--color-bg-brand);
+  background-color: var(--color-bg-danger);
   color: var(--color-text-onbrand);
 }
 
@@ -227,45 +258,6 @@ h3 {
   background-color: transparent;
   white-space: nowrap;
   height: fit-content;
-}
-
-/* Стили для вкладок второго уровня с элементами (кроме All) */
-.tab_borderless[data-tab="outdated"]:not(.tab_borderless_disabled),
-.tab_borderless[data-tab="lost"]:not(.tab_borderless_disabled),
-.tab_borderless[data-tab="detached"]:not(.tab_borderless_disabled),
-.tab_borderless[data-tab="deprecated"]:not(.tab_borderless_disabled) {
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="outdated"]:not(.tab_borderless_disabled):hover,
-.tab_borderless[data-tab="lost"]:not(.tab_borderless_disabled):hover,
-.tab_borderless[data-tab="detached"]:not(.tab_borderless_disabled):hover,
-.tab_borderless[data-tab="deprecated"]:not(.tab_borderless_disabled):hover {
-  background-color: var(--color-bg-danger-tertiary);
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="outdated"]:not(.tab_borderless_disabled).active,
-.tab_borderless[data-tab="lost"]:not(.tab_borderless_disabled).active,
-.tab_borderless[data-tab="detached"]:not(.tab_borderless_disabled).active,
-.tab_borderless[data-tab="deprecated"]:not(.tab_borderless_disabled).active {
-  background-color: var(--color-text-danger);
-  color: white;
-}
-
-/* Стили для вкладки colors */
-.tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled) {
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled):hover {
-  background-color: var(--color-bg-danger-tertiary);
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled).active {
-  background-color: var(--color-text-danger);
-  color: white;
 }
 
 /* Стиль для заблокированных вкладок */
@@ -327,6 +319,7 @@ h3 {
 
 /* Results and Icons */
 #results,
+#review,
 #icons,
 #outdated,
 #colors,
@@ -335,7 +328,7 @@ h3 {
 #lost,
 #detached,
 #deprecated,
-#main-instances,
+#errorsTab,
 #instances {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
@@ -346,6 +339,7 @@ h3 {
 }
 
 #results ul,
+#review ul,
 #icons ul,
 #colors ul,
 #outdated ul,
@@ -354,7 +348,7 @@ h3 {
 #detached ul,
 #log,
 #lost ul,
-#main-instances ul {
+#errorsTab ul {
   gap: 2px;
   margin-top: 0px;
   padding-left: 0px;
@@ -362,6 +356,7 @@ h3 {
 
 #results li,
 #icons li,
+#review li,
 #colors li,
 #outdated li,
 #lost li,

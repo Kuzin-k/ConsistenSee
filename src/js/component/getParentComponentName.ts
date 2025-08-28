@@ -1,4 +1,11 @@
-import { SceneNode } from '../../shared/types';
+import { SceneNode, ComponentNode } from '../../shared/types';
+
+// Определяем тип InstanceNode для использования в функции
+type InstanceNode = SceneNode & {
+  type: "INSTANCE";
+  mainComponent: ComponentNode | null;
+  mainComponentId: string | null;
+};
 import { retryGetMainComponent } from '../utils/retryWithBackoff';
 
 /**
@@ -13,7 +20,7 @@ export const getParentComponentName = async (node: SceneNode): Promise<string | 
   while (parentNode) {
     if (parentNode.type === 'INSTANCE') {
       try {
-        const parentMainComponent = await retryGetMainComponent(parentNode as any, parentNode.name);
+        const parentMainComponent = await retryGetMainComponent(parentNode as InstanceNode, parentNode.name);
         if (parentMainComponent) {
           if (parentMainComponent.parent && parentMainComponent.parent.type === 'COMPONENT_SET') {
             return parentMainComponent.parent.name;

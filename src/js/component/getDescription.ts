@@ -20,8 +20,8 @@ export async function getDescription(node: SceneNode | ComponentNode | Component
   try {
     // 1. Сначала пытаемся получить описание непосредственно с самого узла.
     // Некоторые типы SceneNode не содержат поле description, поэтому читаем безопасно.
-    if ('description' in node && (node as any).description) {
-      description = (node as any).description || '';
+    if ('description' in node && (node as unknown as Record<string, unknown>).description) {
+      description = (node as unknown as Record<string, unknown>).description as string || '';
     } else {
       description = '';
     }

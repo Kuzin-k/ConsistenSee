@@ -1,4 +1,4 @@
-import { convertRgbToHex } from './convertRgbToHex';
+import { convertRgbToHex } from "./convertRgbToHex";
 import { getParentComponentName } from '../component/getParentComponentName';
 import { processVariableBindings } from './processVariableBindings';
 import { checkIsNodeOrParentHidden } from '../utils/checkIsNodeOrParentHidden';
@@ -7,6 +7,20 @@ import { ColorData, ColorsResult, SceneNode, Paint, GeometryMixin } from '../../
 // Constants for special color values
 const COLOR_MIXED = '#MIXED' as const;
 const COLOR_ERROR = '#ERROR' as const;
+
+// Интерфейс для узлов с boundVariables
+interface NodeWithBoundVariables {
+  boundVariables?: {
+    fills?: unknown;
+    strokes?: unknown;
+    [key: string]: unknown;
+  };
+}
+
+// Интерфейс для узлов с key
+interface NodeWithKey {
+  key?: string;
+}
 
 /**
  * Checks if a node has a parent with a specific name and type.
@@ -123,16 +137,17 @@ const processPaintType = async (
         nodeData[`${prefix}_collection_name`] = style.description || '';
       } else {
         nodeData[`${prefix}_variable_name`] = String(styleId);
-        console.warn(`Style with ID "${styleId}" not found for ${prefix} of node ${nodeData.name}.`);
+        console.warn(`Style with ID "${String(styleId)}" not found for ${prefix} of node ${nodeData.name}.`);
       }
     } catch (e) {
-      console.error(`Error getting style by ID "${styleId}" for ${prefix} of node ${nodeData.name}:`, e);
-      nodeData[`${prefix}_variable_name`] = String(styleId);
+      console.error(`Error getting style by ID "${String(styleId)}" for ${prefix} of node ${nodeData.name}:`, e);
+      nodeData[`${prefix}_variable_name`] = String(styleId); // Ensure it's always a string
     }
   }
 
   const propertyType = prefix === 'fill' ? 'fills' : 'strokes';
-  if ((node as any).boundVariables && (node as any).boundVariables[propertyType]) {
+  const nodeWithBoundVariables = node as NodeWithBoundVariables;
+  if (nodeWithBoundVariables.boundVariables && nodeWithBoundVariables.boundVariables[propertyType]) {
     await processVariableBindings(node, nodeData, propertyType, prefix);
   }
 };
@@ -150,10 +165,11 @@ export const processNodeColors = async (
   colorsResult: ColorsResult,
   colorsResultStroke: ColorsResult
 ): Promise<Partial<ColorData> | null> => {
+  const nodeWithKey = node as NodeWithKey;
   const nodeData: Partial<ColorData> = {
     name: node.name,
     nodeId: node.id,
-    key: (node as any).key,
+    key: nodeWithKey.key,
     color: true,
     hidden: checkIsNodeOrParentHidden(node),
     type: node.type,

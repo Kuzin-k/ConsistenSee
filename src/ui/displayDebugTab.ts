@@ -4,7 +4,7 @@
  * @param searchTerm - Термин для поиска
  * @returns HTMLElement
  */
-export function createDebugTree(data: any, searchTerm: string = ''): HTMLElement {
+export function createDebugTree(data: unknown, searchTerm: string = ''): HTMLElement {
   try {
     let hasMatchingChild = false;
     
@@ -45,7 +45,7 @@ export function createDebugTree(data: any, searchTerm: string = ''): HTMLElement
         (typeof value === 'number' && String(value).includes(searchTerm))
       );
 
-      if (matchesSearch || (valueContainer as any).hasMatch) {
+      if (matchesSearch || (valueContainer as unknown as { hasMatch?: boolean }).hasMatch) {
         hasMatchingChild = true;
         details.open = true;
       }
@@ -55,7 +55,7 @@ export function createDebugTree(data: any, searchTerm: string = ''): HTMLElement
     });
 
     details.appendChild(container);
-    (details as any).hasMatch = hasMatchingChild;
+    (details as unknown as { hasMatch: boolean }).hasMatch = hasMatchingChild;
 
     return details;
   } catch (error) {
@@ -73,7 +73,7 @@ export function createDebugTree(data: any, searchTerm: string = ''): HTMLElement
  * @param searchTerm - Термин для поиска
  * @returns HTMLElement
  */
-export function createValueElement(value: any, searchTerm: string = ''): HTMLElement {
+export function createValueElement(value: unknown, searchTerm: string = ''): HTMLElement {
   const span = document.createElement('span');
   const stringValue = String(value);
 
@@ -98,9 +98,9 @@ export function createValueElement(value: any, searchTerm: string = ''): HTMLEle
   if (searchTerm && stringValue.toLowerCase().includes(searchTerm.toLowerCase())) {
     span.className += ' match';
     span.style.backgroundColor = 'yellow';
-    (span as any).hasMatch = true;
+    (span as unknown as { hasMatch: boolean }).hasMatch = true;
   } else {
-    (span as any).hasMatch = false;
+    (span as unknown as { hasMatch: boolean }).hasMatch = false;
   }
 
   return span;
@@ -111,7 +111,7 @@ export function createValueElement(value: any, searchTerm: string = ''): HTMLEle
  * @param results - Результаты поиска
  * @param searchTerm - Термин поиска
  */
-export function displaySearchResults(results: any[], searchTerm: string): void {
+export function displaySearchResults(results: unknown[], searchTerm: string): void {
   const searchResults = document.getElementById('searchResults');
   if (!searchResults) {
     console.error('Элемент searchResults не найден');
@@ -140,10 +140,11 @@ export function displaySearchResults(results: any[], searchTerm: string): void {
 
   const resultList = document.createElement('ul');
   results.forEach(instance => {
+    const instanceData = instance as Record<string, unknown>;
     const li = document.createElement('li');
     
     // Highlight matching text in name
-    const nameText = instance.name;
+    const nameText = instanceData.name as string;
     const highlightedName = highlightText(nameText, searchTerm);
     
     // Create result item
@@ -152,10 +153,10 @@ export function displaySearchResults(results: any[], searchTerm: string): void {
     resultItem.innerHTML = highlightedName;
     
     // Add description if exists
-    if (instance.description) {
+    if (instanceData.description) {
       const description = document.createElement('span');
       description.classList.add('description-tag');
-      description.innerHTML = ' - ' + highlightText(instance.description, searchTerm);
+      description.innerHTML = ' - ' + highlightText(instanceData.description as string, searchTerm);
       resultItem.appendChild(description);
     }
     
@@ -179,9 +180,9 @@ export function highlightText(text: string, searchTerm: string): string {
 
 // Добавляем функции к глобальному объекту UIModules
 if (typeof window !== 'undefined') {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.createDebugTree = createDebugTree;
-  (window as any).UIModules.createValueElement = createValueElement;
-  (window as any).UIModules.displaySearchResults = displaySearchResults;
-  (window as any).UIModules.highlightText = highlightText;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).createDebugTree = createDebugTree;
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).createValueElement = createValueElement;
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).displaySearchResults = displaySearchResults;
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).highlightText = highlightText;
 }

@@ -1,51 +1,4 @@
-// Типы для данных компонентов
-/**
- * @interface ComponentInstance
- * @description Определяет структуру данных для одного экземпляра компонента или узла,
- * который будет отображаться в UI. Содержит всю необходимую информацию для рендеринга и интерактивности.
- */
-interface ComponentInstance {
-  /** Тип узла в Figma (например, 'INSTANCE', 'FRAME', 'TEXT'). */
-  type: string;
-  /** Имя самого узла (инстанса). */
-  name: string;
-  /** Уникальный ID узла в документе Figma. */
-  nodeId: string;
-  /** Имя родительского набора компонентов (Component Set), если применимо. */
-  mainComponentSetName?: string;
-  /** Имя главного компонента (main component). */
-  mainComponentName?: string;
-  /** Имя родительского компонента, если узел вложен в другой инстанс. */
-  parentName?: string;
-  /** Флаг, указывающий, скрыт ли узел или его родитель. */
-  hidden: boolean;
-  /** Флаг, указывающий, является ли компонент устаревшим по сравнению с библиотечной версией. */
-  isOutdated?: boolean;
-  /** Версия компонента из библиотеки (если доступна). */
-  libraryComponentVersion?: string | null;
-  /** Имя набора компонентов из библиотеки (если доступно). */
-  libraryComponentSetName?: string | null;
-  /** Версия, извлеченная из описания локального компонента. */
-  nodeVersion?: string | null;
-  /** Версия, проверенная на актуальность. */
-  checkVersion?: string;
-  /** Полное описание компонента. */
-  description?: string | null;
-  /** Флаг, указывающий, что это узел с информацией о цвете. */
-  color?: boolean;
-  /** HEX-код цвета заливки. */
-  fill?: string;
-  /** Имя переменной цвета заливки. `false`, если переменная не найдена. */
-  fill_variable_name?: string | false;
-  /** Имя коллекции, к которой принадлежит переменная цвета заливки. */
-  fill_collection_name?: string;
-  /** HEX-код цвета обводки. */
-  stroke?: string;
-  /** Имя переменной цвета обводки. `false`, если переменная не найдена. */
-  stroke_variable_name?: string | false;
-  /** Имя коллекции, к которой принадлежит переменная цвета обводки. */
-  stroke_collection_name?: string;
-}
+import { ComponentData } from "../shared/types";
 
 /**
  * @interface GroupedData
@@ -53,7 +6,7 @@ interface ComponentInstance {
  */
 interface GroupedData {
   /** Ключ - это идентификатор группы, значение - массив экземпляров в этой группе. */
-  [key: string]: ComponentInstance[];
+  [key: string]: ComponentData[];
 }
 
 import { createIcon } from "./createIcon";
@@ -68,7 +21,7 @@ import { displayVersionTag } from "./displayVersionTag";
  * такую как прокрутка к элементу в Figma, выделение группы и отображение детальной информации во всплывающем окне.
  *
  * @param {GroupedData} groupedData - Объект, где ключи — это идентификаторы групп (например, ключ главного компонента),
- * а значения — массивы объектов `ComponentInstance`, принадлежащих этой группе.
+ * а значения — массивы объектов `ComponentData`, принадлежащих этой группе.
  * @param {HTMLElement} targetList - DOM-элемент (обычно `<ul>`), в который будут добавлены сгенерированные группы.
  *
  * @details
@@ -99,39 +52,20 @@ import { displayVersionTag } from "./displayVersionTag";
 export const displayGroups = (
   groupedData: GroupedData,
   targetList: HTMLElement,
-  isOutdatedTab: boolean = false,
   tabType: string = ""
 ): void => {
   
   
-  // Проверяем наличие button компонентов в группах
-  const buttonGroups = Object.keys(groupedData).filter(key => 
-    groupedData[key].some((inst: any) => inst.name === 'button')
-  );
-  
-  
-  // Детальная информация о button компонентах
-  buttonGroups.forEach(groupKey => {
-    const buttonInstances = groupedData[groupKey].filter((inst: any) => inst.name === 'button');
-    
-  });
-  
-  const showHidden = document.getElementById("showHiddenToggle")
-    ? (document.getElementById("showHiddenToggle") as HTMLInputElement).checked
-    : true;
-
   targetList.innerHTML = ""; // Очищаем список перед добавлением новых элементов
 
-  // Добавляем заголовок перед списком элементов
-  let headerText = "";
+
   // Сначала проверим, существует ли targetList и его id
   if (!targetList || !targetList.id) {
     console.error("Target list or its ID is undefined.");
     return;
   }
 
-  // Логика для подсчета имен
-  const nameCount: { [key: string]: number } = {};
+
 
   for (const key in groupedData) {
     const group = groupedData[key];
@@ -261,7 +195,7 @@ export const displayGroups = (
     let groupNameHtml = "";
     groupNameHtml += name;
     groupNameHtml += ` <span class="group-counter">${group.length}</span>`;
-    if (groupName && typeof (groupName as any).innerHTML !== "undefined") {
+    if (groupName && typeof (groupName as unknown as { innerHTML?: string }).innerHTML !== "undefined") {
       groupName.innerHTML = groupNameHtml;
     } else {
       console.error(
@@ -392,7 +326,7 @@ export const displayGroups = (
 
       // Добавляем popover при наведении на иконку
       itemIcon.addEventListener("mouseenter", () => {
-        showPopover(itemIcon, instance as any);
+        showPopover(itemIcon, instance);
       });
 
       // Создаем ссылку на название инстанса
@@ -461,6 +395,6 @@ export const displayGroups = (
 
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== "undefined") {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.displayGroups = displayGroups;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).displayGroups = displayGroups;
 }

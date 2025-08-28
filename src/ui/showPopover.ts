@@ -69,7 +69,7 @@ export const showPopover = (icon: Element, instance: ComponentData): void => {
     if (typeof value === 'object' && value !== null) {
       try {
         return `${boldKey} ${JSON.stringify(value)}`;
-      } catch (e) {
+      } catch {
         // На случай циклических структур — заменяем на заметку
         return `${boldKey} [object]`;
       }
@@ -133,7 +133,7 @@ export const showPopover = (icon: Element, instance: ComponentData): void => {
   const onLeave = () => {
     popover.remove();
     // Удаляем обработчик чтобы не накапливать их
-    try { icon.removeEventListener('mouseleave', onLeave); } catch (e) { /* silent */ }
+    try { icon.removeEventListener('mouseleave', onLeave); } catch { /* silent */ }
   };
 
   icon.addEventListener('mouseleave', onLeave);

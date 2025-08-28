@@ -4,13 +4,14 @@
  * @param data - Объект с данными статистики, должен содержать поле overallStats
  *                с объектом типа { totalNodes: number, nodeTypeCounts: Record<string, number> }
  */
-export function displayTabTotal(data: any): void {
+export function displayTabTotal(data: Record<string, unknown>): void {
   // Извлекаем общую статистику из переданного объекта данных
   const { overallStats } = data;
+  const stats = overallStats as { totalNodes: number; nodeTypeCounts: Record<string, number> };
   console.log("displayTabTotalStats:", overallStats);
 
   // Проверяем наличие необходимых данных для корректной работы
-  if (!overallStats || !overallStats.nodeTypeCounts) {
+  if (!overallStats || !stats.nodeTypeCounts) {
     console.log("No nodeTypeCounts found");
     return;
   }
@@ -18,8 +19,8 @@ export function displayTabTotal(data: any): void {
   // Обновляем вкладку "Total", добавляя к ней общее количество узлов в скобках
   const totalTab = document.querySelector('[data-tab="total"]');
   if (totalTab) {
-    totalTab.textContent = `Total (${overallStats.totalNodes})`;
-    console.log("Updated total tab with count:", overallStats.totalNodes);
+    totalTab.textContent = `Total (${stats.totalNodes})`;
+    console.log("Updated total tab with count:", stats.totalNodes);
   }
 
   // Находим элемент списка для отображения общей статистики
@@ -31,11 +32,11 @@ export function displayTabTotal(data: any): void {
     // Создаем и добавляем элемент с общим количеством узлов (первый пункт в списке)
     const totalLi = document.createElement("li");
     totalLi.className = "stats-item";
-    totalLi.innerHTML = `<span class="stats-type"><strong>TOTAL NODES</strong></span><span class="stats-count"><strong>${overallStats.totalNodes}</strong></span>`;
+    totalLi.innerHTML = `<span class="stats-type"><strong>TOTAL NODES</strong></span><span class="stats-count"><strong>${stats.totalNodes}</strong></span>`;
     overallStatsList.appendChild(totalLi);
 
     // Сортируем типы узлов по количеству в порядке убывания (от большего к меньшему)
-    const sortedTypes = Object.entries(overallStats.nodeTypeCounts).sort(
+    const sortedTypes = Object.entries(stats.nodeTypeCounts).sort(
       ([, a], [, b]) => (b as number) - (a as number)
     );
 
@@ -56,6 +57,6 @@ export function displayTabTotal(data: any): void {
 // Добавляем функцию к глобальному объекту UIModules для доступа из других модулей
 // Это позволяет вызывать функцию из других частях приложения, например, при приении сообщений
 if (typeof window !== "undefined") {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.displayTabTotal = displayTabTotal;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).displayTabTotal = displayTabTotal;
 }
