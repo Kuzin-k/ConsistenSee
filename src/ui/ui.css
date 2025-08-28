@@ -199,18 +199,18 @@ h3 {
 }
 
 /* Модификатор colors для базового класса tab */
-.tab.colors {
+.tab.errors {
   color: var(--color-text-danger);
   border-color: var(--color-text-danger);
   background-color: transparent;
 }
 
-.tab.colors:hover {
+.tab.errors:hover {
   background-color: var(--color-bg-danger-tertiary);
   color: var(--color-text-danger);
 }
 
-.tab.colors.active {
+.tab.errors.active {
   background-color: var(--color-text-danger);
   color: white;
 }

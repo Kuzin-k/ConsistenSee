@@ -386,6 +386,52 @@ export function processAndDisplayComponents(
       displayGroups(sortGroups(groupedIcons), iconResultsList, tabType);
     }
   }
+
+  // Обновляем заголовок errorsTab после обработки любой вкладки
+  updateErrorsTabHeader();
+}
+
+/**
+ * Обновляет заголовок вкладки errorsTab с суммой элементов из всех вкладок с ошибками
+ */
+function updateErrorsTabHeader(): void {
+  const errorsTab = document.querySelector('[data-tab="errorsTab"]');
+  if (!errorsTab) return;
+
+  // Получаем количество элементов из каждой вкладки
+  const colorsTab = document.querySelector('[data-tab="colors"]');
+  const outdatedTab = document.querySelector('[data-tab="outdated"]');
+  const lostTab = document.querySelector('[data-tab="lost"]');
+  const deprecatedTab = document.querySelector('[data-tab="deprecated"]');
+  const detachedTab = document.querySelector('[data-tab="detached"]');
+
+  // Извлекаем числа из текста вкладок
+  const extractCount = (tab: Element | null): number => {
+    if (!tab || !tab.textContent) return 0;
+    const match = tab.textContent.match(/\((\d+)\)/);
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+  const colorsCount = extractCount(colorsTab);
+  const outdatedCount = extractCount(outdatedTab);
+  const lostCount = extractCount(lostTab);
+  const deprecatedCount = extractCount(deprecatedTab);
+  const detachedCount = extractCount(detachedTab);
+
+  // Вычисляем общую сумму
+  const totalErrorsCount = colorsCount + outdatedCount + lostCount + deprecatedCount + detachedCount;
+
+  // Обновляем заголовок errorsTab
+  errorsTab.textContent = `Errors (${totalErrorsCount})`;
+
+  // Блокируем/разблокируем вкладку в зависимости от количества ошибок
+  if (totalErrorsCount === 0) {
+    errorsTab.classList.add('disabled');
+    (errorsTab as HTMLElement).style.pointerEvents = 'none';
+  } else {
+    errorsTab.classList.remove('disabled');
+    (errorsTab as HTMLElement).style.pointerEvents = 'auto';
+  }
 }
 
 // Добавляем функцию к глобальному объекту UIModules
@@ -393,4 +439,6 @@ if (typeof window !== "undefined") {
   (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
   ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).processAndDisplayComponents =
     processAndDisplayComponents;
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).updateErrorsTabHeader =
+    updateErrorsTabHeader;
 }

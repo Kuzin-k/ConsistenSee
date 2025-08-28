@@ -207,18 +207,18 @@ h3 {
 }
 
 /* Модификатор colors для базового класса tab */
-.tab.colors {
+.tab.errors {
   color: var(--color-text-danger);
   border-color: var(--color-text-danger);
   background-color: transparent;
 }
 
-.tab.colors:hover {
+.tab.errors:hover {
   background-color: var(--color-bg-danger-tertiary);
   color: var(--color-text-danger);
 }
 
-.tab.colors.active {
+.tab.errors.active {
   background-color: var(--color-text-danger);
   color: white;
 }
@@ -1023,7 +1023,7 @@ input:checked + .slider:before {
         <!-- Tabs -->
         <div class="tabs">
           <div class="tab" data-tab="instances">All instanses</div>
-          <div class="tab color active" data-tab="errorsTab">Errors</div>
+          <div class="tab errors active" data-tab="errorsTab">Errors</div>
           <!--<div class="tab colors" data-tab="colors">Colors</div>-->
           <div class="tab" data-tab="total">Total</div>
           <!--<div class="tab" data-tab="icons">Icons</div>-->
@@ -3664,10 +3664,40 @@ input:checked + .slider:before {
         displayGroups(sortGroups(groupedIcons), iconResultsList, tabType);
       }
     }
+    updateErrorsTabHeader();
+  }
+  function updateErrorsTabHeader() {
+    const errorsTab = document.querySelector('[data-tab="errorsTab"]');
+    if (!errorsTab) return;
+    const colorsTab = document.querySelector('[data-tab="colors"]');
+    const outdatedTab = document.querySelector('[data-tab="outdated"]');
+    const lostTab = document.querySelector('[data-tab="lost"]');
+    const deprecatedTab = document.querySelector('[data-tab="deprecated"]');
+    const detachedTab = document.querySelector('[data-tab="detached"]');
+    const extractCount = (tab) => {
+      if (!tab || !tab.textContent) return 0;
+      const match = tab.textContent.match(/\((\d+)\)/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    const colorsCount = extractCount(colorsTab);
+    const outdatedCount = extractCount(outdatedTab);
+    const lostCount = extractCount(lostTab);
+    const deprecatedCount = extractCount(deprecatedTab);
+    const detachedCount = extractCount(detachedTab);
+    const totalErrorsCount = colorsCount + outdatedCount + lostCount + deprecatedCount + detachedCount;
+    errorsTab.textContent = `Errors (${totalErrorsCount})`;
+    if (totalErrorsCount === 0) {
+      errorsTab.classList.add("disabled");
+      errorsTab.style.pointerEvents = "none";
+    } else {
+      errorsTab.classList.remove("disabled");
+      errorsTab.style.pointerEvents = "auto";
+    }
   }
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
     window.UIModules.processAndDisplayComponents = processAndDisplayComponents;
+    window.UIModules.updateErrorsTabHeader = updateErrorsTabHeader;
   }
 })();
 
@@ -4047,6 +4077,7 @@ input:checked + .slider:before {
 
   // src/ui/processAndDisplayColors.ts
   function processAndDisplayColors(colorsData, colorsStrokeData) {
+    var _a;
     const showHiddenToggle = document.getElementById("showHiddenToggle");
     const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
     let fillFilteredCount = 0;
@@ -4159,6 +4190,9 @@ input:checked + .slider:before {
         colorsTab.textContent = `Colors (${totalColorIssues})`;
         colorsTab.style.pointerEvents = "auto";
       }
+    }
+    if (typeof window !== "undefined" && ((_a = window.UIModules) == null ? void 0 : _a.updateErrorsTabHeader)) {
+      window.UIModules.updateErrorsTabHeader();
     }
   }
   if (typeof window !== "undefined") {

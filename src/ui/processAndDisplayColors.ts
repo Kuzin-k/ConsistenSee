@@ -150,6 +150,11 @@ export function processAndDisplayColors(
             (colorsTab as HTMLElement).style.pointerEvents = 'auto';
         }
     }
+
+    // Обновляем заголовок errorsTab после обновления colors
+    if (typeof window !== 'undefined' && (window as any).UIModules?.updateErrorsTabHeader) {
+        (window as any).UIModules.updateErrorsTabHeader();
+    }
 }
 
 // В конце файла добавить:
