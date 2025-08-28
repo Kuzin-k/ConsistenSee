@@ -3,7 +3,7 @@
  * Демонстрирует базовую структуру тестов для плагина
  */
 
-import { mockFn } from '../setup';
+// import { mockFn } from '../setup';
 
 describe('Пример тестов', () => {
   test('должен корректно работать базовый тест', () => {
@@ -12,11 +12,11 @@ describe('Пример тестов', () => {
 
   test('должен работать с моками Figma API', () => {
     // Проверяем, что figma объект доступен
-    expect((globalThis as any).figma).toBeDefined();
-    expect((globalThis as any).figma.notify).toBeDefined();
+    expect((globalThis as Record<string, unknown>).figma).toBeDefined();
+    expect(((globalThis as Record<string, unknown>).figma as Record<string, unknown>).notify).toBeDefined();
     
     // Вызываем мок функцию
-    const mockNotify = (globalThis as any).figma.notify;
+    const mockNotify = ((globalThis as Record<string, unknown>).figma as Record<string, unknown>).notify as (message: string) => void;
     mockNotify('Тестовое сообщение');
     
     // В реальных тестах здесь можно проверить, что функция была вызвана

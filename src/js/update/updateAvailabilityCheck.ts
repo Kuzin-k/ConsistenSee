@@ -328,15 +328,18 @@ export const updateAvailabilityCheck = async (
     );
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     console.error(
       `Критическая ошибка при проверке компонента "${
         mainComponent ? mainComponent.name : "N/A"
       }":`,
       {
         componentName: mainComponent ? mainComponent.name : "неизвестно",
-        error: error.message,
-        stack: error.stack,
+        error: errorMessage,
+        stack: errorStack,
       }
     );
 

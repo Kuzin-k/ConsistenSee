@@ -14,7 +14,7 @@ declare global {
       /** Функция для отображения результатов операций с возможностью индикации ошибок */
       displayResult: (message: string, isError?: boolean) => void;
       /** Функция для отображения детальной информации о компонентах */
-      displayComponentData: (data: any) => void;
+      displayComponentData: (data: unknown) => void;
     };
   }
 }
@@ -28,7 +28,7 @@ declare global {
  *              - версию и другие метаданные
  * @throws {Error} Если элемент вывода не найден в DOM
  */
-export function displayComponentData(data: any): void {
+export function displayComponentData(data: unknown): void {
   const outputElement = document.getElementById('componentDataOutput');
   if (!outputElement) {
     console.error('Элемент вывода не найден');
@@ -45,8 +45,8 @@ export function displayComponentData(data: any): void {
   const container = document.createElement('div');
   container.style.fontFamily = 'monospace';
 
-  for (const nodeId in data) {
-    const nodeData = data[nodeId];
+  for (const nodeId in (data as Record<string, unknown>)) {
+    const nodeData = (data as Record<string, unknown>)[nodeId] as Record<string, unknown>;
 
     const nodeTitle = document.createElement('h4');
     nodeTitle.textContent = `Компонент: ${nodeData.name || 'Без имени'}`;
@@ -93,8 +93,8 @@ export function displayComponentData(data: any): void {
 
 // Добавляем функцию к глобальному объекту UIModules
 if (typeof window !== 'undefined') {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.displayComponentData = displayComponentData;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).displayComponentData = displayComponentData;
   // Также добавляем к window для обратной совместимости
-  (window as any).displayComponentData = displayComponentData;
+  (window as unknown as Record<string, unknown>).displayComponentData = displayComponentData;
 }

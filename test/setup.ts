@@ -5,14 +5,14 @@
 
 // Простая функция-мок
 const mockFn = () => {
-  const fn = (...args: any[]) => undefined;
+  const fn = () => undefined;
   fn.mockClear = () => {};
-  fn.mockReturnValue = (value: any) => fn;
+  fn.mockReturnValue = () => fn;
   return fn;
 };
 
 // Базовый мок глобального объекта figma
-(globalThis as any).figma = {
+(globalThis as Record<string, unknown>).figma = {
   // UI методы
   ui: {
     postMessage: mockFn(),
@@ -53,7 +53,7 @@ const mockFn = () => {
 };
 
 // Мок для console методов в тестах
-(globalThis as any).console = {
+(globalThis as Record<string, unknown>).console = {
   ...console,
   // Отключаем логи в тестах, если не нужны
   log: mockFn(),

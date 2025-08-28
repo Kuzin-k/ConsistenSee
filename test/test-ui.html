@@ -1,36 +1,67 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Test UI</title>
     <style>
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .tabs { display: flex; gap: 10px; margin: 10px; }
-        .tab { padding: 5px 10px; background: #f0f0f0; cursor: pointer; }
-        .tab.active { background: #007acc; color: white; }
-        #searchResults { background: #ffffcc; padding: 10px; margin: 10px; }
-        #results { background: #ccffcc; padding: 10px; margin: 10px; }
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 10px;
+        }
+
+        .tab {
+            padding: 5px 10px;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: #007acc;
+            color: white;
+        }
+
+        #searchResults {
+            background: #ffffcc;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        #results {
+            background: #ccffcc;
+            padding: 10px;
+            margin: 10px;
+        }
     </style>
 </head>
+
 <body>
     <div class="tabs">
-        <div class="tab active" data-tab="main-instances">Instances</div>
+        <div class="tab active" data-tab="errorsTab">Instances</div>
         <div class="tab" data-tab="debug">Debug</div>
     </div>
-    
+
     <div id="subTabs" class="tabs" style="display: flex;">
         <div class="tab active" data-tab="instances">All</div>
         <div class="tab" data-tab="deprecated">Deprecated</div>
     </div>
-    
+
     <input type="text" id="searchInput" placeholder="Search..." style="margin: 10px; padding: 5px;">
     <button onclick="performSearch()">Search</button>
     <button onclick="clearSearch()">Clear</button>
-    
-    <div id="main-instances" class="tab-content active">
+
+    <div id="errorsTab" class="tab-content active">
         <h3>Main Instances Tab</h3>
     </div>
-    
+
     <div id="instances" class="tab-content">
         <div id="searchResults" style="display: none;">
             <h4>Search Results</h4>
@@ -41,60 +72,60 @@
             <p>Regular instances content</p>
         </div>
     </div>
-    
+
     <div id="debug" class="tab-content">
         <h3>Debug Tab</h3>
     </div>
-    
+
     <script>
         function performSearch() {
             const searchInput = document.getElementById('searchInput');
             const searchResults = document.getElementById('searchResults');
             const resultsDiv = document.getElementById('results');
-            
+
             if (searchInput.value.trim()) {
                 // Показываем результаты поиска
                 searchResults.style.display = 'block';
                 resultsDiv.style.display = 'none';
-                
+
                 // Активируем нужные вкладки
-                document.querySelector('[data-tab="main-instances"]').classList.add('active');
+                document.querySelector('[data-tab="errorsTab"]').classList.add('active');
                 document.querySelector('[data-tab="instances"]').classList.add('active');
-                
+
                 // Показываем контент
                 document.getElementById('instances').style.display = 'block';
                 document.getElementById('subTabs').style.display = 'flex';
-                
+
                 console.log('Search performed:', searchInput.value);
             }
         }
-        
+
         function clearSearch() {
             const searchInput = document.getElementById('searchInput');
             const searchResults = document.getElementById('searchResults');
             const resultsDiv = document.getElementById('results');
-            
+
             searchInput.value = '';
             searchResults.style.display = 'none';
             resultsDiv.style.display = 'block';
-            
+
             console.log('Search cleared');
         }
-        
+
         // Tab switching logic
         document.querySelectorAll('.tab[data-tab]').forEach(tab => {
             tab.addEventListener('click', () => {
                 const tabId = tab.getAttribute('data-tab');
                 const searchInput = document.getElementById('searchInput');
                 const isSearchActive = searchInput && searchInput.value.trim() !== '';
-                
+
                 // Show corresponding content
                 document.querySelectorAll('.tab-content').forEach(content => {
                     content.style.display = content.id === tabId ? 'block' : 'none';
                 });
-                
+
                 // If search is active and instances tab selected, preserve search results
-                if (isSearchActive && (tabId === 'main-instances' || tabId === 'instances')) {
+                if (isSearchActive && (tabId === 'errorsTab' || tabId === 'instances')) {
                     const searchResults = document.getElementById('searchResults');
                     const resultsDiv = document.getElementById('results');
                     if (searchResults && resultsDiv) {
@@ -102,24 +133,25 @@
                         resultsDiv.style.display = 'none';
                     }
                 }
-                
+
                 // Update active tab
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                
+
                 // Show/hide subtabs
                 const subTabs = document.getElementById('subTabs');
                 if (subTabs) {
-                    if (tabId === 'main-instances') {
+                    if (tabId === 'errorsTab') {
                         subTabs.style.display = 'flex';
                     } else {
                         subTabs.style.display = 'none';
                     }
                 }
-                
+
                 console.log('Tab switched to:', tabId, 'Search active:', isSearchActive);
             });
         });
     </script>
 </body>
+
 </html>

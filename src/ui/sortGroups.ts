@@ -3,7 +3,9 @@
  * @param groups - Объект с группами компонентов
  * @returns Отсортированный объект с группами
  */
-export function sortGroups(groups: Record<string, any[]>): Record<string, any[]> {
+import { ComponentData } from '../shared/types';
+
+export function sortGroups(groups: Record<string, ComponentData[]>): Record<string, ComponentData[]> {
     return Object.fromEntries(
         Object.entries(groups).sort(([, groupAItems], [, groupBItems]) => {
             const firstItemA = groupAItems[0];
@@ -32,4 +34,4 @@ export function sortGroups(groups: Record<string, any[]>): Record<string, any[]>
             return aName.localeCompare(bName, undefined, { numeric: true, sensitivity: 'accent' });
         })
     );
-} 
+}

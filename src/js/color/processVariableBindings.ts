@@ -17,9 +17,9 @@ const ERROR_GETTING_COLLECTION = 'Error getting collection' as const;
  * @returns {Promise<void>}
  */
 export const processVariableBindings = async (node: SceneNode, nodeData: Partial<ColorData>, propertyType: 'fills' | 'strokes', prefix: string): Promise<void> => {
-    const boundVariables = (node as any).boundVariables;
+    const boundVariables = (node as Record<string, unknown>).boundVariables as Record<string, unknown[]> | undefined;
     if (boundVariables && boundVariables[propertyType]) {
-        const binding = boundVariables[propertyType][0];
+        const binding = (boundVariables[propertyType] as unknown[])[0] as { id: string };
         if (binding && binding.id) {
             try {
                 const variable = await retryWithBackoff(
@@ -31,7 +31,7 @@ export const processVariableBindings = async (node: SceneNode, nodeData: Partial
                     }
                 );
                 if (variable) {
-                    (nodeData as any)[`${prefix}_variable_name`] = variable.name;
+                    (nodeData as Record<string, unknown>)[`${prefix}_variable_name`] = variable.name;
                     try {
                         const collection = await retryWithBackoff(
                             () => figma.variables.getVariableCollectionByIdAsync(variable.variableCollectionId),
@@ -41,16 +41,16 @@ export const processVariableBindings = async (node: SceneNode, nodeData: Partial
                                 }
                             }
                         );
-                        (nodeData as any)[`${prefix}_collection_name`] = collection ? collection.name : COLLECTION_NOT_FOUND;
-                        (nodeData as any)[`${prefix}_collection_id`] = collection ? collection.id : null;
+                        (nodeData as Record<string, unknown>)[`${prefix}_collection_name`] = collection ? collection.name : COLLECTION_NOT_FOUND;
+                        (nodeData as Record<string, unknown>)[`${prefix}_collection_id`] = collection ? collection.id : null;
                     } catch (collectionError) {
                         console.error(`Error getting collection for variable ${variable.id}:`, collectionError);
-                        (nodeData as any)[`${prefix}_collection_name`] = ERROR_GETTING_COLLECTION;
+                        (nodeData as Record<string, unknown>)[`${prefix}_collection_name`] = ERROR_GETTING_COLLECTION;
                     }
                 }
             } catch (error) {
                 console.error(`Error getting variable by ID ${binding.id}:`, error);
-                (nodeData as any)[`${prefix}_variable_name`] = false;
+                (nodeData as Record<string, unknown>)[`${prefix}_variable_name`] = false;
             }
         }
     }

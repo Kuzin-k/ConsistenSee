@@ -13,27 +13,34 @@
   --color-bg-brand-pressed: #007be5;
   --color-bg-brand-secondary: #0768cf;
   --color-bg-brand-tertiary: #e5f4ff;
+
   --color-bg-danger-tertiary: #ffe2e0;
   --color-bg-disabled: #d9d9d9;
   --color-bg-hover: #f5f5f5;
   --color-bg-secondary: #f5f5f5;
   --color-bg-tertiary: #e6e6e6;
-  --color-bg-positive: #b8f8da;
-  --color-bg-positive-strong: #009951;
+
   --color-bg-warning-tertiary: #fff1c2;
   --color-border: #e6e6e6;
   --color-border-brand: #bde3ff;
   --color-border-component: #e4ccff;
   --color-border-component-hover: #9747ff;
   --color-border-component-strong: #8638e5;
-  --color-border-danger: #dc3412;
+
   --color-text: #000000e5;
   --color-text-brand: #007be5;
   --color-text-disabled: #0000004d;
   --color-text-secondary: #00000080;
   --color-text-onbrand: #ffffff;
+
+  --color-bg-danger: #dc3412;
+  --color-border-danger: #dc3412;
   --color-text-danger: #dc3412;
+
+  --color-bg-positive: #b8f8da;
+  --color-bg-positive-strong: #009951;
   --color-text-success: #009951;
+
   --color-text-warning: #b86200;
   --font-family: "Inter", "Helvetica", sans-serif;
   --font-size-small: 10px;
@@ -199,12 +206,37 @@ h3 {
   color: var(--color-text-onbrand);
 }
 
+/* Модификатор colors для базового класса tab */
+.tab.errors {
+  color: var(--color-text-danger);
+  border-color: var(--color-text-danger);
+  background-color: transparent;
+}
+
+.tab.errors:hover {
+  background-color: var(--color-bg-danger-tertiary);
+  color: var(--color-text-danger);
+}
+
+.tab.errors.active {
+  background-color: var(--color-text-danger);
+  color: white;
+}
+
+.tab.colors:disabled,
+.tab.colors.disabled {
+  color: var(--color-text-disabled);
+  border-color: var(--color-text-disabled);
+  background-color: transparent;
+  cursor: default;
+}
+
 /* Стили для дочерних вкладок без рамки */
 .tab_borderless {
   padding: 3px 6px;
   border-radius: 12px;
   cursor: pointer;
-  color: var(--color-text-brand);
+  color: var(--color-text-danger);
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
   border: none;
@@ -215,12 +247,11 @@ h3 {
 }
 
 .tab_borderless:hover {
-  background-color: var(--color-bg-brand-tertiary);
-  color: var(--color-text-brand);
+  background-color: var(--color-bg-danger-tertiary);
 }
 
 .tab_borderless.active {
-  background-color: var(--color-bg-brand);
+  background-color: var(--color-bg-danger);
   color: var(--color-text-onbrand);
 }
 
@@ -235,45 +266,6 @@ h3 {
   background-color: transparent;
   white-space: nowrap;
   height: fit-content;
-}
-
-/* Стили для вкладок второго уровня с элементами (кроме All) */
-.tab_borderless[data-tab="outdated"]:not(.tab_borderless_disabled),
-.tab_borderless[data-tab="lost"]:not(.tab_borderless_disabled),
-.tab_borderless[data-tab="detached"]:not(.tab_borderless_disabled),
-.tab_borderless[data-tab="deprecated"]:not(.tab_borderless_disabled) {
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="outdated"]:not(.tab_borderless_disabled):hover,
-.tab_borderless[data-tab="lost"]:not(.tab_borderless_disabled):hover,
-.tab_borderless[data-tab="detached"]:not(.tab_borderless_disabled):hover,
-.tab_borderless[data-tab="deprecated"]:not(.tab_borderless_disabled):hover {
-  background-color: var(--color-bg-danger-tertiary);
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="outdated"]:not(.tab_borderless_disabled).active,
-.tab_borderless[data-tab="lost"]:not(.tab_borderless_disabled).active,
-.tab_borderless[data-tab="detached"]:not(.tab_borderless_disabled).active,
-.tab_borderless[data-tab="deprecated"]:not(.tab_borderless_disabled).active {
-  background-color: var(--color-text-danger);
-  color: white;
-}
-
-/* Стили для вкладки colors */
-.tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled) {
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled):hover {
-  background-color: var(--color-bg-danger-tertiary);
-  color: var(--color-text-danger);
-}
-
-.tab_borderless[data-tab="colors"]:not(.tab_borderless_disabled).active {
-  background-color: var(--color-text-danger);
-  color: white;
 }
 
 /* Стиль для заблокированных вкладок */
@@ -335,6 +327,7 @@ h3 {
 
 /* Results and Icons */
 #results,
+#review,
 #icons,
 #outdated,
 #colors,
@@ -343,7 +336,7 @@ h3 {
 #lost,
 #detached,
 #deprecated,
-#main-instances,
+#errorsTab,
 #instances {
   font-size: var(--font-size-medium);
   font-weight: var(--font-weight-regular);
@@ -362,14 +355,24 @@ h3 {
 #detached ul,
 #log,
 #lost ul,
-#main-instances ul {
+#errorsTab ul {
   gap: 2px;
+  margin-top: 0px;
+  padding-left: 0px;
+}
+
+#review ul {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 0px;
   padding-left: 0px;
 }
 
 #results li,
 #icons li,
+#review li,
 #colors li,
 #outdated li,
 #lost li,
@@ -378,6 +381,94 @@ h3 {
 #log li {
   margin: 0px;
   padding: 4px 0 0 16px;
+}
+
+/* Review Summary Styles */
+.review-summary {
+  padding: 20px 0px;
+}
+
+.summary-grid {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg-danger-tertiary);
+  border: 1px solid var(--color-bg-danger-tertiary);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.summary-item:hover {
+  border: 1px solid var(--color-border-danger);
+}
+
+.summary-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.summary-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.summary-title {
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  flex: 1;
+}
+
+.summary-count {
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-danger);
+  margin-left: 8px;
+}
+
+/* Specific icon colors */
+.colors-icon {
+  background-color: rgba(255, 193, 7, 0.1);
+  border-radius: 4px;
+}
+
+.outdated-icon {
+  background-color: rgba(255, 152, 0, 0.1);
+  border-radius: 4px;
+}
+
+.lost-icon {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 4px;
+}
+
+.deprecated-icon {
+  background-color: rgba(156, 39, 176, 0.1);
+  border-radius: 4px;
+}
+
+.detached-icon {
+  background-color: rgba(96, 125, 139, 0.1);
+  border-radius: 4px;
   list-style-type: none;
 }
 
@@ -1027,13 +1118,15 @@ input:checked + .slider:before {
         </div>
         <!-- Tabs -->
         <div class="tabs">
-          <div class="tab active" data-tab="main-instances">Instances</div>
-          <div class="tab" data-tab="colors">Colors</div>
-          <div class="tab" data-tab="total">Total</div>
+          <div class="tab errors active" data-tab="errorsTab">Errors</div>
+          <div class="tab" data-tab="instances">Instanses</div>
+          <div class="tab" data-tab="total">Nodes</div>
+          <!--<div class="tab colors" data-tab="colors">Colors</div>-->
           <!--<div class="tab" data-tab="icons">Icons</div>-->
         </div>
         <div id="subTabs" class="tabs small" style="display: flex;">
-          <div class="tab_borderless active" data-tab="instances">All</div>
+          <div class="tab_borderless active" data-tab="review">Review</div>
+          <div class="tab_borderless" data-tab="colors">Colors</div>
           <div class="tab_borderless" data-tab="outdated">Outdated</div>
           <div class="tab_borderless" data-tab="lost">Lost</div>
           <div class="tab_borderless" data-tab="deprecated">Deprecated</div>
@@ -1046,8 +1139,7 @@ input:checked + .slider:before {
 
 
         <!-- Главная вкладка инстансов -->
-        <div id="main-instances" class="tab-content active">
-        </div>
+        <div id="errorsTab" class="tab-content active"></div>
         <!-- Все инстансы -->
         <div id="instances" class="tab-content">
           <!-- Search Results -->
@@ -1055,6 +1147,51 @@ input:checked + .slider:before {
           <div id="results">
             <a href="#" class="toggle-groups" data-action="expand">expand all</a>
             <ul id="resultsList"></ul>
+          </div>
+        </div>
+
+        <!-- Review - сводная информация -->
+        <div id="review" class="tab-content">
+          <div id="reviewResults">
+            <div class="review-summary">
+              <div class="summary-grid">
+                <div class="summary-item" data-tab="colors">
+                  <div class="summary-icon colors-icon">🎨</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Old colors</div>
+                    <div class="summary-count" id="colors-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="outdated">
+                  <div class="summary-icon outdated-icon">⚠️</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Outdated components</div>
+                    <div class="summary-count" id="outdated-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="lost">
+                  <div class="summary-icon lost-icon">❌</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Lost instances</div>
+                    <div class="summary-count" id="lost-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="deprecated">
+                  <div class="summary-icon deprecated-icon">🚫</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Deprecated components</div>
+                    <div class="summary-count" id="deprecated-count">0</div>
+                  </div>
+                </div>
+                <div class="summary-item" data-tab="detached">
+                  <div class="summary-icon detached-icon">🔗</div>
+                  <div class="summary-content">
+                    <div class="summary-title">Detached components</div>
+                    <div class="summary-count" id="detached-count">0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1204,7 +1341,7 @@ input:checked + .slider:before {
               });
 
               // Если поиск активен и выбрана вкладка instances, сохраняем отображение результатов поиска
-              if (isSearchActive && tabId === 'main-instances') {
+              if (isSearchActive && tabId === 'instances') {
                 const searchResults = document.getElementById('searchResults');
                 const resultsDiv = document.getElementById('results');
                 if (searchResults && resultsDiv) {
@@ -1219,26 +1356,32 @@ input:checked + .slider:before {
 
               // Показываем/скрываем дочерние вкладки в зависимости от выбранной вкладки
               if (subTabs) {
-                const instancesRelatedTabs = ['main-instances', 'instances', 'outdated', 'lost', 'deprecated', 'icons'];
+                const instancesRelatedTabs = ['errorsTab'];
                 if (instancesRelatedTabs.includes(tabId)) {
                   subTabs.style.display = 'flex';
 
-                  // Если переходим на main-instances, автоматически активируем подвкладку All
-                  if (tabId === 'main-instances') {
+                  // Если переходим на errorsTab, автоматически активируем подвкладку review
+                  if (tabId === 'errorsTab') {
                     // Сбрасываем активность всех подвкладок
                     document.querySelectorAll('.tab_borderless').forEach(subTab => {
                       subTab.classList.remove('active');
                     });
-                    // Активируем подвкладку All (instances)
-                    const allSubTab = document.querySelector('.tab_borderless[data-tab="instances"]');
-                    if (allSubTab) {
-                      allSubTab.classList.add('active');
+                    // Активируем подвкладку review
+                    const reviewSubTab = document.querySelector('.tab_borderless[data-tab="review"]');
+                    if (reviewSubTab) {
+                      reviewSubTab.classList.add('active');
                     }
-                    // Показываем контент вкладки instances
+                    // Показываем контент вкладки review
                     document.querySelectorAll('.tab-content').forEach(content => {
-                      content.style.display = content.id === 'instances' ? 'block' : 'none';
+                      content.style.display = content.id === 'review' ? 'block' : 'none';
                     });
                   }
+                } else if (tabId === 'instances') {
+                  subTabs.style.display = 'none';
+                  // Сбрасываем активность дочерних вкладок
+                  document.querySelectorAll('.tab_borderless').forEach(subTab => {
+                    subTab.classList.remove('active');
+                  });
                 } else {
                   subTabs.style.display = 'none';
                   // Сбрасываем активность дочерних вкладок
@@ -1265,7 +1408,7 @@ input:checked + .slider:before {
                 content.style.display = content.id === tabId ? 'block' : 'none';
               });
 
-              // Если поиск активен и выбрана вкладка instances (All), сохраняем отображение результатов поиска
+              // Если поиск активен и выбрана подвкладка instances, сохраняем отображение результатов поиска
               if (isSearchActive && tabId === 'instances') {
                 const searchResults = document.getElementById('searchResults');
                 const resultsDiv = document.getElementById('results');
@@ -1279,23 +1422,37 @@ input:checked + .slider:before {
               subTabElements.forEach(t => t.classList.remove('active'));
               subTab.classList.add('active');
 
-              // Убираем активность с основных вкладок, кроме main-instances
+              // Убираем активность с основных вкладок, кроме errorsTab
               tabs.forEach(t => {
-                if (t.getAttribute('data-tab') !== 'main-instances') {
+                if (t.getAttribute('data-tab') !== 'errorsTab') {
                   t.classList.remove('active');
                 }
               });
 
-              // Обеспечиваем, что основная вкладка main-instances остается активной
-              const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+              // Обеспечиваем, что основная вкладка errorsTab остается активной
+              const instancesTab = document.querySelector('.tab[data-tab="errorsTab"]');
               if (instancesTab) {
                 instancesTab.classList.add('active');
               }
             });
           });
 
+          // Инициализация по умолчанию - показываем вкладку review (соответствует активным вкладкам в HTML)
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = content.id === 'review' ? 'block' : 'none';
+          });
 
-
+          // Убираем активность с вкладки instances, так как по умолчанию активна errorsTab
+          const instancesTab = document.querySelector('.tab[data-tab="instances"]');
+          if (instancesTab) {
+            instancesTab.classList.remove('active');
+          }
+          
+          // Убеждаемся, что errorsTab активна по умолчанию
+          const errorsTab = document.querySelector('.tab[data-tab="errorsTab"]');
+          if (errorsTab) {
+            errorsTab.classList.add('active');
+          }
 
         });
 
@@ -1574,7 +1731,7 @@ input:checked + .slider:before {
               resultsList.innerHTML = '';
 
               if (msg.instances && msg.instances.length > 0) {
-                UIModules.displayGroups(msg.instances, resultsList, false, 'colors');
+                UIModules.displayGroups(msg.instances, resultsList, 'colors');
               } else { resultsList.innerHTML = '<p>Цвета не найдены</p>'; }
             }
             else {
@@ -1630,7 +1787,7 @@ input:checked + .slider:before {
               }
 
               // Активируем вкладку Instances
-              const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+              const instancesTab = document.querySelector('.tab[data-tab="errorsTab"]');
               if (instancesTab) {
                 // Убираем активность со всех основных вкладок
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1683,6 +1840,9 @@ input:checked + .slider:before {
             if (msg.colors) {
               UIModules.processAndDisplayColors(msg.colors, msg.colorsStroke);
             }
+
+            // Update review summary counts (после всех обновлений вкладок)
+            updateReviewCounts(msg.components, msg.colors, msg.colorsStroke);
 
             // Update debug information
             debugContent.innerHTML = '';
@@ -2033,28 +2193,24 @@ input:checked + .slider:before {
             // Показываем результаты поиска
             searchResults.style.display = 'block';
 
-            // Показываем вкладки main-instances и instances
+            // Показываем только вкладку instances
             document.querySelectorAll('.tab-content').forEach(content => {
-              content.style.display = (content.id === 'instances' || content.id === 'main-instances') ? 'block' : 'none';
+              content.style.display = content.id === 'instances' ? 'block' : 'none';
             });
 
-            // Переключаемся на вкладку Instances и показываем дочернюю вкладку All
+            // Переключаемся на вкладку Instances (не errorsTab!)
             tabs.forEach(t => t.classList.remove('active'));
-            const instancesTab = document.querySelector('.tab[data-tab="main-instances"]');
+            const instancesTab = document.querySelector('.tab[data-tab="instances"]');
             if (instancesTab) {
               instancesTab.classList.add('active');
             }
 
-            // Показываем дочерние вкладки и активируем All
+            // Скрываем дочерние вкладки при поиске в instances
             const subTabs = document.getElementById('subTabs');
             if (subTabs) {
-              subTabs.style.display = 'flex';
+              subTabs.style.display = 'none';
               const subTabElements = subTabs.querySelectorAll('.tab_borderless');
               subTabElements.forEach(t => t.classList.remove('active'));
-              const allSubTab = subTabs.querySelector('.tab_borderless[data-tab="instances"]');
-              if (allSubTab) {
-                allSubTab.classList.add('active');
-              }
             }
 
             UIModules.displaySearchResults(results, searchTerm);
@@ -2085,6 +2241,63 @@ input:checked + .slider:before {
         }
 
         // Functions moved to UIModules
+
+        // Function to update review summary counts
+        function updateReviewCounts(componentsData, colorsData, colorsStrokeData) {
+          // Извлекаем количество из уже обновленных вкладок
+          const extractCount = (tabSelector) => {
+            const tab = document.querySelector(tabSelector);
+            if (!tab || !tab.textContent) return 0;
+            const match = tab.textContent.match(/\((\d+)\)/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+
+          // Получаем актуальные значения из вкладок
+          const colorsCount = extractCount('[data-tab="colors"]');
+          const outdatedCount = extractCount('[data-tab="outdated"]');
+          const lostCount = extractCount('[data-tab="lost"]');
+          const deprecatedCount = extractCount('[data-tab="deprecated"]');
+          const detachedCount = extractCount('[data-tab="detached"]');
+
+          // Update UI
+          const colorsCountEl = document.getElementById('colors-count');
+          const outdatedCountEl = document.getElementById('outdated-count');
+          const lostCountEl = document.getElementById('lost-count');
+          const deprecatedCountEl = document.getElementById('deprecated-count');
+          const detachedCountEl = document.getElementById('detached-count');
+
+          if (colorsCountEl) colorsCountEl.textContent = colorsCount;
+          if (outdatedCountEl) outdatedCountEl.textContent = outdatedCount;
+          if (lostCountEl) lostCountEl.textContent = lostCount;
+          if (deprecatedCountEl) deprecatedCountEl.textContent = deprecatedCount;
+          if (detachedCountEl) detachedCountEl.textContent = detachedCount;
+        }
+
+        // Add click handlers for summary items
+        document.addEventListener('DOMContentLoaded', function() {
+          const summaryItems = document.querySelectorAll('.summary-item');
+          summaryItems.forEach(item => {
+            item.addEventListener('click', function() {
+              const targetTab = this.getAttribute('data-tab');
+              if (targetTab) {
+                // Switch to the corresponding sub-tab
+                const subTabs = document.querySelectorAll('.tab_borderless');
+                subTabs.forEach(tab => {
+                  tab.classList.remove('active');
+                  if (tab.getAttribute('data-tab') === targetTab) {
+                    tab.classList.add('active');
+                  }
+                });
+
+                // Show the corresponding tab content
+                const tabContents = document.querySelectorAll('.tab-content');
+                tabContents.forEach(content => {
+                  content.style.display = content.id === targetTab ? 'block' : 'none';
+                });
+              }
+            });
+          });
+        });
 
         // Removed duplicate check-updates handler and redundant inputs init (moved earlier)
 
@@ -2294,24 +2507,25 @@ input:checked + .slider:before {
   // src/ui/displayTabTotal.ts
   function displayTabTotal(data) {
     const { overallStats } = data;
+    const stats = overallStats;
     console.log("displayTabTotalStats:", overallStats);
-    if (!overallStats || !overallStats.nodeTypeCounts) {
+    if (!overallStats || !stats.nodeTypeCounts) {
       console.log("No nodeTypeCounts found");
       return;
     }
     const totalTab = document.querySelector('[data-tab="total"]');
     if (totalTab) {
-      totalTab.textContent = `Total (${overallStats.totalNodes})`;
-      console.log("Updated total tab with count:", overallStats.totalNodes);
+      totalTab.textContent = `Total (${stats.totalNodes})`;
+      console.log("Updated total tab with count:", stats.totalNodes);
     }
     const overallStatsList = document.getElementById("overallStatsList");
     if (overallStatsList) {
       overallStatsList.innerHTML = "";
       const totalLi = document.createElement("li");
       totalLi.className = "stats-item";
-      totalLi.innerHTML = `<span class="stats-type"><strong>TOTAL NODES</strong></span><span class="stats-count"><strong>${overallStats.totalNodes}</strong></span>`;
+      totalLi.innerHTML = `<span class="stats-type"><strong>TOTAL NODES</strong></span><span class="stats-count"><strong>${stats.totalNodes}</strong></span>`;
       overallStatsList.appendChild(totalLi);
-      const sortedTypes = Object.entries(overallStats.nodeTypeCounts).sort(
+      const sortedTypes = Object.entries(stats.nodeTypeCounts).sort(
         ([, a], [, b]) => b - a
       );
       for (const [type, count] of sortedTypes) {
@@ -2427,10 +2641,8 @@ input:checked + .slider:before {
     const {
       instanceVersion = "      ",
       libraryVersion = "      ",
-      isOutdated = "",
       checkVersion = "",
       isGroupHeader = false,
-      uniqueVersions = [],
       groupItems = [],
       tabType = ""
     } = options;
@@ -2439,7 +2651,6 @@ input:checked + .slider:before {
       emptyContainer.classList.add("version-group");
       return emptyContainer;
     }
-    let versionText = "";
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -2506,21 +2717,12 @@ input:checked + .slider:before {
   }
 
   // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList, isOutdatedTab = false, tabType = "") => {
-    const buttonGroups = Object.keys(groupedData).filter(
-      (key) => groupedData[key].some((inst) => inst.name === "button")
-    );
-    buttonGroups.forEach((groupKey) => {
-      const buttonInstances = groupedData[groupKey].filter((inst) => inst.name === "button");
-    });
-    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+  var displayGroups = (groupedData, targetList, tabType = "") => {
     targetList.innerHTML = "";
-    let headerText = "";
     if (!targetList || !targetList.id) {
       console.error("Target list or its ID is undefined.");
       return;
     }
-    const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
@@ -2786,9 +2988,8 @@ input:checked + .slider:before {
   };
 
   // src/ui/displayColorsTab.ts
-  var displayColorsTab = (groupedData, targetList, isOutdatedTab = false) => {
+  var displayColorsTab = (groupedData, targetList) => {
     var _a;
-    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
     if (!targetList || !targetList.id) {
@@ -2807,12 +3008,10 @@ input:checked + .slider:before {
       header.textContent = headerText;
       (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
     }
-    const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
       const firstInstance = group[0];
-      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
       const groupHeader = document.createElement("ul");
       groupHeader.classList.add("group-header");
       const groupName = document.createElement("div");
@@ -2934,7 +3133,6 @@ input:checked + .slider:before {
           componentNameContainer.appendChild(hiddenLabel);
         }
         if (instance.color) {
-          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
           groupItem.appendChild(componentNameContainer);
           if (instance.fill) {
             const fillContainer = document.createElement("div");
@@ -3152,10 +3350,8 @@ input:checked + .slider:before {
     const {
       instanceVersion = "      ",
       libraryVersion = "      ",
-      isOutdated = "",
       checkVersion = "",
       isGroupHeader = false,
-      uniqueVersions = [],
       groupItems = [],
       tabType = ""
     } = options;
@@ -3164,7 +3360,6 @@ input:checked + .slider:before {
       emptyContainer.classList.add("version-group");
       return emptyContainer;
     }
-    let versionText = "";
     const versionGroup = document.createElement("span");
     versionGroup.classList.add("version-group");
     const versionBadge = document.createElement("span");
@@ -3231,21 +3426,12 @@ input:checked + .slider:before {
   }
 
   // src/ui/displayGroups.ts
-  var displayGroups = (groupedData, targetList, isOutdatedTab = false, tabType = "") => {
-    const buttonGroups = Object.keys(groupedData).filter(
-      (key) => groupedData[key].some((inst) => inst.name === "button")
-    );
-    buttonGroups.forEach((groupKey) => {
-      const buttonInstances = groupedData[groupKey].filter((inst) => inst.name === "button");
-    });
-    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
+  var displayGroups = (groupedData, targetList, tabType = "") => {
     targetList.innerHTML = "";
-    let headerText = "";
     if (!targetList || !targetList.id) {
       console.error("Target list or its ID is undefined.");
       return;
     }
-    const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
@@ -3488,10 +3674,7 @@ input:checked + .slider:before {
     let outdatedCount = componentsData.counts && typeof componentsData.counts.outdated === "number" ? componentsData.counts.outdated : componentsData.outdated ? componentsData.outdated.length : 0;
     let lostCount = componentsData.counts && typeof componentsData.counts.lost === "number" ? componentsData.counts.lost : componentsData.lost ? componentsData.lost.length : 0;
     let deprecatedCount = componentsData.counts && typeof componentsData.counts.deprecated === "number" ? componentsData.counts.deprecated : componentsData.deprecated ? componentsData.deprecated.length : 0;
-    let detachedCount = componentsData.counts && typeof componentsData.counts.detached === "number" ? componentsData.counts.detached : filterDetachedFrames(componentsData.instances).length;
-    const instancesWithVersions = sourceInstances.filter(
-      (i) => i.libraryComponentVersion || i.libraryComponentVersionMinimal
-    );
+    const detachedCount = componentsData.counts && typeof componentsData.counts.detached === "number" ? componentsData.counts.detached : filterDetachedFrames(componentsData.instances).length;
     sourceInstances.forEach((instance) => {
       if (!showHidden && instance.hidden) {
         return;
@@ -3511,7 +3694,7 @@ input:checked + .slider:before {
       if (tabType === "instances" && instance.isDetached) {
         return;
       }
-      const groupKey = tabType === "detached" ? instance.name : instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey;
+      const groupKey = tabType === "detached" ? instance.name || "Unknown" : instance.mainComponentSetKey ? instance.mainComponentSetKey : instance.mainComponentKey || "Unknown";
       if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated" || tabType === "detached") {
         if (!groupedInstances[groupKey]) {
           groupedInstances[groupKey] = [];
@@ -3551,8 +3734,8 @@ input:checked + .slider:before {
       return [Number(m[1] || 0), Number(m[2] || 0), Number(m[3] || 0)];
     };
     const compareByVersionThenName = (a, b) => {
-      const aVer = parseVersionNumbers(a.nodeVersion);
-      const bVer = parseVersionNumbers(b.nodeVersion);
+      const aVer = parseVersionNumbers(a.nodeVersion || "");
+      const bVer = parseVersionNumbers(b.nodeVersion || "");
       if (aVer && bVer) {
         for (let i = 0; i < 3; i++) {
           if ((aVer[i] || 0) < (bVer[i] || 0)) return -1;
@@ -3588,7 +3771,6 @@ input:checked + .slider:before {
     if (tabType === "deprecated") {
       deprecatedCount = nonIconCount;
     }
-    const componentsTab = document.querySelector('[data-tab="main-instances"]');
     const allSubTab = document.querySelector(
       '.tab_borderless[data-tab="instances"]'
     );
@@ -3675,22 +3857,51 @@ input:checked + .slider:before {
         }
       }
     }
-    const tabTitle = tabType === "outdated" || tabType === "lost" || tabType === "deprecated" || tabType === "detached";
     if (tabType === "outdated" || tabType === "lost" || tabType === "deprecated" || tabType === "detached") {
-      displayGroups(sortGroups(groupedInstances), resultsList, tabTitle, tabType);
+      displayGroups(sortGroups(groupedInstances), resultsList, tabType);
       if (iconResultsList) {
         iconResultsList.innerHTML = "";
       }
     } else {
-      displayGroups(sortGroups(groupedInstances), resultsList, false, tabType);
+      displayGroups(sortGroups(groupedInstances), resultsList, tabType);
       if (iconResultsList) {
-        displayGroups(sortGroups(groupedIcons), iconResultsList, false, tabType);
+        displayGroups(sortGroups(groupedIcons), iconResultsList, tabType);
       }
+    }
+    updateErrorsTabHeader();
+  }
+  function updateErrorsTabHeader() {
+    const errorsTab = document.querySelector('[data-tab="errorsTab"]');
+    if (!errorsTab) return;
+    const colorsTab = document.querySelector('[data-tab="colors"]');
+    const outdatedTab = document.querySelector('[data-tab="outdated"]');
+    const lostTab = document.querySelector('[data-tab="lost"]');
+    const deprecatedTab = document.querySelector('[data-tab="deprecated"]');
+    const detachedTab = document.querySelector('[data-tab="detached"]');
+    const extractCount = (tab) => {
+      if (!tab || !tab.textContent) return 0;
+      const match = tab.textContent.match(/\((\d+)\)/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    const colorsCount = extractCount(colorsTab);
+    const outdatedCount = extractCount(outdatedTab);
+    const lostCount = extractCount(lostTab);
+    const deprecatedCount = extractCount(deprecatedTab);
+    const detachedCount = extractCount(detachedTab);
+    const totalErrorsCount = colorsCount + outdatedCount + lostCount + deprecatedCount + detachedCount;
+    errorsTab.textContent = `Errors (${totalErrorsCount})`;
+    if (totalErrorsCount === 0) {
+      errorsTab.classList.add("disabled");
+      errorsTab.style.pointerEvents = "none";
+    } else {
+      errorsTab.classList.remove("disabled");
+      errorsTab.style.pointerEvents = "auto";
     }
   }
   if (typeof window !== "undefined") {
     window.UIModules = window.UIModules || {};
     window.UIModules.processAndDisplayComponents = processAndDisplayComponents;
+    window.UIModules.updateErrorsTabHeader = updateErrorsTabHeader;
   }
 })();
 
@@ -3804,9 +4015,8 @@ input:checked + .slider:before {
   };
 
   // src/ui/displayColorsTab.ts
-  var displayColorsTab = (groupedData, targetList, isOutdatedTab = false) => {
+  var displayColorsTab = (groupedData, targetList) => {
     var _a;
-    const showHidden = document.getElementById("showHiddenToggle") ? document.getElementById("showHiddenToggle").checked : true;
     targetList.innerHTML = "";
     let headerText = "";
     if (!targetList || !targetList.id) {
@@ -3825,12 +4035,10 @@ input:checked + .slider:before {
       header.textContent = headerText;
       (_a = targetList.parentNode) == null ? void 0 : _a.insertBefore(header, targetList);
     }
-    const nameCount = {};
     for (const key in groupedData) {
       const group = groupedData[key];
       if (group.length === 0) continue;
       const firstInstance = group[0];
-      const name = firstInstance.mainComponentSetName ? firstInstance.mainComponentSetName : firstInstance.mainComponentName ? firstInstance.mainComponentName : firstInstance.name;
       const groupHeader = document.createElement("ul");
       groupHeader.classList.add("group-header");
       const groupName = document.createElement("div");
@@ -3952,7 +4160,6 @@ input:checked + .slider:before {
           componentNameContainer.appendChild(hiddenLabel);
         }
         if (instance.color) {
-          const hasMissingVariables = instance.fill && (instance.fill_variable_name === false || instance.fill_variable_name === "") || instance.stroke && (instance.stroke_variable_name === false || instance.stroke_variable_name === "");
           groupItem.appendChild(componentNameContainer);
           if (instance.fill) {
             const fillContainer = document.createElement("div");
@@ -4176,15 +4383,21 @@ input:checked + .slider:before {
     const totalColorIssues = fillFilteredCount + strokeFilteredCount;
     if (colorsTab) {
       if (totalColorIssues === 0) {
-        colorsTab.classList.remove("tab");
-        colorsTab.classList.add("tab_disabled");
+        colorsTab.classList.remove("colors");
+        colorsTab.classList.add("disabled");
         colorsTab.textContent = `Colors (0)`;
         colorsTab.style.pointerEvents = "none";
       } else {
-        colorsTab.classList.remove("tab_success", "tab_disabled");
-        colorsTab.classList.add("tab");
+        colorsTab.classList.remove("disabled");
+        colorsTab.classList.add("colors");
         colorsTab.textContent = `Colors (${totalColorIssues})`;
         colorsTab.style.pointerEvents = "auto";
+      }
+    }
+    if (typeof window !== "undefined") {
+      const uiModules = window.UIModules;
+      if (uiModules && typeof uiModules.updateErrorsTabHeader === "function") {
+        uiModules.updateErrorsTabHeader();
       }
     }
   }
@@ -4287,16 +4500,17 @@ input:checked + .slider:before {
     }
     const resultList = document.createElement("ul");
     results.forEach((instance) => {
+      const instanceData = instance;
       const li = document.createElement("li");
-      const nameText = instance.name;
+      const nameText = instanceData.name;
       const highlightedName = highlightText(nameText, searchTerm);
       const resultItem = document.createElement("div");
       resultItem.classList.add("search-result-item");
       resultItem.innerHTML = highlightedName;
-      if (instance.description) {
+      if (instanceData.description) {
         const description = document.createElement("span");
         description.classList.add("description-tag");
-        description.innerHTML = " - " + highlightText(instance.description, searchTerm);
+        description.innerHTML = " - " + highlightText(instanceData.description, searchTerm);
         resultItem.appendChild(description);
       }
       li.appendChild(resultItem);

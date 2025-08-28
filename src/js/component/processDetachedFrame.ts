@@ -3,7 +3,18 @@
  * @module processDetachedFrame
  */
 
-import { ComponentsResult, ComponentData } from "../../shared/types";
+import { ComponentsResult, ComponentData, SceneNode } from "../../shared/types";
+
+// Определяем тип FrameNode для использования в функциях
+type FrameNode = SceneNode & {
+  type: "FRAME";
+  width: number;
+  height: number;
+  detachedInfo?: {
+    componentKey: string;
+    componentId: string;
+  };
+};
 import { checkIsNodeOrParentHidden } from "../utils/checkIsNodeOrParentHidden";
 import { getParentComponentName } from "./getParentComponentName";
 
@@ -14,7 +25,7 @@ import { getParentComponentName } from "./getParentComponentName";
  * @param frameNode - Узел фрейма для проверки
  * @returns true если фрейм detached, false в противном случае
  */
-export function isDetachedFrame(frameNode: any): boolean {
+export function isDetachedFrame(frameNode: FrameNode): boolean {
   // Проверяем, что это фрейм
   if (!frameNode || frameNode.type !== "FRAME") {
     return false;
@@ -28,7 +39,9 @@ export function isDetachedFrame(frameNode: any): boolean {
 
   // Дополнительная проверка: если фрейм был экземпляром компонента,
   // но потерял связь с главным компонентом
-  if (frameNode.mainComponent === null && frameNode.mainComponentId) {
+  // Проверяем через type assertion для InstanceNode
+  const instanceNode = frameNode as unknown as Record<string, unknown>;
+  if (instanceNode.mainComponent === null && instanceNode.mainComponentId) {
     return true;
   }
 
@@ -43,7 +56,7 @@ export function isDetachedFrame(frameNode: any): boolean {
  * @returns Promise<void>
  */
 export async function processDetachedFrame(
-  node: any,
+  node: FrameNode,
   componentsResult: ComponentsResult
 ): Promise<void> {
   // Проверяем, является ли узел detached фреймом
@@ -56,16 +69,16 @@ export async function processDetachedFrame(
   try {
     // Создаем данные для detached фрейма
     const componentData: ComponentData = {
-      type: node.type, // Используем реальный тип узла (FRAME)
+      type: "INSTANCE", // Detached фреймы обрабатываем как инстансы
       name: node.name || "Unnamed Frame",
       nodeId: node.id,
-      key: node.key || null,
-      description: node.description || undefined,
+      key: (node as unknown as Record<string, unknown>).key as string || null,
+      description: (node as unknown as Record<string, unknown>).description as string || undefined,
       nodeVersion: null,
       hidden: checkIsNodeOrParentHidden(node),
       remote: false,
       parentName: await getParentComponentName(node),
-      parentId: node.parent?.id || null,
+      parentId: ((node as unknown as Record<string, unknown>).parent as Record<string, unknown>)?.id as string || null,
       mainComponentName: null,
       mainComponentKey: null,
       mainComponentId: null,
@@ -107,7 +120,7 @@ export async function processDetachedFrame(
  * @param instances - Массив экземпляров для фильтрации
  * @returns Массив detached фреймов
  */
-export function filterDetachedFrames(instances: any[]): any[] {
+export function filterDetachedFrames(instances: ComponentData[]): ComponentData[] {
   return instances.filter((instance) => {
     return instance.isDetached === true;
   });
@@ -119,9 +132,9 @@ export function filterDetachedFrames(instances: any[]): any[] {
  * @param instances - Массив экземпляров для обработки
  * @returns Массив с добавленным признаком isDetached
  */
-export function markDetachedFrames(instances: any[]): any[] {
+export function markDetachedFrames(instances: ComponentData[]): ComponentData[] {
   return instances.map((instance) => ({
     ...instance,
-    isDetached: isDetachedFrame(instance),
+    isDetached: instance.isDetached || false,
   }));
 }

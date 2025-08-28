@@ -23,8 +23,7 @@ export const processNodeComponent = async (
   node: SceneNode,
   componentsResult: ComponentsResult
 ): Promise<ComponentData | ComponentData[] | null> => {
-  // Логируем начало обработки для button компонентов
-  const isButtonComponent = node.name.toLowerCase().includes("button");
+  // Обработка узла компонента
 
   let mainComponent: ComponentNode | null = null; // Переменная для хранения главного компонента
   // Если узел является инстансом, получаем его главный компонент
@@ -52,13 +51,13 @@ export const processNodeComponent = async (
     mainComponent = node; // Если это сам компонент, а не инстанс, он и есть главный компонент
   }
 
-  let name = node.name; // Имя узла
+  const name = node.name; // Имя узла
 
   // Получаем описание и версию, используя главный компонент (если есть) или сам узел
   const descriptionDataMain = await getDescription(mainComponent || node); // Передаем mainComponent или сам node
   let parentComponentName: string | null = null; // Имя родительского компонента (если вложен в инстанс)
   if (node.type === "COMPONENT_SET") {
-    const results: any[] = [];
+    const results: ComponentData[] = [];
     // Обрабатываем сам COMPONENT_SET (если нужно получить его данные)
     const setData = await processComponentSetNode(node as ComponentSetNode);
     if (setData) {
@@ -88,8 +87,8 @@ export const processNodeComponent = async (
 
   // Этот блок кода был перемещен выше, чтобы mainComponentName и mainComponentKey
   // были доступны до блока COMPONENT_SET
-  let mainComponentName = mainComponent ? mainComponent.name : null;
-  let mainComponentKey = mainComponent ? mainComponent.key : null;
+  const mainComponentName = mainComponent ? mainComponent.name : null;
+  const mainComponentKey = mainComponent ? mainComponent.key : null;
 
   // Проверяем, находится ли инстанс внутри другого инстанса
   let isNested = false;
@@ -105,7 +104,6 @@ export const processNodeComponent = async (
   }
 
   // Определяем имя и ключ главного компонента или родительского ComponentSet
-  let componentKeyToUse = mainComponent ? mainComponent.key : null; // Ключ главного компонента по умолчанию
   let mainComponentSetKey: string | null = null; // Ключ набора компонентов, если есть
   let mainComponentSetName: string | null = null; // Имя набора компонентов, если есть
   let mainComponentSetId: string | null = null; // ID набора компонентов, если есть
@@ -116,7 +114,6 @@ export const processNodeComponent = async (
     mainComponent.parent &&
     mainComponent.parent.type === "COMPONENT_SET"
   ) {
-    componentKeyToUse = mainComponent.parent.key; // Ключ родительского ComponentSet
     mainComponentSetName = mainComponent.parent.name; // Имя набора
     mainComponentSetKey = mainComponent.parent.key; // Ключ набора компонентов
     mainComponentSetId = mainComponent.parent.id; // id набора компонентов
@@ -152,25 +149,23 @@ export const processNodeComponent = async (
 
     // Получаем пользовательские данные из PluginData
     let pluginDataKey = "";
-    let pluginDataVersion = "";
 
     try {
       // Пробуем получить данные из PluginData самого узла
       pluginDataKey = node.getPluginData("customKey") || "";
-      pluginDataVersion = node.getPluginData("customVersion") || "";
 
       // Если это инстанс и у него нет своих данных, проверяем PluginData главного компонента
       if (node.type === "INSTANCE" && mainComponent && !pluginDataKey) {
         pluginDataKey = mainComponent.getPluginData("customKey") || "";
       }
 
-      //console.log(`Получены данные из PluginData для ${node.name}:`, { ключ: pluginDataKey, версия: pluginDataVersion });
+      //console.log(`Получены данные из PluginData для ${node.name}:`, { ключ: pluginDataKey });
     } catch (error) {
       // Обработка ошибок при получении PluginData
       console.error(`Ошибка при получении PluginData для ${node.name}:`, error);
     }
 
-    let parent = node.parent; // Непосредственный родитель узла
+    const parent = node.parent; // Непосредственный родитель узла
 
     if (!mainComponent) {
       console.warn(

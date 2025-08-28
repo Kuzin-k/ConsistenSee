@@ -1,4 +1,4 @@
-import { displayColorsTab } from './displayColorsTab';
+import { displayColorsTab, GroupedData } from './displayColorsTab';
 
 /**
  * Обрабатывает и отображает цвета (fill и stroke)
@@ -6,8 +6,8 @@ import { displayColorsTab } from './displayColorsTab';
  * @param colorsStrokeData - Данные цветов обводки
  */
 export function processAndDisplayColors(
-    colorsData: any,
-    colorsStrokeData: any
+    colorsData: Record<string, unknown>,
+    colorsStrokeData: Record<string, unknown>
 ): void {
     const showHiddenToggle = document.getElementById('showHiddenToggle') as HTMLInputElement;
     const showHidden = showHiddenToggle ? showHiddenToggle.checked : true;
@@ -25,14 +25,14 @@ export function processAndDisplayColors(
 
     // Process Fill Colors
     if (colorsData && colorsData.instances) {
-        const groupedFillColors: Record<string, any[]> = {};
-        let rawFillInstances = colorsData.instances;
+        const groupedFillColors: Record<string, Record<string, unknown>[]> = {};
+        let rawFillInstances = colorsData.instances as Record<string, unknown>[];
 
         if (!showHidden) {
-            rawFillInstances = rawFillInstances.filter((instance: any) => !instance.hidden);
+            rawFillInstances = rawFillInstances.filter((instance: Record<string, unknown>) => !instance.hidden);
         }
 
-        rawFillInstances.forEach((instance: any) => {
+        rawFillInstances.forEach((instance: Record<string, unknown>) => {
             const hasFill = instance.fill && instance.fill !== '#MIXED';
             if (!hasFill) return;
 
@@ -59,12 +59,12 @@ export function processAndDisplayColors(
         });
 
         const sortedFillGroupKeys = Object.keys(groupedFillColors).sort((a, b) => a.localeCompare(b));
-        const sortedGroupedFillColors: Record<string, any[]> = {};
+        const sortedGroupedFillColors: Record<string, Record<string, unknown>[]> = {};
         sortedFillGroupKeys.forEach(key => {
             sortedGroupedFillColors[key] = groupedFillColors[key];
         });
         if (fillFilteredCount > 0) {
-            displayColorsTab(sortedGroupedFillColors, colorResultsList);
+            displayColorsTab(sortedGroupedFillColors as unknown as GroupedData, colorResultsList);
         } else {
             colorResultsList.innerHTML = '';
             if (fillHeader && fillHeader.classList.contains('section-header') && fillHeader.textContent === 'Fill') {
@@ -80,14 +80,14 @@ export function processAndDisplayColors(
 
     // Process Stroke Colors
     if (colorsStrokeData && colorsStrokeData.instances) {
-        const groupedStrokeColors: Record<string, any[]> = {};
-        let rawStrokeInstances = colorsStrokeData.instances;
+        const groupedStrokeColors: Record<string, Record<string, unknown>[]> = {};
+        let rawStrokeInstances = colorsStrokeData.instances as Record<string, unknown>[];
 
         if (!showHidden) {
-            rawStrokeInstances = rawStrokeInstances.filter((instance: any) => !instance.hidden);
+            rawStrokeInstances = rawStrokeInstances.filter((instance: Record<string, unknown>) => !instance.hidden);
         }
 
-        rawStrokeInstances.forEach((instance: any) => {
+        rawStrokeInstances.forEach((instance: Record<string, unknown>) => {
             const hasStroke = instance.stroke && instance.stroke !== '#MIXED';
             if (!hasStroke) return;
 
@@ -114,13 +114,13 @@ export function processAndDisplayColors(
         });
 
         const sortedStrokeGroupKeys = Object.keys(groupedStrokeColors).sort((a, b) => a.localeCompare(b));
-        const sortedGroupedStrokeColors: Record<string, any[]> = {};
+        const sortedGroupedStrokeColors: Record<string, Record<string, unknown>[]> = {};
         sortedStrokeGroupKeys.forEach(key => {
             sortedGroupedStrokeColors[key] = groupedStrokeColors[key];
         });
 
         if (strokeFilteredCount > 0) {
-            displayColorsTab(sortedGroupedStrokeColors, colorStrokeResultsList);
+            displayColorsTab(sortedGroupedStrokeColors as unknown as GroupedData, colorStrokeResultsList);
         } else {
             colorStrokeResultsList.innerHTML = '';
             if (strokeHeader && strokeHeader.classList.contains('section-header') && strokeHeader.textContent === 'Stroke') {
@@ -139,21 +139,29 @@ export function processAndDisplayColors(
     const totalColorIssues = fillFilteredCount + strokeFilteredCount;
     if (colorsTab) { // Ensure colorsTab exists
         if (totalColorIssues === 0) {
-            colorsTab.classList.remove('tab');
-            colorsTab.classList.add('tab_disabled');
+            colorsTab.classList.remove('colors');
+      colorsTab.classList.add('disabled');
             colorsTab.textContent = `Colors (0)`;
             (colorsTab as HTMLElement).style.pointerEvents = 'none';
         } else {
-            colorsTab.classList.remove('tab_success', 'tab_disabled');
-            colorsTab.classList.add('tab');
+            colorsTab.classList.remove('disabled');
+      colorsTab.classList.add('colors');
             colorsTab.textContent = `Colors (${totalColorIssues})`;
             (colorsTab as HTMLElement).style.pointerEvents = 'auto';
+        }
+    }
+
+    // Обновляем заголовок errorsTab после обновления colors
+    if (typeof window !== 'undefined') {
+        const uiModules = (window as unknown as Record<string, unknown>).UIModules as Record<string, unknown> | undefined;
+        if (uiModules && typeof uiModules.updateErrorsTabHeader === 'function') {
+            (uiModules.updateErrorsTabHeader as () => void)();
         }
     }
 }
 
 // В конце файла добавить:
 if (typeof window !== 'undefined') {
-  (window as any).UIModules = (window as any).UIModules || {};
-  (window as any).UIModules.processAndDisplayColors = processAndDisplayColors;
+  (window as unknown as Record<string, unknown>).UIModules = (window as unknown as Record<string, unknown>).UIModules || {};
+  ((window as unknown as Record<string, unknown>).UIModules as Record<string, unknown>).processAndDisplayColors = processAndDisplayColors;
 }

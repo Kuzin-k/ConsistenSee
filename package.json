@@ -4,7 +4,9 @@
   "description": "**ConsistenSee** — это плагин для Figma, представляющий собой линтер дизайн-системы. Плагин помогает дизайнерам и командам поддерживать консистентность в использовании компонентов и цветов в проектах Figma, выявляя устаревшие компоненты, некорректное использование цветов и предоставляя удобные инструменты для навигации и анализа.",
   "main": "code.js",
   "scripts": {
+    "all": "npm run lint && node esbuild.config.js",
     "build": "node esbuild.config.js",
+    "lint": "eslint . --ext .ts",
     "test": "jest --config test/jest.config.js",
     "test:watch": "jest --config test/jest.config.js --watch",
     "test:coverage": "jest --config test/jest.config.js --coverage",
@@ -26,9 +28,14 @@
   "devDependencies": {
     "@figma/plugin-typings": "^1.116.0",
     "@types/jest": "^29.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
     "esbuild": "^0.25.8",
+    "eslint": "^9.34.0",
+    "globals": "^16.3.0",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.41.0"
   }
 }

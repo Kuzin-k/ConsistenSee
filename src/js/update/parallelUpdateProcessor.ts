@@ -72,7 +72,7 @@ export class ParallelUpdateProcessor {
       this.totalCount = status.total;
 
       // Не выходим, даже если totalCount === 0 — ждём наполнение очереди и автостарт
-      return new Promise<ComponentsResult>((resolve, reject) => {
+      return new Promise<ComponentsResult>((resolve) => {
         updateQueue.onProgress(
           async (
             processed: number,

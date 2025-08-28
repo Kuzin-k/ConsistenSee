@@ -1,5 +1,5 @@
-const esbuild = require('esbuild');
-const {sassPlugin} = require('esbuild-sass-plugin');
+import esbuild from 'esbuild';
+import {sassPlugin} from 'esbuild-sass-plugin';
 
 esbuild.build({
   entryPoints: {
